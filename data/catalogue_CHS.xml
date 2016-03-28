@@ -1,0 +1,144 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<catalogue>
+  <member diameter="21.3">
+    <thickness>3.2</thickness>
+  </member>
+  <member diameter="26.9">
+    <thickness>2</thickness>
+    <thickness>2.5</thickness>
+    <thickness>3.2</thickness>
+  </member>
+  <member diameter="33.7">
+    <thickness>2</thickness>
+    <thickness>2.5</thickness>
+    <thickness>3</thickness>
+    <thickness>3.2</thickness>
+  </member>
+  <member diameter="42.4">
+    <thickness>2.5</thickness>
+    <thickness>3</thickness>
+    <thickness>3.2</thickness>
+    <thickness>3.6</thickness>
+    <thickness>4</thickness>
+  </member>
+  <member diameter="48.3">
+    <thickness>2.5</thickness>
+    <thickness>3</thickness>
+    <thickness>3.2</thickness>
+    <thickness>3.6</thickness>
+    <thickness>4</thickness>
+  </member>
+  <member diameter="60.3">
+    <thickness>2.5</thickness>
+    <thickness>3</thickness>
+    <thickness>3.2</thickness>
+    <thickness>3.6</thickness>
+    <thickness>4</thickness>
+  </member>
+  <member diameter="76.1">
+    <thickness>2.5</thickness>
+    <thickness>3</thickness>
+    <thickness>3.2</thickness>
+    <thickness>3.6</thickness>
+    <thickness>4</thickness>
+    <thickness>5</thickness>
+  </member>
+  <member diameter="88.9">
+    <thickness>3</thickness>
+    <thickness>3.2</thickness>
+    <thickness>4</thickness>
+    <thickness>5</thickness>
+  </member>
+  <member diameter="114.3">
+    <thickness>3</thickness>
+    <thickness>3.2</thickness>
+    <thickness>3.6</thickness>
+    <thickness>4</thickness>
+    <thickness>5</thickness>
+  </member>
+  <member diameter="139.7">
+    <thickness>4</thickness>
+    <thickness>5</thickness>
+    <thickness>6</thickness>
+    <thickness>6.3</thickness>
+  </member>
+  <member diameter="168.3">
+    <thickness>4</thickness>
+    <thickness>5</thickness>
+    <thickness>6</thickness>
+    <thickness>6.3</thickness>
+    <thickness>10</thickness>
+    <thickness>12.5</thickness>
+  </member>
+  <member diameter="193.7">
+    <thickness>5</thickness>
+    <thickness>6.3</thickness>
+    <thickness>8</thickness>
+    <thickness>10</thickness>
+    <thickness>12.5</thickness>
+  </member>
+  <member diameter="219.1">
+    <thickness>5</thickness>
+    <thickness>6.3</thickness>
+    <thickness>8</thickness>
+    <thickness>10</thickness>
+    <thickness>12.5</thickness>
+    <thickness>16</thickness>
+  </member>
+  <member diameter="244.5">
+    <thickness>6.3</thickness>
+    <thickness>8</thickness>
+    <thickness>10</thickness>
+    <thickness>12.5</thickness>
+    <thickness>16</thickness>
+    <thickness>20</thickness>
+  </member>
+  <member diameter="273">
+    <thickness>6.3</thickness>
+    <thickness>8</thickness>
+    <thickness>10</thickness>
+    <thickness>12.5</thickness>
+    <thickness>16</thickness>
+    <thickness>20</thickness>
+    <thickness>25</thickness>
+  </member>
+  <member diameter="323.9">
+    <thickness>6.3</thickness>
+    <thickness>8</thickness>
+    <thickness>10</thickness>
+    <thickness>12.5</thickness>
+    <thickness>16</thickness>
+    <thickness>20</thickness>
+    <thickness>25</thickness>
+  </member>
+  <member diameter="355.6">
+    <thickness>8</thickness>
+    <thickness>10</thickness>
+    <thickness>12.5</thickness>
+    <thickness>16</thickness>
+    <thickness>20</thickness>
+    <thickness>25</thickness>
+  </member>
+  <member diameter="406.4">
+    <thickness>10</thickness>
+    <thickness>12.5</thickness>
+    <thickness>16</thickness>
+    <thickness>20</thickness>
+    <thickness>25</thickness>
+    <thickness>32</thickness>
+  </member>
+  <member diameter="457">
+    <thickness>10</thickness>
+    <thickness>12.5</thickness>
+    <thickness>16</thickness>
+    <thickness>20</thickness>
+    <thickness>25</thickness>
+    <thickness>32</thickness>
+    <thickness>40</thickness>
+  </member>
+  <member diameter="508">
+    <thickness>10</thickness>
+    <thickness>12.5</thickness>
+    <thickness>16</thickness>
+  </member>
+</catalogue>
