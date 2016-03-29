@@ -556,6 +556,9 @@ initCanvas()
 
 # Setup inventory lists
 orders = []
+orders_side = []
+orders_top = []
+orders_bottom = []
 rows = []
 		
 def inspectMember(obj):
