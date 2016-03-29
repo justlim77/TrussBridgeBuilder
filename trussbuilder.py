@@ -184,7 +184,6 @@ def initPencilTool():
 	from tools import pencil
 	return pencil.Pencil()
 	
-
 def initProxy():
 	# Create proximity manager
 	proxyManager = vizproximity.Manager()
@@ -613,7 +612,7 @@ def addOrder():
 	setattr(newOrder, 'quantity', int(_quantity))
 	
 	#Check for existing order
-	append = Trues
+	append = True
 	if len(orders) < 1:
 		orders.append(newOrder)
 		append = False
