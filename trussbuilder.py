@@ -10,7 +10,7 @@ Specify truss member dimensions and order materials required to build a 20m-long
 3. Interact with floating menus using the VIRTUAL MOUSE
 4. Extend or retract virtual hand with MOUSE SCROLL WHEEL
 5. Grab and hold onto truss members by LEFT MOUSE CLICK when highlighted green
-6. Adjust truss angle by RIGHT MOUSE CLICK while highlighting truss member
+6. Adjust truss ang le by RIGHT MOUSE CLICK while highlighting truss member
 7. Toggle utilities with MIDDLE MOUSE CLICK
 8. Toggle main menu with SPACE BAR
 9. Grab and release main menu with LEFT CONTROL KEY
