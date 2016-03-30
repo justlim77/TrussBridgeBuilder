@@ -660,6 +660,12 @@ def deleteOrder(orderTab,orderList,row,order):
 	orderTab.removeRow(row)
 	orderList.remove(order)
 
+# Create inventory panel
+inventoryCanvas = viz.addGUICanvas(align=viz.ALIGN_CENTER_TOP)
+def createInventory(topList,sideList,botList):
+	
+	pass
+
 def createTruss(order=Order(),path=''):
 	truss = viz.addChild(path,cache=viz.CACHE_COPY)
 	truss.order = order
