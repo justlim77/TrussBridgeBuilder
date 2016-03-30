@@ -30,7 +30,7 @@ import viztask
 
 import mathlite
 import oculuslite
-import projector
+import panels
 import sys
 import themes
 import tools
@@ -62,6 +62,16 @@ QTY_MAX = 20
 
 GRIDS = []
 ENVIRONMENTS = []
+
+# Setup inventory lists
+ORDERS = []
+ORDERS_SIDE = []
+ORDERS_TOP = []
+ORDERS_BOTTOM = []
+ROWS = []
+ORDERS_SIDE_ROWS = []
+ORDERS_TOP_ROWS = []
+ORDERS_BOTTOM_ROWS = []
 
 INVENTORY = []
 BUILD_MEMBERS = []
@@ -420,42 +430,44 @@ quantitySlider.set(qtyProgressPos)
 #quantity = orderPanel.addLabelItem('Quantity', quantityTextbox)
 quantity = orderPanel.addLabelItem('Quantity', quantitySlider)
 
-# Initialize orderButton
-orderButton = orderPanel.addItem(viz.addButtonLabel('ADD'),align=viz.ALIGN_CENTER_BOTTOM)
+# Initialize ordering buttons
+orderSideButton = orderPanel.addItem(viz.addButtonLabel('ADD TO SIDE'),align=viz.ALIGN_CENTER_BOTTOM)
+orderTopButton = orderPanel.addItem(viz.addButtonLabel('ADD TO TOP'),align=viz.ALIGN_CENTER_BOTTOM)
+orderBottomButton = orderPanel.addItem(viz.addButtonLabel('ADD TO BOTTOM'),align=viz.ALIGN_CENTER_BOTTOM)
 
 # Initialize stockPanel
-stockPanel = midRow.addItem(vizinfo.InfoPanel('Ordered truss members',align=None,margin=(0,0),icon=False),align=viz.ALIGN_RIGHT_TOP)
-stockPanel.setTitle( 'Stock' )
-stockPanel.getTitleBar().fontSize(28)
-stockPanel.addSeparator()
-# Initialize stockGrid
-stockGrid = vizdlg.GridPanel(cellAlign=vizdlg.ALIGN_CENTER_TOP,border=False,spacing=0,padding=1,background=False,margin=0)
-diameterLabel = viz.addButtonLabel('d (mm)')
-thicknessLabel = viz.addButtonLabel('t (mm)')
-lengthLabel = viz.addButtonLabel('l (m)')
-quantityLabel = viz.addButtonLabel('qty')
-deleteLabel = viz.addButtonLabel('')
-headerRow = stockGrid.addRow([diameterLabel,thicknessLabel,lengthLabel,quantityLabel,deleteLabel])
-stockPanel.addItem(stockGrid)
+stockMainPanel = vizinfo.InfoPanel('Ordered truss members',align=None,margin=(0,0),icon=False)
+stockMainPanel.setTitle( 'Stock' )
+stockMainPanel.getTitleBar().fontSize(28)
+stockMainPanel.addSeparator()
+
+# Initialize side order tab
+stockPanel = vizdlg.TabPanel()
+
+# Side orders inventory
+stockSideGrid = panels.CreateLabelledPanel()
+stockPanel.addPanel('Side',stockSideGrid)
+
+# Top orders inventory
+stockTopGrid = panels.CreateLabelledPanel()
+stockPanel.addPanel('Top',stockTopGrid)
+
+# Bottom orders inventory
+stockBottomGrid = panels.CreateLabelledPanel()
+stockPanel.addPanel('Bottom',stockBottomGrid)
+
+stockMainPanel.addItem(stockPanel)
+midRow.addItem(stockMainPanel,align=viz.ALIGN_LEFT_TOP)
 doneButton = stockPanel.addItem(viz.addButtonLabel('DONE'),align=viz.ALIGN_CENTER_TOP)
 
-#inventoryPanel.addItem(mainRow)
+# Add mid row to inventory main panel
 inventoryPanel.addItem(midRow)
 
 # Create floating inspector panel
 inspectorCanvas = viz.addGUICanvas(align=viz.ALIGN_LEFT_CENTER)
-statsPanel = vizinfo.InfoPanel(title='Inspector',text=None,parent=inspectorCanvas,align=viz.ALIGN_CENTER_BASE,icon=False)
-statsPanel.getTitleBar().fontSize(16)
-diameter_stat = viz.addText('d (mm)')
-statsPanel.addItem(diameter_stat)
-thickness_stat = viz.addText('t (mm)')
-statsPanel.addItem(thickness_stat)
-length_stat = viz.addText('l (m)')
-statsPanel.addItem(length_stat)
-#quantity_stat = viz.addText('qty')
-#statsPanel.addItem(quantity_stat)
-rotation_stat = viz.addText('angle')
-statsPanel.addItem(rotation_stat)
+inspector = panels.InspectorPanel()
+statPanel = inspector.GetPanel()
+statPanel.setParent(inspectorCanvas)
 # Link inspector canvas with main view
 inspectorLink = viz.link(viz.MainView, inspectorCanvas)
 #inspectorLink.preMultLinkable(viz.MainView)
@@ -553,23 +565,15 @@ def initCanvas():
 	rotationCanvas.visible(viz.OFF)
 	updateMouseStyle(rotationCanvas)
 initCanvas()
-
-# Setup inventory lists
-orders = []
-orders_side = []
-orders_top = []
-orders_bottom = []
-rows = []
 		
 def inspectMember(obj):
-	diameter_stat.message('d (mm): ' + str(obj.diameter))
-	thickness_stat.message('t (mm): ' + str(obj.thickness))
-	length_stat.message('l (m): ' + str(obj.length))
-#	quantity_stat.message('qty: ' + str(obj.quantity))
-	rotation_stat.message('angle: ' + str(obj.getEuler()[2]))
+	inspector.diameter_stat.message('d (mm): ' + str(obj.diameter))
+	inspector.thickness_stat.message('t (mm): ' + str(obj.thickness))
+	inspector.length_stat.message('l (m): ' + str(obj.length))
+	inspector.rotation_stat.message('angle: ' + str(obj.getEuler()[2]))
 
 class Order(object):
-	'Base class for all orders'
+	'Base class for all ORDERS'
 	orderCount = 0
 	
 	def __init__(self,type='CHS',diameter=508,thickness=16,length=4,quantity=1):
@@ -590,18 +594,16 @@ class Order(object):
 		return Order(self.type,self.diameter,self.thickness,self.length,self.quantity+other.quantity)
 		
 	def displayCount(self):
-		print "Total Orders %d" % Order.orderCount
+		print "Total ORDERS %d" % Order.orderCount
 		
 	def displayOrder(self):
 		print "Type: ", self.type, ", Diameter: ", self.diameter, ", Thickness: ", self.thickness, " Length: ", self.length, " Quantity: ", self.quantity
 		
 		
-def addOrder():
+def addOrder(orderTab=None,orderList=None,orderRow=None):
 	"""
 	adds new truss member order
-	"""
-	global orders
-	
+	"""	
 	newOrder = Order()
 
 	_length = viz.clamp(float(lengthTextbox.get()),0.1,20)
@@ -616,11 +618,11 @@ def addOrder():
 	
 	#Check for existing order
 	append = True
-	if len(orders) < 1:
-		orders.append(newOrder)
+	if len(orderList) < 1:
+		orderList.append(newOrder)
 		append = False
 	else:	
-		for order in orders:
+		for order in orderList:
 			_d = order.diameter
 			_t = order.thickness
 			_l = order.length
@@ -633,33 +635,30 @@ def addOrder():
 				append = False
 	
 	if append == True:	
-		orders.append(newOrder)
+		orderList.append(newOrder)
 	
 	#Clear grid
-	for row in rows:
-		stockGrid.removeRow(row)
+	for row in orderRow:
+		orderTab.removeRow(row)
 	
 	#Sort by lowest to highest
 	from operator import itemgetter, attrgetter, methodcaller
-	orders = sorted(orders, key=attrgetter('diameter', 'thickness', 'length'))
+	_orders = sorted(orderList, key=attrgetter('diameter', 'thickness', 'length'))
 	
-	#Populate grid with orders in order list
-	for sortOrder in orders:
+	#Populate grid with ORDERS in order list
+	for sortOrder in _orders:
 		__d = viz.addText(str(sortOrder.diameter))
 		__t = viz.addText(str(sortOrder.thickness))
 		__l = viz.addText(str(sortOrder.length))
 		__q = viz.addText(str(sortOrder.quantity))
 		deleteButton = viz.addButtonLabel('X')
-		_row = stockGrid.addRow([__d,__t,__l,__q,deleteButton])
-		vizact.onbuttonup(deleteButton,deleteOrder,_row,sortOrder)
-		rows.append(_row)
+		_row = orderTab.addRow([__d,__t,__l,__q,deleteButton])
+		vizact.onbuttonup(deleteButton,deleteOrder,orderTab,orderList,_row,sortOrder)
+		orderRow.append(_row)
 
-def deleteOrder(row,order):
-	global orders
-	global rows
-	
-	stockGrid.removeRow(row)
-	orders.remove(order)
+def deleteOrder(orderTab,orderList,row,order):	
+	orderTab.removeRow(row)
+	orderList.remove(order)
 
 def createTruss(order=Order(),path=''):
 	truss = viz.addChild(path,cache=viz.CACHE_COPY)
@@ -706,14 +705,14 @@ def generateMembers(loading=False):
 	global BUILD_MEMBERS
 	global grabberTool
 	global highlightTool
-	global orders
-	global rows
+	global ORDERS
+	global ROWS
 	global proxyManager
 	
-	#Clear order rows
-	for row in rows:
-		stockGrid.removeRow(row)
-	rows = []
+	#Clear order ROWS
+	for row in ROWS:
+		stockSideGrid.removeRow(row)
+	ROWS = []
 	
 	# Clear current inventory
 	for item in INVENTORY:
@@ -731,7 +730,7 @@ def generateMembers(loading=False):
 	
 #	clearMembers()
 	
-	for i, order in enumerate(orders):
+	for i, order in enumerate(ORDERS):
 		trussMember = createTruss(order,'resources/CHS.osgb')
 		trussMember.order = order
 		trussMember.setEuler([0,0,0])
@@ -762,8 +761,8 @@ def generateMembers(loading=False):
 		listItem.apply(lightEffect)		
 	highlightTool.setItems(mergedList)
 	
-	# Clear orders
-	orders = []
+	# Clear ORDERS
+	ORDERS = []
 	
 
 def diameterListChanged(e,sound=True):
@@ -951,7 +950,8 @@ def onHighlight(e):
 		# Inspect stats
 		inspectMember(e.new)
 		if isgrabbing == False:
-			print 'Ready to grab truss of length:', e.new.length
+#			print 'Ready to grab truss of length:', e.new.length
+			pass
 		highlightedItem = e.new
 from tools import highlighter
 viz.callback(highlighter.HIGHLIGHT_EVENT,onHighlight)
@@ -1199,7 +1199,7 @@ def SaveData(filePath,sound=True):
 # Loads build members' truss dimensions, position, rotation from './data/bridge#.csv'					
 def LoadData(filePath,sound=True):
 	global BUILD_MEMBERS
-	global orders
+	global ORDERS
 	global highlightTool
 	
 	if sound:
@@ -1211,14 +1211,14 @@ def LoadData(filePath,sound=True):
 		del member
 	BUILD_MEMBERS = []
 	
-	orders = []
+	ORDERS = []
 	with open(filePath,'rb') as f:
 		reader = csv.reader(f)
 		for row in reader:
 			 order = Order(diameter=float(row[0]),thickness=float(row[1]),length=float(row[2]),quantity=int(row[3]))
 			 order.pos = ( [float(row[4]), float(row[5]), float(row[6])] )
 			 order.euler = ( [float(row[7]), float(row[8]), float(row[9])] )
-			 orders.append(order)
+			 ORDERS.append(order)
 	
 	clearMembers()
 	generateMembers(loading=True)
@@ -1235,8 +1235,12 @@ viz.callback ( viz.MOUSEDOWN_EVENT, onMouseDown )
 viz.callback ( viz.SLIDER_EVENT, onSlider )
 
 # Button callbacks
-vizact.onbuttonup ( orderButton, addOrder )
-vizact.onbuttonup ( orderButton, clickSound.play )
+vizact.onbuttonup ( orderSideButton, addOrder,stockSideGrid,ORDERS_SIDE,ORDERS_SIDE_ROWS )
+vizact.onbuttonup ( orderSideButton, clickSound.play )
+vizact.onbuttonup ( orderTopButton, addOrder,stockTopGrid,ORDERS_TOP,ORDERS_TOP_ROWS )
+vizact.onbuttonup ( orderTopButton, clickSound.play )
+vizact.onbuttonup ( orderBottomButton, addOrder,stockBottomGrid,ORDERS_BOTTOM,ORDERS_BOTTOM_ROWS )
+vizact.onbuttonup ( orderBottomButton, clickSound.play )
 vizact.onbuttonup ( doneButton, generateMembers )
 vizact.onbuttonup ( doneButton, clickSound.play )
 vizact.onkeydown ( KEYS['snapMenu'], toggleMenuLink )
@@ -1275,7 +1279,7 @@ if QUICK_TEST == True:
 	order12 = Order(thickness=27,quantity=1)
 	order13 = Order(thickness=28,quantity=1)
 	order14 = Order(thickness=29,quantity=1)
-	orders = ( [order1,order2,order3,order4,order5,order6,order7,
+	ORDERS = ( [order1,order2,order3,order4,order5,order6,order7,
 				order8,order9,order10,order11,order12,order13,order14] )
 	generateMembers()
-	orders = []
+	ORDERS = []
