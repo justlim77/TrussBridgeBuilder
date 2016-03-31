@@ -91,7 +91,7 @@ SCROLL_MAX = 20
 
 DEBUG_PROXIMITY = True
 DEBUG_CAMBOUNDS = False
-QUICK_TEST = True
+QUICK_TEST = False
 
 SAVE_FILES = [	 './data/bridge1.csv'
 				,'./data/bridge2.csv'
@@ -161,6 +161,7 @@ def initViewport(position):
 	vp.add(vizconnect.getDisplay())
 	return vp
 	
+	
 def initLighting():
 	# Disable the head lamps since we're doing lighting ourselves
 	for window in viz.getWindowList():
@@ -180,6 +181,7 @@ def initHandGrabber():
 	return grabber.Grabber(	usingPhysics=usingPhysics,
 							usingSprings=usingPhysics,
 							highlightMode=highlighter.MODE_RIM)
+
 
 # Laser pointer
 def initPointerTool():
@@ -307,10 +309,12 @@ def initGrid():
 	GRIDS.append(height_text)
 initGrid()
 
+
 # Parse catalogue from data subdirectory
 def getCatalogue(path):
 	return ET.parse(str(path)).getroot()
 root = getCatalogue('data/catalogue_CHS.xml')
+
 
 def updateMouseStyle(canvas):
 	"""Update mouse style based on current options"""
@@ -663,8 +667,32 @@ def deleteOrder(orderTab,orderList,row,order):
 # Create inventory panel
 inventoryCanvas = viz.addGUICanvas(align=viz.ALIGN_CENTER_TOP)
 def createInventory(topList,sideList,botList):
+	# Initialize truss tab
+	tabbedPanel = vizdlg.TabPanel(align=viz.ALIGN_CENTER_TOP,parent=inventoryCanvas)
+
+	# Side truss inventory
+	topInventory = panels.CreateLabelledPanel()
+	tabbedPanel.addPanel('Top',topInventory)
+
+	# Top truss inventory
+	sideInventory = panels.CreateLabelledPanel()
+	tabbedPanel.addPanel('Side',sideInventory)
+
+	# Bottom truss inventory
+	bottomInventory = panels.CreateLabelledPanel()
+	tabbedPanel.addPanel('Bottom',bottomInventory)
+
+	inventoryCanvas.setRenderWorld([400,200],[1,viz.AUTO_COMPUTE])
+	updateMouseStyle(inventoryCanvas)
+	# Link rotation canvas with main view
+	inventoryLink = viz.link(viz.MainView,inventoryCanvas)
+	inventoryLink.preEuler( [0,30,0] )
+	inventoryLink.preTrans( [0,0,1] )
+	
+	# Add truss members
 	
 	pass
+createInventory(ORDERS_TOP,ORDERS_SIDE,ORDERS_BOTTOM)
 
 def createTruss(order=Order(),path=''):
 	truss = viz.addChild(path,cache=viz.CACHE_COPY)
