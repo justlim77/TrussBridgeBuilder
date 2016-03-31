@@ -128,9 +128,11 @@ def initScene(res=([1280,720]),quality=4,stencil=8,stereoMode=viz.STEREO_HORZ,fu
 	darkTheme = themes.getDarkTheme()
 	viz.setTheme(darkTheme)	
 
+
 def initCamera(configPath):
 	nav = vizconnect.go(configPath)
 	return nav
+
 
 def initOculus():
 	# Reset view
@@ -154,6 +156,7 @@ def initOculus():
 					camera_bounds.color(viz.RED)
 			vizact.onupdate(0, CheckPositionTracked)
 	return hmd
+	
 			
 def initViewport(position):
 	# Add a viewpoint so the user starts at the specified position
@@ -188,13 +191,16 @@ def initPointerTool():
 	from tools import laser_pointer
 	return laser_pointer.LaserPointer()
 	
+	
 def initHighlightTool():
 	from tools import highlighter
 	return highlighter.Highlighter()
 	
+	
 def initPencilTool():
 	from tools import pencil
 	return pencil.Pencil()
+	
 	
 def initProxy():
 	# Create proximity manager
@@ -219,6 +225,7 @@ def initProxy():
 	proxyManager.onExit(None, exitProximity)
 	
 	return proxyManager
+
 
 # Initialize
 initScene(RESOLUTION,MULTISAMPLING,STENCIL,STEREOMODE,FULLSCREEN,CLEAR_COLOR)
@@ -321,6 +328,7 @@ def updateMouseStyle(canvas):
 	if canvas.getRenderMode() in [viz.CANVAS_WORLD,viz.CANVAS_WORLD_OVERLAY]:
 		canvas.setMouseStyle(viz.CANVAS_MOUSE_VIRTUAL)
 #		canvas.setMouseStyle(viz.CANVAS_MOUSE_VISIBLE)
+
 
 # Add environment effects
 env = viz.addEnvironmentMap('sky.jpg')
@@ -462,10 +470,14 @@ stockPanel.addPanel('Bottom',stockBottomGrid)
 
 stockMainPanel.addItem(stockPanel)
 midRow.addItem(stockMainPanel,align=viz.ALIGN_LEFT_TOP)
-doneButton = stockPanel.addItem(viz.addButtonLabel('DONE'),align=viz.ALIGN_CENTER_TOP)
 
 # Add mid row to inventory main panel
 inventoryPanel.addItem(midRow)
+
+bottomRow = vizdlg.Panel(layout=vizdlg.LAYOUT_HORZ_CENTER,align=viz.ALIGN_CENTER_TOP,border=False,background=False,spacing=20)
+doneButton = bottomRow.addItem(viz.addButtonLabel('DONE'),align=viz.ALIGN_CENTER_TOP)
+doneButton.length(2)
+inventoryPanel.addItem(bottomRow)
 
 # Create floating inspector panel
 inspectorCanvas = viz.addGUICanvas(align=viz.ALIGN_LEFT_CENTER)
@@ -570,11 +582,13 @@ def initCanvas():
 	updateMouseStyle(rotationCanvas)
 initCanvas()
 		
+		
 def inspectMember(obj):
 	inspector.diameter_stat.message('d (mm): ' + str(obj.diameter))
 	inspector.thickness_stat.message('t (mm): ' + str(obj.thickness))
 	inspector.length_stat.message('l (m): ' + str(obj.length))
 	inspector.rotation_stat.message('angle: ' + str(obj.getEuler()[2]))
+
 
 class Order(object):
 	'Base class for all ORDERS'
@@ -660,9 +674,11 @@ def addOrder(orderTab=None,orderList=None,orderRow=None):
 		vizact.onbuttonup(deleteButton,deleteOrder,orderTab,orderList,_row,sortOrder)
 		orderRow.append(_row)
 
+
 def deleteOrder(orderTab,orderList,row,order):	
 	orderTab.removeRow(row)
 	orderList.remove(order)
+
 
 # Create inventory panel
 inventoryCanvas = viz.addGUICanvas(align=viz.ALIGN_CENTER_TOP)
@@ -670,11 +686,11 @@ def createInventory(topList,sideList,botList):
 	# Initialize truss tab
 	tabbedPanel = vizdlg.TabPanel(align=viz.ALIGN_CENTER_TOP,parent=inventoryCanvas)
 
-	# Side truss inventory
+	# Top truss inventory
 	topInventory = panels.CreateLabelledPanel()
 	tabbedPanel.addPanel('Top',topInventory)
 
-	# Top truss inventory
+	# Side truss inventory
 	sideInventory = panels.CreateLabelledPanel()
 	tabbedPanel.addPanel('Side',sideInventory)
 
@@ -689,10 +705,13 @@ def createInventory(topList,sideList,botList):
 	inventoryLink.preEuler( [0,30,0] )
 	inventoryLink.preTrans( [0,0,1] )
 	
+	def clearInventory():
+		pass
 	# Add truss members
 	
 	pass
 createInventory(ORDERS_TOP,ORDERS_SIDE,ORDERS_BOTTOM)
+
 
 def createTruss(order=Order(),path=''):
 	truss = viz.addChild(path,cache=viz.CACHE_COPY)
@@ -840,10 +859,12 @@ def clearMembers():
 	
 	# Add glove grabberTool back to proximity targets
 	proxyManager.addTarget(proxTarget)
+
 	
 def toggleEnvironment(value=viz.TOGGLE):
 	for environment in ENVIRONMENTS:
 		environment.visible(value)
+
 			
 def toggleUtility(sound=True):
 	utilityCanvas.visible(viz.TOGGLE)
@@ -854,6 +875,7 @@ def toggleUtility(sound=True):
 			hideMenuSound.play()
 		else:
 			showMenuSound.play()
+
 	
 #Link the grabber to an arrow in order to
 #visualize it's position
@@ -863,6 +885,7 @@ def initTracker(distance=0.5):
 	tracker.distance = distance
 	return tracker
 mouseTracker = initTracker(HAND_DISTANCE)
+
 
 def initLink(modelPath):
 	model = viz.addChild(modelPath)
@@ -874,6 +897,7 @@ viz.link(gloveLink,grabberTool)
 viz.link(gloveLink,highlightTool)
 viz.link(gloveLink,laserTool)
 viz.link(gloveLink,pencilTool)
+
 
 def clampTrackerScroll(tracker,min=0.2,max=20):
 	tracker.distance = viz.clamp(tracker.distance,min,max)
@@ -901,6 +925,7 @@ def toggleMenuLink():
 		
 def toggleCollision():
 	viz.collision(viz.TOGGLE)
+
 
 # Disable mouse navigation and hide the mouse curser
 viz.mouse(viz.OFF)
@@ -976,6 +1001,7 @@ def updateHighlightTool(highlightTool):
 		
 highlightTool.setUpdateFunction(updateHighlightTool)
 
+
 #Register a callback function for the highlight event
 def onHighlight(e):
 	global isgrabbing
@@ -989,6 +1015,7 @@ def onHighlight(e):
 		highlightedItem = e.new
 from tools import highlighter
 viz.callback(highlighter.HIGHLIGHT_EVENT,onHighlight)
+
 
 def onHighlightGrab():
 	""" Clamp grabbed member to front glove position and grid z """
@@ -1004,12 +1031,14 @@ def onHighlightGrab():
 #		grabbedItem.setEuler( grabbedRotation )
 vizact.ontimer(0,onHighlightGrab)
 
+
 # update code for laser pointer
 def updateLaserPointer(pointerTool):
 	state = viz.mouse.getState()
 	if state & viz. MOUSEBUTTON_LEFT:
 		pointerTool.shoot()
 #laserTool.setUpdateFunction(updateLaserPointer)
+
 
 from tools import grabber
 def onGrab(e):
@@ -1034,6 +1063,7 @@ def onGrab(e):
 	
 	SNAP_TO_POS = grabbedItem.getPosition()
 #viz.callback(grabber.GRAB_EVENT,onGrab)
+
 
 def onRelease(e=None,sound=True):
 	global INVENTORY
@@ -1102,12 +1132,14 @@ def onRelease(e=None,sound=True):
 	SNAP_TO_POS = []
 viz.callback(grabber.RELEASE_EVENT,onRelease)
 
+
 def updateAngle(obj,slider,label):
 	rot = obj.getEuler()
 	pos = mathlite.getNewRange(rot[2],90,-90,0,1)
 	slider.set(pos)
 	string = str(int(rot[2]))
 	label.message(string)
+
 
 def rotateTruss(origin,obj,slider,label):	
 	if objToRotate != None:
@@ -1169,6 +1201,7 @@ def onKeyUp(key,sound=True):
 		clickSound.play()
 	elif key == 'l':
 		viz.link(cameraFly,viz.MainView)
+
 		
 def onMouseUp(button):	
 	global isgrabbing
@@ -1195,11 +1228,13 @@ def onMouseUp(button):
 	if button == KEYS['utility']:
 		toggleUtility()
 
+
 def onMouseDown(button):
 	global objToRotate
 	if button == KEYS['rotate']:
 		if objToRotate != None:
 			rotationSlider.visible(True)
+
 
 def onSlider(obj,pos):
 	global objToRotate
@@ -1215,6 +1250,7 @@ def onSlider(obj,pos):
 		displayedQty = int(mathlite.getNewRange(pos,0.0,1.0,QTY_MIN,QTY_MAX))
 		quantitySlider.message(str(displayedQty))
 
+
 import csv
 # Saves current build members' truss dimensions, position, rotation to './data/bridge#.csv'
 def SaveData(filePath,sound=True):
@@ -1229,6 +1265,7 @@ def SaveData(filePath,sound=True):
 			writer.writerow([str(truss.order.diameter),str(truss.order.thickness),str(truss.order.length),str(truss.order.quantity),
 							str(truss.getPosition()[0]), str(truss.getPosition()[1]),str(truss.getPosition()[2]),
 							str(truss.getEuler()[0]),str(truss.getEuler()[1]),str(truss.getEuler()[2])])
+	
 		
 # Loads build members' truss dimensions, position, rotation from './data/bridge#.csv'					
 def LoadData(filePath,sound=True):
