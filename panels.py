@@ -12,6 +12,10 @@ def CreateLabelledPanel():
 	headerRow = panel.addRow([diameterLabel,thicknessLabel,lengthLabel,quantityLabel,deleteLabel])
 	return panel
 	
+def CreateInventoryPanel():
+	panel = vizdlg.GridPanel(cellAlign=vizdlg.ALIGN_CENTER_TOP,border=False,spacing=0,padding=1,background=False,margin=0)
+	return panel
+	
 class InspectorPanel(vizinfo.InfoPanel):
 	def __init__(self):
 		self.statsPanel = vizinfo.InfoPanel(title='Inspector',text=None,align=viz.ALIGN_CENTER_BASE,icon=False)
