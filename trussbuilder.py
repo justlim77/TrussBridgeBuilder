@@ -680,26 +680,40 @@ def deleteOrder(orderTab,orderList,row,order):
 	orderList.remove(order)
 
 
-# Create inventory panel
-inventoryCanvas = viz.addGUICanvas(align=viz.ALIGN_CENTER_TOP)
-def createInventory(topList,sideList,botList):
-	# Initialize truss tab
+def createInventory():
+#	Create inventory panel
+	global inventoryCanvas
+	inventoryCanvas = viz.addGUICanvas(align=viz.ALIGN_CENTER_TOP)
+	
+	global tabbedPanel
 	tabbedPanel = vizdlg.TabPanel(align=viz.ALIGN_CENTER_TOP,layout=vizdlg.LAYOUT_VERT_LEFT,parent=inventoryCanvas)
 
-	# Top truss inventory
-	topInventory = panels.CreateLabelledPanel()
-	topInventory.layout = vizdlg.LAYOUT_VERT_LEFT
-	tabbedPanel.addPanel('Top',topInventory)
-
 	# Side truss inventory
-	sideInventory = panels.CreateLabelledPanel()
+	global sideInventory
+	sideInventory = vizdlg.GridPanel(cellAlign=vizdlg.ALIGN_CENTER_TOP,border=False,spacing=0,padding=1,background=False,margin=0)
 	sideInventory.layout = vizdlg.LAYOUT_VERT_LEFT
 	tabbedPanel.addPanel('Side',sideInventory)
 
+	global sideRows
+	sideRows = []
+	
+	# Top truss inventory
+	global topInventory
+	topInventory = vizdlg.GridPanel(cellAlign=vizdlg.ALIGN_CENTER_TOP,border=False,spacing=0,padding=1,background=False,margin=0)
+	topInventory.layout = vizdlg.LAYOUT_VERT_LEFT
+	tabbedPanel.addPanel('Top',topInventory)
+	
+	global topRows
+	topRows = []
+	
 	# Bottom truss inventory
-	bottomInventory = panels.CreateLabelledPanel()
+	global bottomInventory
+	bottomInventory = vizdlg.GridPanel(cellAlign=vizdlg.ALIGN_CENTER_TOP,border=False,spacing=0,padding=1,background=False,margin=0)
 	bottomInventory.layout = vizdlg.LAYOUT_VERT_LEFT
 	tabbedPanel.addPanel('Bottom',bottomInventory)
+
+	global bottomRows
+	bottomRows = []
 
 	inventoryCanvas.setRenderWorld([400,200],[1,viz.AUTO_COMPUTE])
 	updateMouseStyle(inventoryCanvas)
@@ -707,29 +721,45 @@ def createInventory(topList,sideList,botList):
 	inventoryLink = viz.link(viz.MainView,inventoryCanvas)
 	inventoryLink.preEuler( [0,30,0] )
 	inventoryLink.preTrans( [0,0,1] )
+createInventory()
+
+def clearInventory():
+	global sideRows
+	global topRows
+	global bottomRows
+	for row in sideRows:
+		sideInventory.removeRow(row)
+	for row in topRows:
+		topInventory.removeRow(row)
+	for row in bottomRows:
+		bottomInventory.removeRow(row)
+		
+	sideRows = []
+	topRows = []
+	bottomRows = []
+
+def populateInventory(sideList,topList,botList):
+	clearInventory()
 	
 	# Generate truss buttons based on respective lists
+	for sideOrder in sideList:
+		msg = '{}mm(d) x {}mm(th) x {}m(l) [{}]'.format(sideOrder.diameter, sideOrder.thickness, sideOrder.length, sideOrder.quantity)
+		sideButton = viz.addButtonLabel(msg)
+		vizact.onbuttonup( sideButton,createTruss,sideOrder,'resources/CHS.osgb' )
+		row = sideInventory.addRow([sideButton])
+		sideRows.append(row)
 	for topOrder in topList:
 		msg = '{}mm(d) x {}mm(th) x {}m(l) [{}]'.format(topOrder.diameter, topOrder.thickness, topOrder.length, topOrder.quantity)
 		topButton = viz.addButtonLabel(msg)
 		vizact.onbuttonup( topButton,createTruss,topOrder,'resources/CHS.osgb' )
-		topInventory.addItem(topButton)
-	for sideOrder in sideList:
-		msg = '{}mm(d) x {}mm(th) x {}m(l) [{}]'.format(sideOrder.diameter, sideOrder.thickness, sideOrder.length, sideOrder.quantity)
-		sideButton = viz.addButtonLabel(msg)
-		vizact.onbuttonup( sideButton,createTruss,topOrder,'resources/CHS.osgb' )
-		sideInventory.addItem(sideButton)
+		row = topInventory.addRow([topButton])
+		topRows.append(row)
 	for botOrder in botList:
 		msg = '{}mm(d) x {}mm(th) x {}m(l) [{}]'.format(botOrder.diameter, botOrder.thickness, botOrder.length, botOrder.quantity)
 		botButton = viz.addButtonLabel(msg)
-		vizact.onbuttonup( botButton,createTruss,topOrder,'resources/CHS.osgb' )
-		bottomInventory.addItem(botButton)
-	def clearInventory():
-		pass
-	# Add truss members
-	
-	pass
-#createInventory(ORDERS_TOP,ORDERS_SIDE,ORDERS_BOTTOM)
+		vizact.onbuttonup( botButton,createTruss,botOrder,'resources/CHS.osgb' )
+		row = bottomInventory.addRow([botButton])
+		bottomRows.append(row)
 
 
 def createTruss(order=Order(),path=''):
@@ -1332,7 +1362,7 @@ vizact.onbuttonup ( orderTopButton, clickSound.play )
 vizact.onbuttonup ( orderBottomButton, addOrder,stockBottomGrid,ORDERS_BOTTOM,ORDERS_BOTTOM_ROWS )
 vizact.onbuttonup ( orderBottomButton, clickSound.play )
 #vizact.onbuttonup ( doneButton, generateMembers )
-vizact.onbuttonup ( doneButton, createInventory, ORDERS_TOP, ORDERS_SIDE, ORDERS_BOTTOM )
+vizact.onbuttonup ( doneButton, populateInventory, ORDERS_SIDE, ORDERS_TOP, ORDERS_BOTTOM )
 vizact.onbuttonup ( doneButton, clickSound.play )
 vizact.onkeydown ( KEYS['snapMenu'], toggleMenuLink )
 vizact.onlist( diameterDropList, diameterListChanged )
