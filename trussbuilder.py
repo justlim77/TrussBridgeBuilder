@@ -745,19 +745,19 @@ def populateInventory(sideList,topList,botList):
 	for sideOrder in sideList:
 		msg = '{}mm(d) x {}mm(th) x {}m(l) [{}]'.format(sideOrder.diameter, sideOrder.thickness, sideOrder.length, sideOrder.quantity)
 		sideButton = viz.addButtonLabel(msg)
-		vizact.onbuttonup( sideButton,createTruss,sideOrder,'resources/CHS.osgb' )
+		vizact.onbuttonup( sideButton,createTrussNew,sideOrder,'resources/CHS.osgb' )
 		row = sideInventory.addRow([sideButton])
 		sideRows.append(row)
 	for topOrder in topList:
 		msg = '{}mm(d) x {}mm(th) x {}m(l) [{}]'.format(topOrder.diameter, topOrder.thickness, topOrder.length, topOrder.quantity)
 		topButton = viz.addButtonLabel(msg)
-		vizact.onbuttonup( topButton,createTruss,topOrder,'resources/CHS.osgb' )
+		vizact.onbuttonup( topButton,createTrussNew,topOrder,'resources/CHS.osgb' )
 		row = topInventory.addRow([topButton])
 		topRows.append(row)
 	for botOrder in botList:
 		msg = '{}mm(d) x {}mm(th) x {}m(l) [{}]'.format(botOrder.diameter, botOrder.thickness, botOrder.length, botOrder.quantity)
 		botButton = viz.addButtonLabel(msg)
-		vizact.onbuttonup( botButton,createTruss,botOrder,'resources/CHS.osgb' )
+		vizact.onbuttonup( botButton,createTrussNew,botOrder,'resources/CHS.osgb' )
 		row = bottomInventory.addRow([botButton])
 		bottomRows.append(row)
 
@@ -800,6 +800,82 @@ def createTruss(order=Order(),path=''):
 	
 	return truss
 
+def createTrussNew(order=Order(),path=''):
+	truss = viz.addChild(path,cache=viz.CACHE_COPY)
+	truss.order = order
+	truss.diameter = float(order.diameter)
+	truss.thickness = float(order.thickness)
+	truss.length = float(order.length)
+	truss.quantity = int(order.quantity)
+	
+	truss.setScale([truss.length,truss.diameter/1000,truss.diameter/1000])	
+
+	posA = truss.getPosition()
+	posA[0] -= truss.length / 2
+	nodeA = vizshape.addSphere(0.2,pos=posA)
+	nodeA.disable(viz.PICKING)
+	nodeA.visible(False)
+	viz.grab(truss,nodeA)
+	
+	posB = truss.getPosition()
+	posB[0] += truss.length / 2
+	nodeB = vizshape.addSphere(0.2,pos=posB)
+	nodeB.disable(viz.PICKING)
+	nodeB.visible(False)
+	viz.grab(truss,nodeB)
+	
+	truss.proxyNodes = [nodeA,nodeB]
+	
+	targetA = vizproximity.Target(truss.proxyNodes[0])
+	targetB = vizproximity.Target(truss.proxyNodes[1])	
+	truss.targetNodes = [targetA,targetB]
+	
+	sensorA =  vizproximity.addBoundingSphereSensor(truss.proxyNodes[0])
+	sensorB =  vizproximity.addBoundingSphereSensor(truss.proxyNodes[1])	
+	truss.sensorNodes = [sensorA,sensorB]
+	
+	global INVENTORY
+	global BUILD_MEMBERS
+	global highlightTool
+	global proxyManager
+	global PROXY_NODES
+	global TARGET_NODES
+	global SENSOR_NODES
+	
+	global PRE_SNAP_POS	
+	global PRE_SNAP_ROT
+	global SNAP_TO_POS
+	PRE_SNAP_POS = truss.getPosition()
+	PRE_SNAP_ROT = truss.getEuler()
+	
+	
+	PROXY_NODES.append(truss.proxyNodes[0])
+	PROXY_NODES.append(truss.proxyNodes[1])
+	TARGET_NODES.append(truss.targetNodes[0])
+	TARGET_NODES.append(truss.targetNodes[1])
+	SENSOR_NODES.append(truss.sensorNodes[0])
+	SENSOR_NODES.append(truss.sensorNodes[1])
+	
+	proxyManager.addSensor(truss.sensorNodes[0])
+	proxyManager.addSensor(truss.sensorNodes[1])
+
+	BUILD_MEMBERS.append(truss)
+		
+	# Merge lists
+	mergedList = BUILD_MEMBERS + INVENTORY
+	for listItem in mergedList:
+		listItem.texture(env)
+		listItem.appearance(viz.ENVIRONMENT_MAP)
+		listItem.apply(effect)
+		listItem.apply(lightEffect)		
+	highlightTool.setItems(mergedList)
+	
+	global grabbedItem
+	grabbedItem = truss
+	global isgrabbing
+	isgrabbing = True
+	
+	return truss
 
 def generateMembers(loading=False):
 	"""Create truss members based on order list"""
@@ -1047,7 +1123,6 @@ def updateHighlightTool(highlightTool):
 			zeroPoint = viz.Mouse.getPosition()[0]
 			print 'Mouse Zero Pos:', zeroPoint
 #			updateAngle(zeroPoint,objToRotate,rotationSlider,rotationLabel)
-		
 highlightTool.setUpdateFunction(updateHighlightTool)
 
 
@@ -1355,11 +1430,11 @@ viz.callback ( viz.MOUSEDOWN_EVENT, onMouseDown )
 viz.callback ( viz.SLIDER_EVENT, onSlider )
 
 # Button callbacks
-vizact.onbuttonup ( orderSideButton, addOrder,stockSideGrid,ORDERS_SIDE,ORDERS_SIDE_ROWS )
+vizact.onbuttonup ( orderSideButton, addOrder,stockSideGrid, ORDERS_SIDE, ORDERS_SIDE_ROWS )
 vizact.onbuttonup ( orderSideButton, clickSound.play )
-vizact.onbuttonup ( orderTopButton, addOrder,stockTopGrid,ORDERS_TOP,ORDERS_TOP_ROWS )
+vizact.onbuttonup ( orderTopButton, addOrder, stockTopGrid, ORDERS_TOP, ORDERS_TOP_ROWS )
 vizact.onbuttonup ( orderTopButton, clickSound.play )
-vizact.onbuttonup ( orderBottomButton, addOrder,stockBottomGrid,ORDERS_BOTTOM,ORDERS_BOTTOM_ROWS )
+vizact.onbuttonup ( orderBottomButton, addOrder, stockBottomGrid, ORDERS_BOTTOM, ORDERS_BOTTOM_ROWS )
 vizact.onbuttonup ( orderBottomButton, clickSound.play )
 #vizact.onbuttonup ( doneButton, generateMembers )
 vizact.onbuttonup ( doneButton, populateInventory, ORDERS_SIDE, ORDERS_TOP, ORDERS_BOTTOM )
