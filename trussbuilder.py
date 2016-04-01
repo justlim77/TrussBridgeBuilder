@@ -760,6 +760,13 @@ def populateInventory(sideList,topList,botList):
 		vizact.onbuttonup( botButton,createTrussNew,botOrder,'resources/CHS.osgb' )
 		row = bottomInventory.addRow([botButton])
 		bottomRows.append(row)
+		
+	for topRow in ORDERS_TOP_ROWS:
+		stockTopGrid.removeRow(topRow)
+	for sideRow in ORDERS_SIDE_ROWS:
+		stockSideGrid.removeRow(sideRow)
+	for botRow in ORDERS_BOTTOM_ROWS:
+		stockBottomGrid.removeRow(botRow)
 
 
 def createTruss(order=Order(),path=''):
@@ -813,14 +820,12 @@ def createTrussNew(order=Order(),path=''):
 	posA = truss.getPosition()
 	posA[0] -= truss.length / 2
 	nodeA = vizshape.addSphere(0.2,pos=posA)
-	nodeA.disable(viz.PICKING)
 	nodeA.visible(False)
 	viz.grab(truss,nodeA)
 	
 	posB = truss.getPosition()
 	posB[0] += truss.length / 2
 	nodeB = vizshape.addSphere(0.2,pos=posB)
-	nodeB.disable(viz.PICKING)
 	nodeB.visible(False)
 	viz.grab(truss,nodeB)
 	
@@ -848,7 +853,6 @@ def createTrussNew(order=Order(),path=''):
 	PRE_SNAP_POS = truss.getPosition()
 	PRE_SNAP_ROT = truss.getEuler()
 	
-	
 	PROXY_NODES.append(truss.proxyNodes[0])
 	PROXY_NODES.append(truss.proxyNodes[1])
 	TARGET_NODES.append(truss.targetNodes[0])
@@ -856,8 +860,9 @@ def createTrussNew(order=Order(),path=''):
 	SENSOR_NODES.append(truss.sensorNodes[0])
 	SENSOR_NODES.append(truss.sensorNodes[1])
 	
-	proxyManager.addSensor(truss.sensorNodes[0])
-	proxyManager.addSensor(truss.sensorNodes[1])
+	# Enable truss nodes to interact with other sensors
+	proxyManager.addTarget(truss.targetNodes[0])
+	proxyManager.addTarget(truss.targetNodes[1])
 
 	BUILD_MEMBERS.append(truss)
 		
@@ -872,6 +877,10 @@ def createTrussNew(order=Order(),path=''):
 	
 	global grabbedItem
 	grabbedItem = truss
+	
+	global highlightedItem
+	highlightedItem = truss
+	
 	global isgrabbing
 	isgrabbing = True
 	
@@ -1430,7 +1439,7 @@ viz.callback ( viz.MOUSEDOWN_EVENT, onMouseDown )
 viz.callback ( viz.SLIDER_EVENT, onSlider )
 
 # Button callbacks
-vizact.onbuttonup ( orderSideButton, addOrder,stockSideGrid, ORDERS_SIDE, ORDERS_SIDE_ROWS )
+vizact.onbuttonup ( orderSideButton, addOrder, stockSideGrid, ORDERS_SIDE, ORDERS_SIDE_ROWS )
 vizact.onbuttonup ( orderSideButton, clickSound.play )
 vizact.onbuttonup ( orderTopButton, addOrder, stockTopGrid, ORDERS_TOP, ORDERS_TOP_ROWS )
 vizact.onbuttonup ( orderTopButton, clickSound.play )
