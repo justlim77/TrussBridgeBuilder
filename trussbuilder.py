@@ -884,6 +884,8 @@ def createTrussNew(order=Order(),path=''):
 	global isgrabbing
 	isgrabbing = True
 	
+	truss.isNewMember = True
+	
 	return truss
 
 def generateMembers(loading=False):
@@ -1198,7 +1200,7 @@ def onGrab(e):
 #viz.callback(grabber.GRAB_EVENT,onGrab)
 
 
-def onRelease(e=None,sound=True):
+def onHighlightGrabRelease(e=None,sound=True):
 	global INVENTORY
 	global BUILD_MEMBERS
 	global grabbedItem
@@ -1209,6 +1211,9 @@ def onRelease(e=None,sound=True):
 	global VALID_SNAP
 		
 	if VALID_SNAP:
+		if grabbedItem.isNewMember == True:
+			grabbedItem.isNewMember = False
+			
 		# Check facing of truss
 		xFacing = 1
 		if grabbedItem.getPosition()[0] < SNAP_TO_POS[0]:
@@ -1251,8 +1256,12 @@ def onRelease(e=None,sound=True):
 		if sound:
 			clickSound.play()
 	else:
-		grabbedItem.setPosition(PRE_SNAP_POS)
-		grabbedItem.setEuler(PRE_SNAP_ROT)
+		if grabbedItem.isNewMember:
+			grabbedItem.remove()
+			BUILD_MEMBERS.remove(grabbedItem)
+		else:	
+			grabbedItem.setPosition(PRE_SNAP_POS)
+			grabbedItem.setEuler(PRE_SNAP_ROT)
 		
 		# Play warning sound
 		if sound:
@@ -1263,7 +1272,7 @@ def onRelease(e=None,sound=True):
 	proxyManager.removeTarget(grabbedItem.targetNodes[1])
 	grabbedItem = None
 	SNAP_TO_POS = []
-viz.callback(grabber.RELEASE_EVENT,onRelease)
+#viz.callback(grabber.RELEASE_EVENT,onHighlightGrabRelease)
 
 
 def updateAngle(obj,slider,label):
@@ -1340,7 +1349,7 @@ def onMouseUp(button):
 	global isgrabbing
 	if button == viz.MOUSEBUTTON_LEFT:
 		if isgrabbing == True:
-			onRelease()
+			onHighlightGrabRelease()
 			isgrabbing = False
 			
 #	global highlightedItem
