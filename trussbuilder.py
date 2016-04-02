@@ -28,6 +28,7 @@ import vizproximity
 import vizshape
 import viztask
 
+import inventory
 import mathlite
 import oculuslite
 import panels
@@ -57,6 +58,8 @@ INSPECTOR_POS_OFFSET = ( [0,0,2] )
 INSPECTOR_ROT_OFFSET = ( [] )
 INVENTORY_MESSAGE = 'Order truss members from the catalogue and manage'
 
+LEN_MIN = 0.1
+LEN_MAX = 20.0
 QTY_MIN = 1
 QTY_MAX = 20
 
@@ -65,13 +68,16 @@ ENVIRONMENTS = []
 
 # Setup order lists
 ORDERS = []
-ORDERS_SIDE = []
-ORDERS_TOP = []
-ORDERS_BOTTOM = []
+ORDERS_SIDE = inventory.OrderList()
+ORDERS_TOP = inventory.OrderList()
+ORDERS_BOT = inventory.OrderList()
 ROWS = []
 ORDERS_SIDE_ROWS = []
 ORDERS_TOP_ROWS = []
-ORDERS_BOTTOM_ROWS = []
+ORDERS_BOT_ROWS = []
+ORDERS_SIDE_FLAG = 'side'
+ORDERS_TOP_FLAG = 'top'
+ORDERS_BOT_FLAG = 'bot'
 
 INVENTORY = []
 BUILD_MEMBERS = []
@@ -459,16 +465,16 @@ stockMainPanel.addSeparator()
 stockPanel = vizdlg.TabPanel()
 
 # Side orders inventory
-stockSideGrid = panels.CreateLabelledPanel()
-stockPanel.addPanel('Side',stockSideGrid)
+ORDERS_SIDE_GRID = panels.CreateLabelledPanel()
+stockPanel.addPanel('Side',ORDERS_SIDE_GRID)
 
 # Top orders inventory
-stockTopGrid = panels.CreateLabelledPanel()
-stockPanel.addPanel('Top',stockTopGrid)
+ORDERS_TOP_GRID = panels.CreateLabelledPanel()
+stockPanel.addPanel('Top',ORDERS_TOP_GRID)
 
 # Bottom orders inventory
-stockBottomGrid = panels.CreateLabelledPanel()
-stockPanel.addPanel('Bottom',stockBottomGrid)
+ORDERS_BOT_GRID = panels.CreateLabelledPanel()
+stockPanel.addPanel('Bottom',ORDERS_BOT_GRID)
 
 stockMainPanel.addItem(stockPanel)
 midRow.addItem(stockMainPanel,align=viz.ALIGN_LEFT_TOP)
@@ -619,20 +625,19 @@ class Order(object):
 	def displayOrder(self):
 		print "Type: ", self.type, ", Diameter: ", self.diameter, ", Thickness: ", self.thickness, " Length: ", self.length, " Quantity: ", self.quantity
 		
-		
-def addOrder(orderTab=None,orderList=None,orderRow=None):
+def addOrder(orderTab,orderList=inventory.OrderList(),orderRow=[],flag=''):
 	"""
 	adds new truss member order
 	"""	
 	newOrder = Order()
-
-	_length = viz.clamp(float(lengthTextbox.get()),0.1,20)
-	qtyInt = quantitySlider.get()
-	qtyInt = mathlite.getNewRange(qtyInt,0.0,1.0,QTY_MIN,QTY_MAX)
-	_quantity = viz.clamp(int(qtyInt),QTY_MIN,QTY_MAX)
 	
-	setattr(newOrder, 'diameter', float(diameterDropList.getItem(diameterDropList.getSelection())))
-	setattr(newOrder, 'thickness', float(thicknessDropList.getItem(thicknessDropList.getSelection())))
+	_diameter = diameterDropList.getItem(diameterDropList.getSelection())
+	_thickness = thicknessDropList.getItem(thicknessDropList.getSelection())
+	_length = viz.clamp(float(lengthTextbox.get()),LEN_MIN,LEN_MAX)
+	_quantity = mathlite.getNewRange(quantitySlider.get(),0.0,1.0,QTY_MIN,QTY_MAX)
+	
+	setattr(newOrder, 'diameter', float(_diameter))
+	setattr(newOrder, 'thickness', float(_thickness))
 	setattr(newOrder, 'length', float(_length))
 	setattr(newOrder, 'quantity', int(_quantity))
 	
@@ -661,27 +666,28 @@ def addOrder(orderTab=None,orderList=None,orderRow=None):
 	for row in orderRow:
 		orderTab.removeRow(row)
 	
-	#Sort by lowest to highest
-	from operator import itemgetter, attrgetter, methodcaller
-	_orders = sorted(orderList, key=attrgetter('diameter', 'thickness', 'length'))
+	#Sort lowest to highest (d x Th x l)
+	orderList.sortByAttr()
 	
 	#Populate grid with ORDERS in order list
-	for sortOrder in _orders:
-		__d = viz.addText(str(sortOrder.diameter))
-		__t = viz.addText(str(sortOrder.thickness))
-		__l = viz.addText(str(sortOrder.length))
-		__q = viz.addText(str(sortOrder.quantity))
+	for _order in orderList:
+		__d = viz.addText(str(_order.diameter))
+		__t = viz.addText(str(_order.thickness))
+		__l = viz.addText(str(_order.length))
+		__q = viz.addText(str(_order.quantity))
 		deleteButton = viz.addButtonLabel('X')
-		_row = orderTab.addRow([__d,__t,__l,__q,deleteButton])
-		vizact.onbuttonup(deleteButton,deleteOrder,orderTab,orderList,_row,sortOrder)
+		_index = orderList.index(_order)
+		_row = orderTab.addRow( [__d,__t,__l,__q,deleteButton] )
+		vizact.onbuttonup ( deleteButton, deleteOrder, _order, orderList, _index, _row, orderRow, orderTab, flag )
 		orderRow.append(_row)
 
 
-def deleteOrder(orderTab,orderList,row,order):	
+#TODO: Not deleting back-order
+def deleteOrder(order, orderList, index, row, orderRow, orderTab, flag ):	
+	orderList.pop(index)		
 	orderTab.removeRow(row)
-	orderList.remove(order)
-
-
+	orderRow.remove(row)	
+	
 def createInventory():
 #	Create inventory panel
 	global inventoryCanvas
@@ -729,6 +735,7 @@ def clearInventory():
 	global sideRows
 	global topRows
 	global bottomRows
+	
 	for row in sideRows:
 		sideInventory.removeRow(row)
 	for row in topRows:
@@ -739,9 +746,12 @@ def clearInventory():
 	sideRows = []
 	topRows = []
 	bottomRows = []
+	
 
 def populateInventory(sideList,topList,botList):
 	clearInventory()
+	
+	print 'populateInventory: sideList:', sideList
 	
 	# Generate truss buttons based on respective lists
 	for sideOrder in sideList:
@@ -769,12 +779,24 @@ def populateInventory(sideList,topList,botList):
 		vizact.onbuttonup ( botButton, updateQuantity, botOrder, botButton, botList, bottomInventory, row )
 		vizact.onbuttonup ( botButton, clickSound.play )
 		
+	# Clear order panel rows
 	for topRow in ORDERS_TOP_ROWS:
-		stockTopGrid.removeRow(topRow)
+		ORDERS_TOP_GRID.removeRow(topRow)
 	for sideRow in ORDERS_SIDE_ROWS:
-		stockSideGrid.removeRow(sideRow)
-	for botRow in ORDERS_BOTTOM_ROWS:
-		stockBottomGrid.removeRow(botRow)
+		ORDERS_SIDE_GRID.removeRow(sideRow)
+	for botRow in ORDERS_BOT_ROWS:
+		ORDERS_BOT_GRID.removeRow(botRow)
+	
+	# Clear orders from order list
+	for order in sideList:
+		sideList.pop()
+	sideList = []
+	for order in topList:
+		topList.pop()
+	topList = []
+	for order in botList:
+		botList.pop()
+	botList = []
 
 
 def createTruss(order=Order(),path=''):
@@ -911,7 +933,7 @@ def generateMembers(loading=False):
 	
 	#Clear order ROWS
 	for row in ROWS:
-		stockSideGrid.removeRow(row)
+		ORDERS_SIDE_GRID.removeRow(row)
 	ROWS = []
 	
 	# Clear current inventory
@@ -1152,11 +1174,7 @@ def onHighlight(e):
 	global isgrabbing
 	global highlightedItem
 	if e.new != None and e.new.length != None:
-		# Inspect stats
 		inspectMember(e.new)
-		if isgrabbing == False:
-#			print 'Ready to grab truss of length:', e.new.length
-			pass
 		highlightedItem = e.new
 from tools import highlighter
 viz.callback(highlighter.HIGHLIGHT_EVENT,onHighlight)
@@ -1166,14 +1184,12 @@ def onHighlightGrab():
 	""" Clamp grabbed member to front glove position and grid z """
 	global grabbedItem
 	global isgrabbing
-#	global grabbedRotation
 	global gloveLink	
 	if grabbedItem != None and isgrabbing == True:
 		xOffset = grabbedItem.getScale()[0] / 2
-		clampedX =  viz.clamp(gloveLink.getPosition()[0],-10 + xOffset,10 - xOffset)
-		clampedY =  viz.clamp(gloveLink.getPosition()[1],2,10)
+		clampedX =  viz.clamp( gloveLink.getPosition()[0],-10 + xOffset,10 - xOffset )
+		clampedY =  viz.clamp( gloveLink.getPosition()[1],2,10 )
 		grabbedItem.setPosition( [gloveLink.getPosition()[0],gloveLink.getPosition()[1],-5] )
-#		grabbedItem.setEuler( grabbedRotation )
 vizact.ontimer(0,onHighlightGrab)
 
 
@@ -1210,7 +1226,7 @@ def onGrab(e):
 #viz.callback(grabber.GRAB_EVENT,onGrab)
 
 
-def onHighlightGrabRelease(e=None,sound=True):
+def onRelease(e=None,sound=True):
 	global INVENTORY
 	global BUILD_MEMBERS
 	global grabbedItem
@@ -1221,8 +1237,11 @@ def onHighlightGrabRelease(e=None,sound=True):
 	global VALID_SNAP
 		
 	if VALID_SNAP:
-		if grabbedItem.isNewMember == True:
-			grabbedItem.isNewMember = False
+		try:			
+			if grabbedItem.isNewMember == True:
+				grabbedItem.isNewMember = False
+		except:
+			pass
 			
 		# Check facing of truss
 		xFacing = 1
@@ -1243,37 +1262,36 @@ def onHighlightGrabRelease(e=None,sound=True):
 		grabbedItem.setPosition( [SNAP_TO_POS[0] + xOffset, SNAP_TO_POS[1] + yOffset, SNAP_TO_POS[2]] )
 		grabbedItem.setEuler( [0,0,grabbedItem.getEuler()[2]] )
 		
-		#Debug
-#		print 'Snapping to position', SNAP_TO_POS
-#		print 'xOffset:', xOffset
-#		print 'yOffset:', yOffset
-#		print 'Member final position', grabbedItem.getPosition()
-		
 		# Enable sensor nodes for other members to snap to
 		proxyManager.addSensor(grabbedItem.sensorNodes[0])
 		proxyManager.addSensor(grabbedItem.sensorNodes[1])
-		
-		# Move truss from inventory to buildmembers
-		try:
-			INVENTORY.remove(grabbedItem)
-			BUILD_MEMBERS.append(grabbedItem)
-			print 'Removed', grabbedItem, 'from INVENTORY'
-			print 'Placed', grabbedItem, 'into BUILD_MEMBERS'
-		except:
-			print grabbedItem, 'not in INVENTORY'
 		
 		# Play snap sound
 		if sound:
 			clickSound.play()
 	else:
-		if grabbedItem.isNewMember == True:
-			grabbedItem.remove()
-			BUILD_MEMBERS.remove(grabbedItem)
+		try:			
+			# If invalid position and newly-generated truss, destroy it
+			if grabbedItem.isNewMember == True:
+				BUILD_MEMBERS.remove(grabbedItem)
+				proxyManager.removeTarget(grabbedItem.targetNodes[0])
+				proxyManager.removeTarget(grabbedItem.targetNodes[1])
+				grabbedItem.remove()
+				highlightedItem = None
+			else:	
+				grabbedItem.setPosition(PRE_SNAP_POS)
+				grabbedItem.setEuler(PRE_SNAP_ROT)
+				# Enable sensor nodes for other members to snap to
+				proxyManager.addSensor(grabbedItem.sensorNodes[0])
+				proxyManager.addSensor(grabbedItem.sensorNodes[1])
+		except:
 			highlightedItem = None
-		else:	
 			grabbedItem.setPosition(PRE_SNAP_POS)
 			grabbedItem.setEuler(PRE_SNAP_ROT)
-		
+			# Enable sensor nodes for other members to snap to
+			proxyManager.addSensor(grabbedItem.sensorNodes[0])
+			proxyManager.addSensor(grabbedItem.sensorNodes[1])
+			
 		# Play warning sound
 		if sound:
 			warningSound.play()
@@ -1283,7 +1301,6 @@ def onHighlightGrabRelease(e=None,sound=True):
 	proxyManager.removeTarget(grabbedItem.targetNodes[1])
 	grabbedItem = None
 	SNAP_TO_POS = []
-#viz.callback(grabber.RELEASE_EVENT,onHighlightGrabRelease)
 
 def updateQuantity(order,button,orderList,inventory,row):
 	if order.quantity > 0:
@@ -1291,7 +1308,7 @@ def updateQuantity(order,button,orderList,inventory,row):
 		button.message('{}mm(d) x {}mm(th) x {}m(l) [{}]'.format(order.diameter, order.thickness, order.length, order.quantity))
 	if order.quantity <= 0:
 		inventory.removeRow(row)
-		orderList.remove(order)
+#		orderList.remove(order)
 		
 
 def updateAngle(obj,slider,label):
@@ -1368,7 +1385,7 @@ def onMouseUp(button):
 	global isgrabbing
 	if button == viz.MOUSEBUTTON_LEFT:
 		if isgrabbing == True:
-			onHighlightGrabRelease()
+			onRelease()
 			isgrabbing = False
 			
 #	global highlightedItem
@@ -1467,14 +1484,14 @@ viz.callback ( viz.MOUSEDOWN_EVENT, onMouseDown )
 viz.callback ( viz.SLIDER_EVENT, onSlider )
 
 # Button callbacks
-vizact.onbuttonup ( orderSideButton, addOrder, stockSideGrid, ORDERS_SIDE, ORDERS_SIDE_ROWS )
+vizact.onbuttonup ( orderSideButton, addOrder, ORDERS_SIDE_GRID, ORDERS_SIDE, ORDERS_SIDE_ROWS, ORDERS_SIDE_FLAG )
 vizact.onbuttonup ( orderSideButton, clickSound.play )
-vizact.onbuttonup ( orderTopButton, addOrder, stockTopGrid, ORDERS_TOP, ORDERS_TOP_ROWS )
+vizact.onbuttonup ( orderTopButton, addOrder, ORDERS_TOP_GRID, ORDERS_TOP, ORDERS_TOP_ROWS, ORDERS_TOP_FLAG )
 vizact.onbuttonup ( orderTopButton, clickSound.play )
-vizact.onbuttonup ( orderBottomButton, addOrder, stockBottomGrid, ORDERS_BOTTOM, ORDERS_BOTTOM_ROWS )
+vizact.onbuttonup ( orderBottomButton, addOrder, ORDERS_BOT_GRID, ORDERS_BOT, ORDERS_BOT_ROWS, ORDERS_BOT_FLAG )
 vizact.onbuttonup ( orderBottomButton, clickSound.play )
 #vizact.onbuttonup ( doneButton, generateMembers )
-vizact.onbuttonup ( doneButton, populateInventory, ORDERS_SIDE, ORDERS_TOP, ORDERS_BOTTOM )
+vizact.onbuttonup ( doneButton, populateInventory, ORDERS_SIDE, ORDERS_TOP, ORDERS_BOT )
 vizact.onbuttonup ( doneButton, clickSound.play )
 vizact.onkeydown ( KEYS['snapMenu'], toggleMenuLink )
 vizact.onlist( diameterDropList, diameterListChanged )
