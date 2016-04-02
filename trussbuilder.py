@@ -63,7 +63,7 @@ QTY_MAX = 20
 GRIDS = []
 ENVIRONMENTS = []
 
-# Setup inventory lists
+# Setup order lists
 ORDERS = []
 ORDERS_SIDE = []
 ORDERS_TOP = []
@@ -422,7 +422,7 @@ diameterDropList = viz.addDropList()
 for member in root.iter('member'):
 	diameter = member.get('diameter')
 	diameterDropList.addItem(diameter)
-diameterDropList.select(0)
+diameterDropList.select(19)
 diameter = orderPanel.addLabelItem('Diameter (mm)', diameterDropList)
 # Initialize thicknessDropList
 thicknessDropList = viz.addDropList()
@@ -430,11 +430,13 @@ thicknesses = []
 for thickness in root[diameterDropList.getSelection()]:
 	thicknesses.append(thickness.text)
 thicknessDropList.addItems(thicknesses)
+thicknessDropList.select(2)
 thickness = orderPanel.addLabelItem('Thickness (mm)', thicknessDropList)
-# Initilize lengthTextbox
+# Initilize lengthTextbox with default value of 1m
 lengthTextbox = viz.addTextbox()
+lengthTextbox.message('1')
 length = orderPanel.addLabelItem('Length (m)', lengthTextbox)
-# Initialize quantityTextbox
+# Initialize quantityTextbox with default value of 1qty
 quantityTextbox = viz.addTextbox()
 quantitySlider = viz.addProgressBar('1')
 qtyProgressPos = mathlite.getNewRange(1,QTY_MIN,QTY_MAX,0.0,1.0)
@@ -743,23 +745,29 @@ def populateInventory(sideList,topList,botList):
 	
 	# Generate truss buttons based on respective lists
 	for sideOrder in sideList:
-		msg = '{}mm(d) x {}mm(th) x {}m(l) [{}]'.format(sideOrder.diameter, sideOrder.thickness, sideOrder.length, sideOrder.quantity)
-		sideButton = viz.addButtonLabel(msg)
-		vizact.onbuttonup( sideButton,createTrussNew,sideOrder,'resources/CHS.osgb' )
-		row = sideInventory.addRow([sideButton])
-		sideRows.append(row)
+		msg = '{}mm(d) x {}mm(th) x {}m(l) [{}]'.format ( sideOrder.diameter, sideOrder.thickness, sideOrder.length, sideOrder.quantity )
+		sideButton = viz.addButtonLabel ( msg )
+		vizact.onbuttonup ( sideButton, createTrussNew, sideOrder, 'resources/CHS.osgb' )
+		row = sideInventory.addRow ( [sideButton] )
+		sideRows.append ( row )
+		vizact.onbuttonup ( sideButton, updateQuantity, sideOrder, sideButton, sideList, sideInventory, row )
+		vizact.onbuttonup ( sideButton, clickSound.play )
 	for topOrder in topList:
-		msg = '{}mm(d) x {}mm(th) x {}m(l) [{}]'.format(topOrder.diameter, topOrder.thickness, topOrder.length, topOrder.quantity)
-		topButton = viz.addButtonLabel(msg)
-		vizact.onbuttonup( topButton,createTrussNew,topOrder,'resources/CHS.osgb' )
-		row = topInventory.addRow([topButton])
-		topRows.append(row)
+		msg = '{}mm(d) x {}mm(th) x {}m(l) [{}]'.format ( topOrder.diameter, topOrder.thickness, topOrder.length, topOrder.quantity )
+		topButton = viz.addButtonLabel ( msg )
+		vizact.onbuttonup ( topButton, createTrussNew, topOrder, 'resources/CHS.osgb' )
+		row = topInventory.addRow( [topButton] )
+		topRows.append ( row )
+		vizact.onbuttonup ( topButton, updateQuantity, topOrder, topButton, topList, topInventory, row )
+		vizact.onbuttonup ( topButton, clickSound.play )
 	for botOrder in botList:
-		msg = '{}mm(d) x {}mm(th) x {}m(l) [{}]'.format(botOrder.diameter, botOrder.thickness, botOrder.length, botOrder.quantity)
-		botButton = viz.addButtonLabel(msg)
-		vizact.onbuttonup( botButton,createTrussNew,botOrder,'resources/CHS.osgb' )
-		row = bottomInventory.addRow([botButton])
-		bottomRows.append(row)
+		msg = '{}mm(d) x {}mm(th) x {}m(l) [{}]'.format ( botOrder.diameter, botOrder.thickness, botOrder.length, botOrder.quantity )
+		botButton = viz.addButtonLabel ( msg )
+		vizact.onbuttonup ( botButton, createTrussNew, botOrder, 'resources/CHS.osgb' )
+		row = bottomInventory.addRow ( [botButton] )
+		bottomRows.append ( row )
+		vizact.onbuttonup ( botButton, updateQuantity, botOrder, botButton, botList, bottomInventory, row )
+		vizact.onbuttonup ( botButton, clickSound.play )
 		
 	for topRow in ORDERS_TOP_ROWS:
 		stockTopGrid.removeRow(topRow)
@@ -807,7 +815,7 @@ def createTruss(order=Order(),path=''):
 	
 	return truss
 
-def createTrussNew(order=Order(),path=''):
+def createTrussNew(order=Order(),path='',loading=False):
 	truss = viz.addChild(path,cache=viz.CACHE_COPY)
 	truss.order = order
 	truss.diameter = float(order.diameter)
@@ -817,6 +825,7 @@ def createTrussNew(order=Order(),path=''):
 	
 	truss.setScale([truss.length,truss.diameter/1000,truss.diameter/1000])	
 
+	# Setup proximity-based snapping nodes
 	posA = truss.getPosition()
 	posA[0] -= truss.length / 2
 	nodeA = vizshape.addSphere(0.2,pos=posA)
@@ -831,10 +840,12 @@ def createTrussNew(order=Order(),path=''):
 	
 	truss.proxyNodes = [nodeA,nodeB]
 	
+	# Setup target nodes at both ends
 	targetA = vizproximity.Target(truss.proxyNodes[0])
 	targetB = vizproximity.Target(truss.proxyNodes[1])	
 	truss.targetNodes = [targetA,targetB]
 	
+	# Setup sensor nodes at both ends
 	sensorA =  vizproximity.addBoundingSphereSensor(truss.proxyNodes[0])
 	sensorB =  vizproximity.addBoundingSphereSensor(truss.proxyNodes[1])	
 	truss.sensorNodes = [sensorA,sensorB]
@@ -875,16 +886,17 @@ def createTrussNew(order=Order(),path=''):
 		listItem.apply(lightEffect)		
 	highlightTool.setItems(mergedList)
 	
-	global grabbedItem
-	grabbedItem = truss
-	
-	global highlightedItem
-	highlightedItem = truss
-	
-	global isgrabbing
-	isgrabbing = True
-	
-	truss.isNewMember = True
+	if not loading:
+		global grabbedItem
+		global highlightedItem
+		global isgrabbing
+		
+		grabbedItem = truss		
+		highlightedItem = truss
+		isgrabbing = True
+		truss.isNewMember = True
+	else:
+		truss.isNewMember = False
 	
 	return truss
 
@@ -892,7 +904,6 @@ def generateMembers(loading=False):
 	"""Create truss members based on order list"""
 	global INVENTORY
 	global BUILD_MEMBERS
-	global grabberTool
 	global highlightTool
 	global ORDERS
 	global ROWS
@@ -1130,7 +1141,6 @@ def updateHighlightTool(highlightTool):
 	if state & KEYS['rotate']:
 		if objToRotate == None:
 			objToRotate = highlightTool.getSelection()
-			print 'Object to rotate:', objToRotate
 			zeroPoint = viz.Mouse.getPosition()[0]
 			print 'Mouse Zero Pos:', zeroPoint
 #			updateAngle(zeroPoint,objToRotate,rotationSlider,rotationLabel)
@@ -1256,9 +1266,10 @@ def onHighlightGrabRelease(e=None,sound=True):
 		if sound:
 			clickSound.play()
 	else:
-		if grabbedItem.isNewMember:
+		if grabbedItem.isNewMember == True:
 			grabbedItem.remove()
 			BUILD_MEMBERS.remove(grabbedItem)
+			highlightedItem = None
 		else:	
 			grabbedItem.setPosition(PRE_SNAP_POS)
 			grabbedItem.setEuler(PRE_SNAP_ROT)
@@ -1274,6 +1285,14 @@ def onHighlightGrabRelease(e=None,sound=True):
 	SNAP_TO_POS = []
 #viz.callback(grabber.RELEASE_EVENT,onHighlightGrabRelease)
 
+def updateQuantity(order,button,orderList,inventory,row):
+	if order.quantity > 0:
+		order.quantity -= 1
+		button.message('{}mm(d) x {}mm(th) x {}m(l) [{}]'.format(order.diameter, order.thickness, order.length, order.quantity))
+	if order.quantity <= 0:
+		inventory.removeRow(row)
+		orderList.remove(order)
+		
 
 def updateAngle(obj,slider,label):
 	rot = obj.getEuler()
@@ -1442,7 +1461,7 @@ def LoadData(filePath,sound=True):
 		
 
 # Events
-viz.callback( viz.KEYUP_EVENT, onKeyUp )
+viz.callback ( viz.KEYUP_EVENT, onKeyUp )
 viz.callback ( viz.MOUSEUP_EVENT, onMouseUp )
 viz.callback ( viz.MOUSEDOWN_EVENT, onMouseDown )
 viz.callback ( viz.SLIDER_EVENT, onSlider )
