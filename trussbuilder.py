@@ -97,7 +97,6 @@ SCROLL_MAX = 20
 
 DEBUG_PROXIMITY = True
 DEBUG_CAMBOUNDS = False
-QUICK_TEST = False
 
 SAVE_FILES = [	 './data/bridge1.csv'
 				,'./data/bridge2.csv'
@@ -179,17 +178,6 @@ def initLighting():
 	sky_light.color(viz.WHITE)
 	sky_light.ambient([0.8]*3)
 	viz.setOption('viz.lightModel.ambient',[0]*3)
-	
-
-# Grabber
-grabbableItems = []
-def initHandGrabber():
-	usingPhysics=False
-	from tools import grabber
-	from tools import highlighter
-	return grabber.Grabber(	usingPhysics=usingPhysics,
-							usingSprings=usingPhysics,
-							highlightMode=highlighter.MODE_RIM)
 
 
 # Laser pointer
@@ -241,7 +229,6 @@ hmd = initOculus()
 viewport = initViewport(START_POS)
 initLighting()
 
-grabberTool = initHandGrabber()
 laserTool = initPointerTool()
 laserTool.disable(viz.PICKING)
 
@@ -252,8 +239,6 @@ pencilTool = initPencilTool()
 pencilTool.disable(viz.PICKING)
 
 proxyManager = initProxy()
-proxTarget = vizproximity.Target(grabberTool)
-proxyManager.addTarget(proxTarget)
 
 # Sounds
 startSound = viz.addAudio('./resources/sounds/return_to_holodeck.wav')
@@ -337,15 +322,15 @@ def updateMouseStyle(canvas):
 
 
 # Add environment effects
-env = viz.addEnvironmentMap('sky.jpg')
+env = viz.addEnvironmentMap('resources/textures/sky.jpg')
 effect = vizfx.addAmbientCubeEffect(env)
 vizfx.getComposer().addEffect(effect)
 lightEffect = vizfx.addLightingModel(diffuse=vizfx.DIFFUSE_LAMBERT,specular=None)
 vizfx.getComposer().addEffect(lightEffect)
 
 # Setup environment
-day = viz.addChild('sky_day.osgb', scale=([5,5,5]))
-river = viz.addChild('resources/singaporeEnv.osgb', pos=(0,0,0))
+day = viz.addChild('resources/sky_day.osgb', scale=([5,5,5]))
+river = viz.addChild('resources/singaporeEnv.osgb', pos=(0,0,0),scale=([1,1,1]))
 water = viz.addChild('resources/water.osgb', pos=(0,0,0),scale=([1,1,1]))
 
 ENVIRONMENTS.append(day)
@@ -356,7 +341,6 @@ water.setAnimationSpeed(0.005)
 
 for environment in ENVIRONMENTS:
 	environment.visible(viz.OFF)
-
 
 # Bridge pin and roller supports
 pinSupport = viz.addChild('resources/pinSupport.osgb',pos=(-9.5,4,0),scale=[1,1,11])
@@ -682,7 +666,6 @@ def addOrder(orderTab,orderList=inventory.OrderList(),orderRow=[],flag=''):
 		orderRow.append(_row)
 
 
-#TODO: Not deleting back-order
 def deleteOrder(order, orderList, index, row, orderRow, orderTab, flag ):	
 	orderList.pop(index)		
 	orderTab.removeRow(row)
@@ -1062,7 +1045,6 @@ def initLink(modelPath):
 	link.postMultLinkable(viz.MainView)
 	return link
 gloveLink = initLink('glove.cfg')
-viz.link(gloveLink,grabberTool)
 viz.link(gloveLink,highlightTool)
 viz.link(gloveLink,laserTool)
 viz.link(gloveLink,pencilTool)
@@ -1239,8 +1221,16 @@ def onRelease(e=None,sound=True):
 	if VALID_SNAP:
 		try:			
 			if grabbedItem.isNewMember == True:
+				pos = grabbedItem.getPosition()
+				pos[2] *= -1
+				clone = grabbedItem.clone()
+				clone.setScale(grabbedItem.getScale())
+				clone.setEuler(grabbedItem.getEuler())
+				clone.setPosition(pos)
+				viz.grab(grabbedItem,clone)
 				grabbedItem.isNewMember = False
 		except:
+			print 'Not new member'
 			pass
 			
 		# Check facing of truss
@@ -1513,23 +1503,3 @@ vizact.onbuttonup ( saveBridgeButton3, SaveData, SAVE_FILES[2] )
 vizact.onbuttonup ( loadBridgeButton1, LoadData, SAVE_FILES[0] )
 vizact.onbuttonup ( loadBridgeButton2, LoadData, SAVE_FILES[1] )
 vizact.onbuttonup ( loadBridgeButton3, LoadData, SAVE_FILES[2] )
-	
-if QUICK_TEST == True:
-	order1 = Order()
-	order2 = Order(thickness=17,quantity=1)
-	order3 = Order(thickness=18,quantity=1)
-	order4 = Order(thickness=19,quantity=1)
-	order5 = Order(thickness=20,quantity=1)
-	order6 = Order(thickness=21,quantity=1)
-	order7 = Order(thickness=22,quantity=1)
-	order8 = Order(thickness=23,quantity=1)
-	order9 = Order(thickness=24,quantity=1)
-	order10 = Order(thickness=25,quantity=1)
-	order11 = Order(thickness=26,quantity=1)
-	order12 = Order(thickness=27,quantity=1)
-	order13 = Order(thickness=28,quantity=1)
-	order14 = Order(thickness=29,quantity=1)
-	ORDERS = ( [order1,order2,order3,order4,order5,order6,order7,
-				order8,order9,order10,order11,order12,order13,order14] )
-	generateMembers()
-	ORDERS = []
