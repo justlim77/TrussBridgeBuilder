@@ -87,6 +87,9 @@ X = viz.addText3D('X',pos=[1.1,0,0],color=viz.RED,scale=[0.3,0.3,0.3],parent=BRI
 Y = viz.addText3D('Y',pos=[0,1.1,0],color=viz.GREEN,scale=[0.3,0.3,0.3],align=viz.ALIGN_CENTER_BASE,parent=BRIDGE_ROOT)
 Z = viz.addText3D('Z',pos=[0,0,1.1],color=viz.BLUE,scale=[0.3,0.3,0.3],align=viz.ALIGN_CENTER_BASE,parent=BRIDGE_ROOT)
 BRIDGE_ROOT_POS = [0,4,0]
+SIDE_VIEW_ROT = [0,0,0]
+TOP_VIEW_ROT = [0,-90,0]
+BOT_VIEW_ROT = [0,90,0]
 
 PROXY_NODES = []
 TARGET_NODES = []
@@ -269,40 +272,38 @@ viewChangeSound.play()
 # Set grids
 def initGrid():	
 	# Create front grid
-	grid_front = vizshape.addGrid(size=(20,8))
+	grid_front = vizshape.addGrid(size=(20,10))
 	grid_front.color(GRID_COLOR)
-	grid_front.setPosition(0,2+4,-5)
+	grid_front.setPosition(0,5,-5)
 	grid_front.setEuler(0,90,0)
 	
 	# Create back grid
-	grid_back = vizshape.addGrid(size=(20,8))
+	grid_back = vizshape.addGrid(size=(20,10))
 	grid_back.color(GRID_COLOR)
-	grid_back.setPosition(0,2+4,-5-24)
+	grid_back.setPosition(0,5,-5-24)
 	grid_back.setEuler(0,90,0)
 	grid_back.setScale(1,z=-1)
 
 	# Create bottom grid
 	grid_bottom = vizshape.addGrid(size=(20,24))
 	grid_bottom.color(GRID_COLOR)
-	grid_bottom.setPosition(0,2,START_POS[2])
+	grid_bottom.setPosition(0,0,START_POS[2])
 	
 	# Create left grid
-	grid_left = vizshape.addGrid(size=(8,24),)
+	grid_left = vizshape.addGrid(size=(10,24))
 	grid_left.color(GRID_COLOR)
-	grid_left.setPosition(-10,4+2,START_POS[2])
+	grid_left.setPosition(-10,5,START_POS[2])
 	grid_left.setEuler(0,0,90)
 	
 	# Create right grid
-	grid_right = vizshape.addGrid(size=(8,24))
+	grid_right = vizshape.addGrid(size=(10,24))
 	grid_right.color(GRID_COLOR)
-	grid_right.setPosition(10,4+2,START_POS[2])
+	grid_right.setPosition(10,5,START_POS[2])
 	grid_right.setEuler(0,0,-90)
 
 	# Create floating measurements
 	span_text = viz.addText3D('<< 20 meters >>',pos=[-3.25,10.25,-5])
-	span_text.disable(viz.PICKING)
-	height_text = viz.addText3D('<< 8 meters >>',pos=[-10.25,2.5,-5],euler=[0,0,90])
-	height_text.disable(viz.PICKING)
+	height_text = viz.addText3D('<< 10 meters >>',pos=[-10.25,1,-5],euler=[0,0,90])
 	
 	GRIDS.append(grid_back)
 	GRIDS.append(grid_bottom)
@@ -382,7 +383,7 @@ for model in supports:
 	viz.grab(BRIDGE_ROOT,model)
 	
 # Rotate root test
-BRIDGE_ROOT.setEuler( [0,-90,0] )
+BRIDGE_ROOT.setEuler( SIDE_VIEW_ROT )
 
 # Create canvas for displaying GUI objects
 instructionsPanel = vizinfo.InfoPanel(title='Truss Bridge Builder & Visualizer',align=viz.ALIGN_CENTER_BASE,icon=False)
