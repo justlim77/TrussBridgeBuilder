@@ -82,6 +82,11 @@ ORDERS_BOT_FLAG = 'bot'
 INVENTORY = []
 BUILD_MEMBERS = []
 SIDE_CLONES = []
+BRIDGE_ROOT = vizshape.addAxes()
+X = viz.addText3D('X',pos=[1.1,0,0],color=viz.RED,scale=[0.3,0.3,0.3],parent=BRIDGE_ROOT)
+Y = viz.addText3D('Y',pos=[0,1.1,0],color=viz.GREEN,scale=[0.3,0.3,0.3],align=viz.ALIGN_CENTER_BASE,parent=BRIDGE_ROOT)
+Z = viz.addText3D('Z',pos=[0,0,1.1],color=viz.BLUE,scale=[0.3,0.3,0.3],align=viz.ALIGN_CENTER_BASE,parent=BRIDGE_ROOT)
+BRIDGE_ROOT_POS = [0,4,0]
 
 PROXY_NODES = []
 TARGET_NODES = []
@@ -326,17 +331,19 @@ def updateMouseStyle(canvas):
 env = viz.addEnvironmentMap('resources/textures/sky.jpg')
 effect = vizfx.addAmbientCubeEffect(env)
 vizfx.getComposer().addEffect(effect)
-lightEffect = vizfx.addLightingModel(diffuse=vizfx.DIFFUSE_LAMBERT,specular=None)
-vizfx.getComposer().addEffect(lightEffect)
+#lightEffect = vizfx.addLightingModel(diffuse=vizfx.DIFFUSE_LAMBERT,specular=None)
+#vizfx.getComposer().addEffect(lightEffect)
 
 # Setup environment
-day = viz.addChild('resources/sky_day.osgb', scale=([5,5,5]))
+day = viz.add('resources/sky_day.osgb', scale=([5,5,5]))
 river = viz.addChild('resources/singaporeEnv.osgb', pos=(0,0,0),scale=([1,1,1]))
 water = viz.addChild('resources/water.osgb', pos=(0,0,0),scale=([1,1,1]))
+#riverEnv = viz.addChild('resources/riverEnv.osgb', pos=(-100,-8.25,80), euler=(-175,0,0))
 
 ENVIRONMENTS.append(day)
 ENVIRONMENTS.append(river)
 ENVIRONMENTS.append(water)
+#ENVIRONMENTS.append(riverEnv)
 
 water.setAnimationSpeed(0.005)
 
@@ -351,28 +358,31 @@ for model in supports:
 	model.texture(env)
 	model.appearance(viz.ENVIRONMENT_MAP)
 	model.apply(effect)
-	model.apply(lightEffect)
+#	model.apply(lightEffect)
 
 #Setup anchor points for truss members
 pinAnchorSphere = vizshape.addSphere(0.2,pos=([-10,5,-5]))
-pinAnchorSphere.visible(False)
-pinAnchorSensor = vizproximity.addBoundingSphereSensor(pinAnchorSphere)
+#pinAnchorSphere.visible(False)
+pinLink = viz.link(pinAnchorSphere,viz.NullLinkable)
+pinAnchorSensor = vizproximity.Sensor(vizproximity.Sphere(0.3,center=[0,0.1,0]),pinLink)
 proxyManager.addSensor(pinAnchorSensor)
+viz.grab(pinSupport,pinAnchorSphere)
 
 rollerAnchorSphere = vizshape.addSphere(0.2,pos=([10,5,-5]))
-rollerAnchorSphere.visible(False)
-rollerAnchorSensor = vizproximity.addBoundingSphereSensor(rollerAnchorSphere)
+#rollerAnchorSphere.visible(False)
+rollerLink = viz.link(rollerAnchorSphere,viz.NullLinkable)
+rollerAnchorSensor = vizproximity.Sensor(vizproximity.Sphere(0.3,center=[0,0.1,0]), rollerLink)
 proxyManager.addSensor(rollerAnchorSensor)
+viz.grab(rollerSupport,rollerAnchorSphere)
 
-# Side view cloner
-#trussSidesupports = [truss0A]
-#for truss in trussSidesupports:
-#	pos = truss.getPosition()
-#	pos[2] *= -1
-#	trussDuplicate = truss.clone()
-#	trussDuplicate.setScale(truss.getScale())
-#	trussDuplicate.setEuler(truss.getEuler())
-#	trussDuplicate.setPosition(pos)
+# Setup bridge root
+BRIDGE_ROOT.setPosition( BRIDGE_ROOT_POS )
+
+for model in supports:
+	viz.grab(BRIDGE_ROOT,model)
+	
+# Rotate root test
+BRIDGE_ROOT.setEuler( [0,-90,0] )
 
 # Create canvas for displaying GUI objects
 instructionsPanel = vizinfo.InfoPanel(title='Truss Bridge Builder & Visualizer',align=viz.ALIGN_CENTER_BASE,icon=False)
