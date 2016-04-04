@@ -23,6 +23,12 @@ $RECYCLE.BIN/
 *.tmp
 
 # =========================
+# Vizard Project Folders
+# =========================
+resources/
+Resources/
+
+# =========================
 # Operating System Files
 # =========================
 
