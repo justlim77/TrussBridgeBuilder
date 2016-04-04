@@ -81,6 +81,7 @@ ORDERS_BOT_FLAG = 'bot'
 
 INVENTORY = []
 BUILD_MEMBERS = []
+SIDE_CLONES = []
 
 PROXY_NODES = []
 TARGET_NODES = []
@@ -542,7 +543,9 @@ rotationLabel = viz.addText('0')
 row = rotationPanel.addRow([rotationSlider,rotationLabel])
 
 # Link rotation canvas with main view
-viz.link(viz.MainView,rotationCanvas,offset=(0,-1,1.5))
+rotationLink = viz.link(viz.MainView,rotationCanvas)
+rotationLink.preEuler( [0,30,0] )
+rotationLink.preTrans( [0,0.1,1] )
 
 # Add tabbed panels to main menu canvas
 menuCanvas = viz.addGUICanvas(align=viz.ALIGN_CENTER_TOP)
@@ -570,8 +573,7 @@ def initCanvas():
 	rotationCanvas.setRenderWorld([300,100],[1,viz.AUTO_COMPUTE])
 	rotationCanvas.setPosition(0,0,0)
 	rotationCanvas.setEuler(0,0,0)
-	rotationCanvas.visible(viz.OFF)
-	updateMouseStyle(rotationCanvas)
+#	rotationCanvas.visible(viz.OFF)
 initCanvas()
 		
 		
@@ -1010,7 +1012,7 @@ def clearMembers():
 	SENSOR_NODES = []
 	
 	# Add glove grabberTool back to proximity targets
-	proxyManager.addTarget(proxTarget)
+#	proxyManager.addTarget(proxTarget)
 
 	
 def toggleEnvironment(value=viz.TOGGLE):
@@ -1103,7 +1105,6 @@ def updateHandGrabber(grabberTool):
 #grabberTool.setUpdateFunction(updateHandGrabber)
 
 objToRotate = None
-zeroPoint = 0
 # update code for highlight tool
 def updateHighlightTool(highlightTool):
 	global grabbedItem
@@ -1141,13 +1142,10 @@ def updateHighlightTool(highlightTool):
 			isgrabbing = True
 			
 	global objToRotate
-	global zeroPoint
 	if state & KEYS['rotate']:
 		if objToRotate == None:
 			objToRotate = highlightTool.getSelection()
-			zeroPoint = viz.Mouse.getPosition()[0]
-			print 'Mouse Zero Pos:', zeroPoint
-#			updateAngle(zeroPoint,objToRotate,rotationSlider,rotationLabel)
+		updateAngle(objToRotate,rotationSlider,rotationLabel)
 highlightTool.setUpdateFunction(updateHighlightTool)
 
 
@@ -1221,13 +1219,7 @@ def onRelease(e=None,sound=True):
 	if VALID_SNAP:
 		try:			
 			if grabbedItem.isNewMember == True:
-				pos = grabbedItem.getPosition()
-				pos[2] *= -1
-				clone = grabbedItem.clone()
-				clone.setScale(grabbedItem.getScale())
-				clone.setEuler(grabbedItem.getEuler())
-				clone.setPosition(pos)
-				viz.grab(grabbedItem,clone)
+				cloneSide(grabbedItem)			
 				grabbedItem.isNewMember = False
 		except:
 			print 'Not new member'
@@ -1292,6 +1284,18 @@ def onRelease(e=None,sound=True):
 	grabbedItem = None
 	SNAP_TO_POS = []
 
+
+def cloneSide(truss):
+	pos = truss.getPosition()
+	pos[2] *= -1
+	clone = truss.clone()
+	clone.setScale(truss.getScale())
+	clone.setEuler(truss.getEuler())
+	clone.setPosition(pos)
+	viz.grab(truss,clone)
+	SIDE_CLONES.append(clone)
+	return clone
+	
 def updateQuantity(order,button,orderList,inventory,row):
 	if order.quantity > 0:
 		order.quantity -= 1
@@ -1309,8 +1313,9 @@ def updateAngle(obj,slider,label):
 	label.message(string)
 
 
-def rotateTruss(origin,obj,slider,label):	
+def rotateTruss(obj,slider,label):	
 	if objToRotate != None:
+		slider.visible(True)
 		pos = viz.Mouse.getPosition(viz.WINDOW_NORMALIZED)[0]
 		slider.set(pos)
 		rotateTo = mathlite.getNewRange(pos,0,1,90,-90)
@@ -1438,6 +1443,7 @@ def SaveData(filePath,sound=True):
 # Loads build members' truss dimensions, position, rotation from './data/bridge#.csv'					
 def LoadData(filePath,sound=True):
 	global BUILD_MEMBERS
+	global SIDE_CLONES
 	global ORDERS
 	global highlightTool
 	
@@ -1449,6 +1455,12 @@ def LoadData(filePath,sound=True):
 		member.remove()
 		del member
 	BUILD_MEMBERS = []
+	
+	# Clear side clones
+	for clone in SIDE_CLONES:
+		clone.remove()
+		del clone
+	SIDE_CLONES = []
 	
 	ORDERS = []
 	with open(filePath,'rb') as f:
@@ -1465,6 +1477,8 @@ def LoadData(filePath,sound=True):
 	for truss in BUILD_MEMBERS:
 		truss.setPosition(truss.order.pos)
 		truss.setEuler(truss.order.euler)
+		SIDE_CLONES.append(cloneSide(truss))
+		
 		
 
 # Events
@@ -1485,7 +1499,7 @@ vizact.onbuttonup ( doneButton, populateInventory, ORDERS_SIDE, ORDERS_TOP, ORDE
 vizact.onbuttonup ( doneButton, clickSound.play )
 vizact.onkeydown ( KEYS['snapMenu'], toggleMenuLink )
 vizact.onlist( diameterDropList, diameterListChanged )
-vizact.whilemousedown ( KEYS['rotate'], rotateTruss, zeroPoint, objToRotate, rotationSlider, rotationLabel )
+vizact.whilemousedown ( KEYS['rotate'], rotateTruss, objToRotate, rotationSlider, rotationLabel )
 
 # Utility
 vizact.onbuttonup ( menuButton, toggleMenuLink )
