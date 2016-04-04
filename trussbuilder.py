@@ -338,12 +338,12 @@ vizfx.getComposer().addEffect(effect)
 day = viz.add('resources/sky_day.osgb', scale=([5,5,5]))
 river = viz.addChild('resources/singaporeEnv.osgb', pos=(0,0,0),scale=([1,1,1]))
 water = viz.addChild('resources/water.osgb', pos=(0,0,0),scale=([1,1,1]))
-#riverEnv = viz.addChild('resources/riverEnv.osgb', pos=(-100,-8.25,80), euler=(-175,0,0))
+riverEnv = viz.addChild('resources/riverEnv.osgb')
 
 ENVIRONMENTS.append(day)
 ENVIRONMENTS.append(river)
 ENVIRONMENTS.append(water)
-#ENVIRONMENTS.append(riverEnv)
+ENVIRONMENTS.append(riverEnv)
 
 water.setAnimationSpeed(0.005)
 
