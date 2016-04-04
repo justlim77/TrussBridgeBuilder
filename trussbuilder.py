@@ -331,8 +331,8 @@ def updateMouseStyle(canvas):
 env = viz.addEnvironmentMap('resources/textures/sky.jpg')
 effect = vizfx.addAmbientCubeEffect(env)
 vizfx.getComposer().addEffect(effect)
-#lightEffect = vizfx.addLightingModel(diffuse=vizfx.DIFFUSE_LAMBERT,specular=None)
-#vizfx.getComposer().addEffect(lightEffect)
+lightEffect = vizfx.addLightingModel(diffuse=vizfx.DIFFUSE_LAMBERT,specular=None)
+vizfx.getComposer().addEffect(lightEffect)
 
 # Setup environment
 day = viz.add('resources/sky_day.osgb', scale=([5,5,5]))
@@ -358,7 +358,7 @@ for model in supports:
 	model.texture(env)
 	model.appearance(viz.ENVIRONMENT_MAP)
 	model.apply(effect)
-#	model.apply(lightEffect)
+	model.apply(lightEffect)
 
 #Setup anchor points for truss members
 pinAnchorSphere = vizshape.addSphere(0.2,pos=([-10,5,-5]))
