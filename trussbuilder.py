@@ -28,6 +28,7 @@ import vizproximity
 import vizshape
 import viztask
 
+import events
 import inventory
 import mathlite
 import oculuslite
@@ -648,6 +649,15 @@ def createInventory():
 
 	global bottomRows
 	bottomRows = []
+
+	def onSelectedPanel(panel):
+		if panel.getSelectedPanel() == sidePanel:
+			print 'Selected side'
+		if panel.getSelectedPanel() == topPanel:
+			print 'Selected top'
+		if panel.getSelectedPanel() == bottomPanel:
+			print 'Selected bottom'
+	viz.callback(events.PANEL_EVENT,onSelectedPanel)
 
 	inventoryCanvas.setRenderWorld([400,200],[1,viz.AUTO_COMPUTE])
 	updateMouseStyle(inventoryCanvas)
@@ -1427,8 +1437,3 @@ vizact.onbuttonup ( saveBridgeButton3, SaveData, SAVE_FILES[2] )
 vizact.onbuttonup ( loadBridgeButton1, LoadData, SAVE_FILES[0] )
 vizact.onbuttonup ( loadBridgeButton2, LoadData, SAVE_FILES[1] )
 vizact.onbuttonup ( loadBridgeButton3, LoadData, SAVE_FILES[2] )
-
-def onSelectedPanel(panel):
-	if panel.getSelectedPanel().name == 'Side':
-		print 'Selected side'
-vizact.ontimer(0,onSelectedPanel, sidePanel)
