@@ -650,15 +650,6 @@ def createInventory():
 	global bottomRows
 	bottomRows = []
 
-	def onSelectedPanel(panel):
-		if panel.getSelectedPanel() == sidePanel:
-			print 'Selected side'
-		if panel.getSelectedPanel() == topPanel:
-			print 'Selected top'
-		if panel.getSelectedPanel() == bottomPanel:
-			print 'Selected bottom'
-	viz.callback(events.PANEL_EVENT,onSelectedPanel)
-
 	inventoryCanvas.setRenderWorld([400,200],[1,viz.AUTO_COMPUTE])
 	updateMouseStyle(inventoryCanvas)
 	# Link rotation canvas with main view
@@ -1346,6 +1337,25 @@ def onSlider(obj,pos):
 		quantitySlider.message(str(displayedQty))
 
 
+def onList(e):
+	if e.object == diameterDropList:
+		thicknesses = []
+		index = e.object.getSelection()
+		for thickness in catalogue_root[int(index)]:
+			thicknesses.append(thickness.text)
+		thicknessDropList.clearItems()
+		thicknessDropList.addItems(thicknesses)
+		
+	if e.object == tabbedPanel.tabGroup:
+		if e.newSel == 0:
+			print 'Side mode'
+		if e.newSel == 1:
+			print 'Top mode'
+		if e.newSel == 2:
+			print 'Bottom mode'
+		
+	clickSound.play()
+		
 import csv
 # Saves current build members' truss dimensions, position, rotation to './data/bridge#.csv'
 def SaveData(filePath,sound=True):
@@ -1408,6 +1418,7 @@ viz.callback ( viz.KEYUP_EVENT, onKeyUp )
 viz.callback ( viz.MOUSEUP_EVENT, onMouseUp )
 viz.callback ( viz.MOUSEDOWN_EVENT, onMouseDown )
 viz.callback ( viz.SLIDER_EVENT, onSlider )
+viz.callback ( viz.LIST_EVENT,onList )
 
 # Button callbacks
 vizact.onbuttonup ( orderSideButton, addOrder, ORDERS_SIDE_GRID, ORDERS_SIDE, ORDERS_SIDE_ROWS, ORDERS_SIDE_FLAG )
@@ -1419,7 +1430,7 @@ vizact.onbuttonup ( orderBottomButton, clickSound.play )
 vizact.onbuttonup ( doneButton, populateInventory, ORDERS_SIDE, ORDERS_TOP, ORDERS_BOT )
 vizact.onbuttonup ( doneButton, clickSound.play )
 vizact.onkeydown ( KEYS['snapMenu'], toggleMenuLink )
-vizact.onlist( diameterDropList, diameterListChanged )
+#vizact.onlist( diameterDropList, diameterListChanged )
 vizact.whilemousedown ( KEYS['rotate'], rotateTruss, objToRotate, rotationSlider, rotationLabel )
 
 # Utility
