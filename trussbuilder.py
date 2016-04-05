@@ -32,6 +32,7 @@ import inventory
 import mathlite
 import oculuslite
 import panels
+import roots
 import sys
 import themes
 import tools
@@ -64,7 +65,6 @@ QTY_MIN = 1
 QTY_MAX = 20
 
 GRIDS = []
-ENVIRONMENTS = []
 
 # Setup order lists
 ORDERS = []
@@ -87,6 +87,11 @@ X = viz.addText3D('X',pos=[1.1,0,0],color=viz.RED,scale=[0.3,0.3,0.3],parent=BRI
 Y = viz.addText3D('Y',pos=[0,1.1,0],color=viz.GREEN,scale=[0.3,0.3,0.3],align=viz.ALIGN_CENTER_BASE,parent=BRIDGE_ROOT)
 Z = viz.addText3D('Z',pos=[0,0,1.1],color=viz.BLUE,scale=[0.3,0.3,0.3],align=viz.ALIGN_CENTER_BASE,parent=BRIDGE_ROOT)
 BRIDGE_ROOT_POS = [0,4,0]
+
+BRIDGE_ROOT_POS = [0,4,0]
+SIDE_VIEW_ROT = [0,0,0]
+TOP_VIEW_ROT = [0,-90,0]
+BOT_VIEW_ROT = [0,90,0]
 
 PROXY_NODES = []
 TARGET_NODES = []
@@ -122,9 +127,10 @@ KEYS = { 'forward'	: 'w'
 		,'hand'		: 'h'
 		,'showMenu' : ' '
 		,'snapMenu'	: viz.KEY_CONTROL_L
+		,'interact' : viz.MOUSEBUTTON_LEFT
 		,'utility'	: viz.MOUSEBUTTON_MIDDLE
-		,'proxi'	: 'p'
 		,'rotate'	: viz.MOUSEBUTTON_RIGHT
+		,'proxi'	: 'p'
 		,'collide'	: 'c'
 }
 
@@ -176,6 +182,13 @@ def initViewport(position):
 	return vp
 	
 	
+# Disable mouse navigation and hide the mouse cursor
+def initMouse():
+	viz.mouse(viz.OFF)
+	viz.mouse.setVisible(viz.OFF)
+	viz.mouse.setTrap(viz.ON)
+	
+	
 def initLighting():
 	# Disable the head lamps since we're doing lighting ourselves
 	for window in viz.getWindowList():
@@ -185,21 +198,11 @@ def initLighting():
 	sky_light.ambient([0.8]*3)
 	viz.setOption('viz.lightModel.ambient',[0]*3)
 
-
-# Laser pointer
-def initPointerTool():
-	from tools import laser_pointer
-	return laser_pointer.LaserPointer()
 	
-	
+# Highlighter	
 def initHighlightTool():
 	from tools import highlighter
 	return highlighter.Highlighter()
-	
-	
-def initPencilTool():
-	from tools import pencil
-	return pencil.Pencil()
 	
 	
 def initProxy():
@@ -225,28 +228,22 @@ def initProxy():
 	proxyManager.onExit(None, exitProximity)
 	
 	return proxyManager
-
-
+	
 # Initialize
 initScene(RESOLUTION,MULTISAMPLING,STENCIL,STEREOMODE,FULLSCREEN,CLEAR_COLOR)
 cameraRift = initCamera('vizconnect_config_riftDefault')
 #cameraFly = initCamera('vizconnect_config_riftFly')
 hmd = initOculus()
 viewport = initViewport(START_POS)
+initMouse()
 initLighting()
-
-laserTool = initPointerTool()
-laserTool.disable(viz.PICKING)
-
 highlightTool = initHighlightTool()
-highlightTool.disable(viz.PICKING)
-
-pencilTool = initPencilTool()
-pencilTool.disable(viz.PICKING)
-
 proxyManager = initProxy()
+grid_root = roots.GridRoot(gridColor=GRID_COLOR,origin=START_POS)
+environment_root = roots.EnvironmentRoot(visibility=False)
+bridge_root = roots.BridgeRoot(BRIDGE_ROOT_POS,SIDE_VIEW_ROT)
 
-# Sounds
+# Setup audio
 startSound = viz.addAudio('./resources/sounds/return_to_holodeck.wav')
 buttonHighlightSound = viz.addAudio('./resources/sounds/button_highlight.wav')
 clickSound = viz.addAudio('./resources/sounds/click.wav')
@@ -266,58 +263,11 @@ warningSound.volume(.05)
 
 viewChangeSound.play()
 
-# Set grids
-def initGrid():	
-	# Create front grid
-	grid_front = vizshape.addGrid(size=(20,8))
-	grid_front.color(GRID_COLOR)
-	grid_front.setPosition(0,2+4,-5)
-	grid_front.setEuler(0,90,0)
-	
-	# Create back grid
-	grid_back = vizshape.addGrid(size=(20,8))
-	grid_back.color(GRID_COLOR)
-	grid_back.setPosition(0,2+4,-5-24)
-	grid_back.setEuler(0,90,0)
-	grid_back.setScale(1,z=-1)
-
-	# Create bottom grid
-	grid_bottom = vizshape.addGrid(size=(20,24))
-	grid_bottom.color(GRID_COLOR)
-	grid_bottom.setPosition(0,2,START_POS[2])
-	
-	# Create left grid
-	grid_left = vizshape.addGrid(size=(8,24),)
-	grid_left.color(GRID_COLOR)
-	grid_left.setPosition(-10,4+2,START_POS[2])
-	grid_left.setEuler(0,0,90)
-	
-	# Create right grid
-	grid_right = vizshape.addGrid(size=(8,24))
-	grid_right.color(GRID_COLOR)
-	grid_right.setPosition(10,4+2,START_POS[2])
-	grid_right.setEuler(0,0,-90)
-
-	# Create floating measurements
-	span_text = viz.addText3D('<< 20 meters >>',pos=[-3.25,10.25,-5])
-	span_text.disable(viz.PICKING)
-	height_text = viz.addText3D('<< 8 meters >>',pos=[-10.25,2.5,-5],euler=[0,0,90])
-	height_text.disable(viz.PICKING)
-	
-	GRIDS.append(grid_back)
-	GRIDS.append(grid_bottom)
-	GRIDS.append(grid_front)
-	GRIDS.append(grid_left)
-	GRIDS.append(grid_right)
-	GRIDS.append(span_text)
-	GRIDS.append(height_text)
-initGrid()
-
 
 # Parse catalogue from data subdirectory
 def getCatalogue(path):
 	return ET.parse(str(path)).getroot()
-root = getCatalogue('data/catalogue_CHS.xml')
+catalogue_root = getCatalogue('data/catalogue_CHS.xml')
 
 
 def updateMouseStyle(canvas):
@@ -334,6 +284,7 @@ vizfx.getComposer().addEffect(effect)
 #lightEffect = vizfx.addLightingModel(diffuse=vizfx.DIFFUSE_LAMBERT,specular=None)
 #vizfx.getComposer().addEffect(lightEffect)
 
+<<<<<<< HEAD
 # Setup environment
 day = viz.add('resources/sky_day.osgb', scale=([5,5,5]))
 river = viz.addChild('resources/singaporeEnv.osgb', pos=(0,0,0),scale=([1,1,1]))
@@ -350,6 +301,8 @@ water.setAnimationSpeed(0.005)
 for environment in ENVIRONMENTS:
 	environment.visible(viz.OFF)
 
+=======
+>>>>>>> origin/master
 # Bridge pin and roller supports
 pinSupport = viz.addChild('resources/pinSupport.osgb',pos=(-9.5,4,0),scale=[1,1,11])
 rollerSupport = viz.addChild('resources/rollerSupport.osgb',pos=(9.5,4,0),scale=[1,1,11])
@@ -362,19 +315,28 @@ for model in supports:
 
 #Setup anchor points for truss members
 pinAnchorSphere = vizshape.addSphere(0.2,pos=([-10,5,-5]))
+<<<<<<< HEAD
 #pinAnchorSphere.visible(False)
+=======
+pinAnchorSphere.visible(False)
+>>>>>>> origin/master
 pinLink = viz.link(pinAnchorSphere,viz.NullLinkable)
 pinAnchorSensor = vizproximity.Sensor(vizproximity.Sphere(0.3,center=[0,0.1,0]),pinLink)
 proxyManager.addSensor(pinAnchorSensor)
 viz.grab(pinSupport,pinAnchorSphere)
 
 rollerAnchorSphere = vizshape.addSphere(0.2,pos=([10,5,-5]))
+<<<<<<< HEAD
 #rollerAnchorSphere.visible(False)
+=======
+rollerAnchorSphere.visible(False)
+>>>>>>> origin/master
 rollerLink = viz.link(rollerAnchorSphere,viz.NullLinkable)
 rollerAnchorSensor = vizproximity.Sensor(vizproximity.Sphere(0.3,center=[0,0.1,0]), rollerLink)
 proxyManager.addSensor(rollerAnchorSensor)
 viz.grab(rollerSupport,rollerAnchorSphere)
 
+<<<<<<< HEAD
 # Setup bridge root
 BRIDGE_ROOT.setPosition( BRIDGE_ROOT_POS )
 
@@ -383,6 +345,12 @@ for model in supports:
 	
 # Rotate root test
 BRIDGE_ROOT.setEuler( [0,-90,0] )
+=======
+for model in supports:
+	viz.grab(bridge_root,model)
+
+bridge_root.setEuler(TOP_VIEW_ROT)
+>>>>>>> origin/master
 
 # Create canvas for displaying GUI objects
 instructionsPanel = vizinfo.InfoPanel(title='Truss Bridge Builder & Visualizer',align=viz.ALIGN_CENTER_BASE,icon=False)
@@ -420,7 +388,7 @@ typeDropList.addItem('CHS', 0)
 trussType = orderPanel.addLabelItem('Type', typeDropList)
 # Initialize diameterDropList
 diameterDropList = viz.addDropList()
-for member in root.iter('member'):
+for member in catalogue_root.iter('member'):
 	diameter = member.get('diameter')
 	diameterDropList.addItem(diameter)
 diameterDropList.select(19)
@@ -428,7 +396,7 @@ diameter = orderPanel.addLabelItem('Diameter (mm)', diameterDropList)
 # Initialize thicknessDropList
 thicknessDropList = viz.addDropList()
 thicknesses = []
-for thickness in root[diameterDropList.getSelection()]:
+for thickness in catalogue_root[diameterDropList.getSelection()]:
 	thicknesses.append(thickness.text)
 thicknessDropList.addItems(thicknesses)
 thicknessDropList.select(2)
@@ -695,8 +663,10 @@ def createInventory():
 	global sideInventory
 	sideInventory = vizdlg.GridPanel(cellAlign=vizdlg.ALIGN_CENTER_TOP,border=False,spacing=0,padding=1,background=False,margin=0)
 	sideInventory.layout = vizdlg.LAYOUT_VERT_LEFT
-	tabbedPanel.addPanel('Side',sideInventory)
-
+	
+	global sidePanel
+	sidePanel = tabbedPanel.addPanel('Side',sideInventory)
+	
 	global sideRows
 	sideRows = []
 	
@@ -704,7 +674,9 @@ def createInventory():
 	global topInventory
 	topInventory = vizdlg.GridPanel(cellAlign=vizdlg.ALIGN_CENTER_TOP,border=False,spacing=0,padding=1,background=False,margin=0)
 	topInventory.layout = vizdlg.LAYOUT_VERT_LEFT
-	tabbedPanel.addPanel('Top',topInventory)
+	
+	global topPanel
+	topPanel = tabbedPanel.addPanel('Top',topInventory)
 	
 	global topRows
 	topRows = []
@@ -713,7 +685,9 @@ def createInventory():
 	global bottomInventory
 	bottomInventory = vizdlg.GridPanel(cellAlign=vizdlg.ALIGN_CENTER_TOP,border=False,spacing=0,padding=1,background=False,margin=0)
 	bottomInventory.layout = vizdlg.LAYOUT_VERT_LEFT
-	tabbedPanel.addPanel('Bottom',bottomInventory)
+	
+	global bottomPanel
+	bottomPanel = tabbedPanel.addPanel('Bottom',bottomInventory)
 
 	global bottomRows
 	bottomRows = []
@@ -985,7 +959,7 @@ def generateMembers(loading=False):
 def diameterListChanged(e,sound=True):
 	thicknesses = []
 	index = e.object.getSelection()
-	for thickness in root[int(index)]:
+	for thickness in catalogue_root[int(index)]:
 		thicknesses.append(thickness.text)
 	thicknessDropList.clearItems()
 	thicknessDropList.addItems(thicknesses)
@@ -1026,9 +1000,10 @@ def clearMembers():
 
 	
 def toggleEnvironment(value=viz.TOGGLE):
-	for environment in ENVIRONMENTS:
-		environment.visible(value)
+	environment_root.visible(value)
 
+def toggleGrid(value=viz.TOGGLE):
+	grid_root.visible(value)
 			
 def toggleUtility(sound=True):
 	utilityCanvas.visible(viz.TOGGLE)
@@ -1058,19 +1033,11 @@ def initLink(modelPath):
 	return link
 gloveLink = initLink('glove.cfg')
 viz.link(gloveLink,highlightTool)
-viz.link(gloveLink,laserTool)
-viz.link(gloveLink,pencilTool)
 
 
 def clampTrackerScroll(tracker,min=0.2,max=20):
 	tracker.distance = viz.clamp(tracker.distance,min,max)
 vizact.ontimer(0,clampTrackerScroll,mouseTracker,SCROLL_MIN,SCROLL_MAX)
-
-## Hand
-#import hand
-#r_hand = hand.add(sensor=None)
-#r_hand.disable(viz.PICKING)
-#viz.link(glove,r_hand)
 
 menuLink = None
 def toggleMenuLink():
@@ -1084,16 +1051,12 @@ def toggleMenuLink():
 		menuCanvas.setPosition(gloveLink.getPosition())
 		menuCanvas.setEuler(0,0,0)
 		menuLink = viz.grab( gloveLink, menuCanvas )
+		menuCanvas.visible(True)
 		
 		
 def toggleCollision():
 	viz.collision(viz.TOGGLE)
-
-
-# Disable mouse navigation and hide the mouse curser
-viz.mouse(viz.OFF)
-viz.mouse.setVisible(viz.OFF)
-viz.mouse.setTrap(viz.ON)
+	
 
 # update code for grabber
 isgrabbing = False
@@ -1114,8 +1077,8 @@ def updateHandGrabber(grabberTool):
 		grabbedItem.setEuler( [0,0,0] )
 #grabberTool.setUpdateFunction(updateHandGrabber)
 
-objToRotate = None
 # update code for highlight tool
+objToRotate = None
 def updateHighlightTool(highlightTool):
 	global grabbedItem
 	global grabbedRotation
@@ -1159,7 +1122,7 @@ def updateHighlightTool(highlightTool):
 highlightTool.setUpdateFunction(updateHighlightTool)
 
 
-#Register a callback function for the highlight event
+# Register a callback function for the highlight event
 def onHighlight(e):
 	global isgrabbing
 	global highlightedItem
@@ -1181,14 +1144,6 @@ def onHighlightGrab():
 		clampedY =  viz.clamp( gloveLink.getPosition()[1],2,10 )
 		grabbedItem.setPosition( [gloveLink.getPosition()[0],gloveLink.getPosition()[1],-5] )
 vizact.ontimer(0,onHighlightGrab)
-
-
-# update code for laser pointer
-def updateLaserPointer(pointerTool):
-	state = viz.mouse.getState()
-	if state & viz. MOUSEBUTTON_LEFT:
-		pointerTool.shoot()
-#laserTool.setUpdateFunction(updateLaserPointer)
 
 
 from tools import grabber
@@ -1325,6 +1280,8 @@ def updateAngle(obj,slider,label):
 
 def rotateTruss(obj,slider,label):	
 	if objToRotate != None:
+		# Clamp glove link z-orientation
+		mouseTracker.distance = 0.1
 		slider.visible(True)
 		pos = viz.Mouse.getPosition(viz.WINDOW_NORMALIZED)[0]
 		slider.set(pos)
@@ -1352,8 +1309,8 @@ def onKeyUp(key,sound=True):
 		try:
 			hmd.getSensor().reset(0)
 		except:
-			print 'Reset orientation failed: Unable to get Oculus Rift sensor!'
 			warningSound.play()
+			print 'Reset orientation failed: Unable to get Oculus Rift sensor!'
 		clickSound.play()
 	elif key == KEYS['hand']:
 		mouseTracker.distance = HAND_DISTANCE
@@ -1361,19 +1318,16 @@ def onKeyUp(key,sound=True):
 		toggleEnvironment(False)
 		proxyManager.setDebug(True)
 		mouseTracker.distance = HAND_DISTANCE
-		for grid in GRIDS:
-			grid.visible(True)
+		toggleGrid(True)
 		clickSound.play()
 	elif key == KEYS['viewer']:
 		toggleEnvironment(True)
 		proxyManager.setDebug(False)
 		mouseTracker.distance = HAND_DISTANCE
-		for grid in GRIDS:
-			grid.visible(False)
+		toggleGrid(False)
 		clickSound.play()
 	elif key == KEYS['grid']:
-		for grid in GRIDS:
-			grid.visible(viz.TOGGLE)
+		toggleGrid(viz.TOGGLE)
 		clickSound.play()
 	elif key == KEYS['showMenu']:
 		menuCanvas.visible(viz.TOGGLE)
@@ -1388,19 +1342,10 @@ def onKeyUp(key,sound=True):
 		
 def onMouseUp(button):	
 	global isgrabbing
-	if button == viz.MOUSEBUTTON_LEFT:
+	if button == KEYS['interact']:
 		if isgrabbing == True:
 			onRelease()
 			isgrabbing = False
-			
-#	global highlightedItem
-#	if button == KEYS['rotate']:
-#		if highlightedItem != None:
-#			rot = highlightedItem.getEuler()
-#			pos = mathlite.getNewRange(rot[2],90,-90,0,1)
-#			rotationSlider.set(pos)
-#			rotationLabel.message(str(int(rot[2])))
-#			rotationCanvas.visible(viz.TOGGLE)
 
 	global objToRotate
 	if button == KEYS['rotate']:
@@ -1504,7 +1449,6 @@ vizact.onbuttonup ( orderTopButton, addOrder, ORDERS_TOP_GRID, ORDERS_TOP, ORDER
 vizact.onbuttonup ( orderTopButton, clickSound.play )
 vizact.onbuttonup ( orderBottomButton, addOrder, ORDERS_BOT_GRID, ORDERS_BOT, ORDERS_BOT_ROWS, ORDERS_BOT_FLAG )
 vizact.onbuttonup ( orderBottomButton, clickSound.play )
-#vizact.onbuttonup ( doneButton, generateMembers )
 vizact.onbuttonup ( doneButton, populateInventory, ORDERS_SIDE, ORDERS_TOP, ORDERS_BOT )
 vizact.onbuttonup ( doneButton, clickSound.play )
 vizact.onkeydown ( KEYS['snapMenu'], toggleMenuLink )
@@ -1512,10 +1456,9 @@ vizact.onlist( diameterDropList, diameterListChanged )
 vizact.whilemousedown ( KEYS['rotate'], rotateTruss, objToRotate, rotationSlider, rotationLabel )
 
 # Utility
-vizact.onbuttonup ( menuButton, toggleMenuLink )
+#vizact.onbuttonup ( menuButton, toggleMenuLink )
 vizact.onbuttonup ( menuButton, onKeyUp, KEYS['showMenu'], )
 vizact.onbuttonup ( homeButton, onKeyUp, KEYS['home'] )
-vizact.onbuttonup ( resetOriButton, onKeyUp, KEYS['reset'] )
 vizact.onbuttonup ( buildModeButton, onKeyUp, KEYS['builder'] )
 vizact.onbuttonup ( viewerModeButton, onKeyUp, KEYS['viewer'] )
 vizact.onbuttonup ( resetOriButton, onKeyUp, KEYS['reset'] )
@@ -1527,3 +1470,8 @@ vizact.onbuttonup ( saveBridgeButton3, SaveData, SAVE_FILES[2] )
 vizact.onbuttonup ( loadBridgeButton1, LoadData, SAVE_FILES[0] )
 vizact.onbuttonup ( loadBridgeButton2, LoadData, SAVE_FILES[1] )
 vizact.onbuttonup ( loadBridgeButton3, LoadData, SAVE_FILES[2] )
+
+def onSelectedPanel(panel):
+	if panel.getSelectedPanel().name == 'Side':
+		print 'Selected side'
+vizact.ontimer(0,onSelectedPanel, sidePanel)
