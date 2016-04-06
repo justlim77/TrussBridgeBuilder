@@ -43,6 +43,7 @@ def GridRoot(gridColor=viz.CYAN,origin=([0,0,0])):
 	span_text = viz.addText3D('<< 20 meters >>',pos=[-3.25,10.25,-5],parent=grid_root)
 	height_text = viz.addText3D('<< 10 meters >>',pos=[-10.25,1,-5],euler=[0,0,90],parent=grid_root)
 	
+	print 'Creating grid...'
 	return grid_root
 	
 def EnvironmentRoot(visibility=True):
@@ -56,6 +57,7 @@ def EnvironmentRoot(visibility=True):
 #	waves.setAnimationLoopMode(viz.LOOP)
 	environment_root.visible(visibility)
 	
+	print 'Creating environment...'
 	return environment_root
 	
 def BridgeRoot(pos=([0,0,0]),euler=([0,0,0])):
@@ -67,4 +69,5 @@ def BridgeRoot(pos=([0,0,0]),euler=([0,0,0])):
 	bridge_root.setPosition(pos)
 	bridge_root.setEuler(euler)
 	
+	print 'Creating bridge root...'
 	return bridge_root

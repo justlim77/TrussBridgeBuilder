@@ -29,7 +29,6 @@ import vizproximity
 import vizshape
 import viztask
 
-import events
 import inventory
 import mathlite
 import oculuslite
@@ -782,6 +781,7 @@ def createTrussNew(order=Order(),path='',loading=False):
 	truss.thickness = float(order.thickness)
 	truss.length = float(order.length)
 	truss.quantity = int(order.quantity)
+	truss.orientation = ORIENTATION
 	
 	truss.setScale([truss.length,truss.diameter/1000,truss.diameter/1000])	
 
@@ -951,9 +951,6 @@ def clearMembers():
 		proxyManager.removeSensor(sensor)
 		del sensor
 	SENSOR_NODES = []
-	
-	# Add glove grabberTool back to proximity targets
-#	proxyManager.addTarget(proxTarget)
 
 	
 def toggleEnvironment(value=viz.TOGGLE):
@@ -1011,31 +1008,17 @@ def toggleMenuLink():
 		menuCanvas.visible(True)
 		
 		
-def toggleCollision():
-	viz.collision(viz.TOGGLE)
+def toggleCollision(val=viz.TOGGLE):
+	viz.collision(val)
 	
 
-# update code for grabber
+# update code for highlight tool
 isgrabbing = False
 grabbedItem = None
 highlightedItem = None
 grabbedRotation = []
-def updateHandGrabber(grabberTool):
-	global grabbedItem
-	state = viz.mouse.getState()
-	if state & viz.MOUSEBUTTON_LEFT:
-		grabberTool.grabAndHold()
-	if grabbedItem is not None:	
-#		print 'Grabbing', grabbedItem
-		xOffset = grabbedItem.getScale()[0] / 2
-		clampedX =  viz.clamp(grabbedItem.getPosition()[0],-10 + xOffset,10 - xOffset)
-		clampedY =  viz.clamp(grabbedItem.getPosition()[1],2,10)
-		grabbedItem.setPosition( [clampedX,clampedY,-5] )
-		grabbedItem.setEuler( [0,0,0] )
-#grabberTool.setUpdateFunction(updateHandGrabber)
-
-# update code for highlight tool
 objToRotate = None
+
 def updateHighlightTool(highlightTool):
 	global grabbedItem
 	global grabbedRotation
@@ -1101,31 +1084,6 @@ def onHighlightGrab():
 		clampedY =  viz.clamp( gloveLink.getPosition()[1],2,10 )
 		grabbedItem.setPosition( [gloveLink.getPosition()[0],gloveLink.getPosition()[1],-5] )
 vizact.ontimer(0,onHighlightGrab)
-
-
-from tools import grabber
-def onGrab(e):
-	global grabbedItem
-	global proxyManager
-	global PRE_SNAP_POS
-	global PRE_SNAP_ROT
-	global SNAP_TO_POS
-	
-	grabbedItem = e.grabbed
-	
-	# Enable truss member target nodes
-	proxyManager.addTarget(grabbedItem.targetNodes[0])
-	proxyManager.addTarget(grabbedItem.targetNodes[1])
-	
-	# Disable truss member sensor nodes
-	proxyManager.removeSensor(grabbedItem.sensorNodes[0])
-	proxyManager.removeSensor(grabbedItem.sensorNodes[1])
-	
-	PRE_SNAP_POS = e.grabbed.getPosition()
-	PRE_SNAP_ROT = e.grabbed.getEuler()
-	
-	SNAP_TO_POS = grabbedItem.getPosition()
-#viz.callback(grabber.GRAB_EVENT,onGrab)
 
 
 def onRelease(e=None,sound=True):
@@ -1251,19 +1209,21 @@ def rotateTruss(obj,slider,label):
 		rotationLabel.message(string)
 	
 def cycleMode(val):
+	global ORIENTATION
 	rot = []
-	if val == 'top':
+	ORIENTATION = val
+	if val == Orientation.top:
 		rot = TOP_VIEW_ROT
-	elif val == 'bot':
+	elif val == Orientation.bottom:
 		rot = BOT_VIEW_ROT
 	else:
 		rot = SIDE_VIEW_ROT
 	bridge_root.setEuler(rot)
-vizact.onkeyup(KEYS['cycle'],cycleMode,vizact.choice(['top','bot','side']))
+vizact.onkeyup(KEYS['cycle'],cycleMode,vizact.choice([Orientation.top,Orientation.bottom,Orientation.side]))
 
 
 # Setup Callbacks and Events
-def onKeyUp(key,sound=True):
+def onKeyUp(key):
 	if key == '=':
 		pass
 	elif key == KEYS['home']:
@@ -1309,9 +1269,24 @@ def onKeyUp(key,sound=True):
 	elif key == 'l':
 		viz.link(cameraFly,viz.MainView)
 
+
 def onKeyDown(key):
 	if key == KEYS['snapMenu']:
 		toggleMenuLink()
+		
+		
+def onMouseWheel(dir):
+	global ORIENTATION
+	global bridge_root
+	
+	if ORIENTATION == Orientation.top or ORIENTATION == Orientation.bottom:
+		pos = bridge_root.getPosition()
+		if dir > 0:
+			pos[2] += 1	
+		else:
+			pos[2] -= 1
+		bridge_root.setPosition(pos)
+		
 		
 def onMouseUp(button):	
 	global isgrabbing
@@ -1370,6 +1345,7 @@ def onList(e):
 			ORIENTATION = Orientation.bottom
 		
 	clickSound.play()
+	
 		
 import csv
 # Saves current build members' truss dimensions, position, rotation to './data/bridge#.csv'
@@ -1384,7 +1360,8 @@ def SaveData(filePath):
 			writer.writerow([str(truss.order.diameter),str(truss.order.thickness),str(truss.order.length),str(truss.order.quantity),
 							str(truss.getPosition()[0]), str(truss.getPosition()[1]),str(truss.getPosition()[2]),
 							str(truss.getEuler()[0]),str(truss.getEuler()[1]),str(truss.getEuler()[2]),
-							str(truss.orientation)])
+							int(truss.orientation.value)])
+			print int(truss.orientation.value)
 	
 		
 # Loads build members' truss dimensions, position, rotation from './data/bridge#.csv'					
@@ -1397,6 +1374,7 @@ def LoadData(filePath):
 	global ORDERS
 	global highlightTool
 	
+	# Play sound
 	clickSound.play()
 	
 	# Clear previous bridge
@@ -1417,7 +1395,8 @@ def LoadData(filePath):
 		for row in reader:
 			 order = Order(diameter=float(row[0]),thickness=float(row[1]),length=float(row[2]),quantity=int(row[3]))
 			 order.pos = ( [float(row[4]), float(row[5]), float(row[6])] )
-			 order.euler = ( [float(row[7]), float(row[8]), float(row[9])])
+			 order.euler = ( [float(row[7]), float(row[8]), float(row[9])] )
+			 order.orientation = Orientation(int(row[10]))
 			 ORDERS.append(order)
 	
 	clearMembers()
@@ -1426,18 +1405,20 @@ def LoadData(filePath):
 	for truss in BUILD_MEMBERS:
 		truss.setPosition(truss.order.pos)
 		truss.setEuler(truss.order.euler)
-		SIDE_CLONES.append(cloneSide(truss))
+		truss.orientation = truss.order.orientation
+		if truss.orientation == Orientation.side:
+			SIDE_CLONES.append(cloneSide(truss))
 		viz.grab(bridge_root,truss)
-		
-		
+				
 
 # Events
 viz.callback ( viz.KEYUP_EVENT, onKeyUp )
 viz.callback ( viz.KEYDOWN_EVENT, onKeyDown )
 viz.callback ( viz.MOUSEUP_EVENT, onMouseUp )
 viz.callback ( viz.MOUSEDOWN_EVENT, onMouseDown )
+viz.callback ( viz.MOUSEWHEEL_EVENT, onMouseWheel )
 viz.callback ( viz.SLIDER_EVENT, onSlider )
-viz.callback ( viz.LIST_EVENT,onList )
+viz.callback ( viz.LIST_EVENT, onList )
 
 # Button callbacks
 vizact.onbuttonup ( orderSideButton, addOrder, ORDERS_SIDE_GRID, ORDERS_SIDE, ORDERS_SIDE_ROWS, ORDERS_SIDE_FLAG )
