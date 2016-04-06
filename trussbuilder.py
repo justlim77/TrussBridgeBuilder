@@ -14,7 +14,6 @@ Specify truss member dimensions and order materials required to build a 20m-long
 7. Adjust truss ang le by RIGHT MOUSE CLICK while highlighting truss member
 8. Toggle utilities with MIDDLE MOUSE CLICK
 9. Toggle main menu with SPACE BAR
-10. Grab and release main menu with LEFT CONTROL KEY
 """
 import viz
 import vizact
@@ -110,6 +109,7 @@ PRE_SNAP_ROT = []
 SNAP_TO_POS = []
 VALID_SNAP = False
 
+SHOW_HIGHLIGHTER = False
 HAND_DISTANCE = 0.5
 SCROLL_MIN = 0.2
 SCROLL_MAX = 20
@@ -1220,6 +1220,11 @@ def rotateTruss(obj,slider,label):
 	
 def cycleMode(val):
 	global ORIENTATION
+	global grabbedItem
+	
+	if grabbedItem != None:
+		return
+	
 	rot = []
 	ORIENTATION = val
 	if val == Orientation.top:
@@ -1227,6 +1232,7 @@ def cycleMode(val):
 	elif val == Orientation.bottom:
 		rot = BOT_VIEW_ROT
 	else:
+		bridge_root.setPosition(BRIDGE_ROOT_POS)
 		rot = SIDE_VIEW_ROT
 	bridge_root.setEuler(rot)
 vizact.onkeyup(KEYS['cycle'],cycleMode,vizact.choice([Orientation.top,Orientation.bottom,Orientation.side]))
@@ -1265,6 +1271,8 @@ def onKeyUp(key):
 		proxyManager.setDebug(False)
 		mouseTracker.distance = HAND_DISTANCE
 		toggleGrid(False)
+		bridge_root.setPosition(BRIDGE_ROOT_POS)
+		bridge_root.setEuler(SIDE_VIEW_ROT)
 		clickSound.play()
 	elif key == KEYS['grid']:
 		toggleGrid(viz.TOGGLE)
@@ -1282,7 +1290,8 @@ def onKeyUp(key):
 
 def onKeyDown(key):
 	if key == KEYS['snapMenu']:
-		toggleMenuLink()
+#		toggleMenuLink()
+		pass
 		
 		
 def onMouseWheel(dir):
@@ -1292,9 +1301,9 @@ def onMouseWheel(dir):
 	if ORIENTATION == Orientation.top or ORIENTATION == Orientation.bottom:
 		pos = bridge_root.getPosition()
 		if dir > 0:
-			pos[2] += 1	
+			pos[2] += 0.5	
 		else:
-			pos[2] -= 1
+			pos[2] -= 0.5
 		bridge_root.setPosition(pos)
 		
 		
@@ -1303,12 +1312,14 @@ def onMouseUp(button):
 	if button == KEYS['interact']:
 		if isgrabbing == True:
 			onRelease()
+			mouseTracker.distance = 10.0
 			isgrabbing = False
 
 	global objToRotate
 	if button == KEYS['rotate']:
 		if objToRotate != None:
 			objToRotate = None
+			mouseTracker.distance = 10.0
 		rotationSlider.visible(False)
 	
 	if button == KEYS['utility']:
@@ -1335,7 +1346,7 @@ def onSlider(obj,pos):
 		quantitySlider.set(pos)
 		displayedQty = int(mathlite.getNewRange(pos,0.0,1.0,QTY_MIN,QTY_MAX))
 		quantitySlider.message(str(displayedQty))
-
+		
 
 def onList(e):
 	if e.object == diameterDropList:
@@ -1362,6 +1373,7 @@ import csv
 def SaveData(filePath):
 	global BUILD_MEMBERS
 		
+	# Play sound
 	clickSound.play()
 	
 	with open(filePath,'wb') as f:
@@ -1376,12 +1388,8 @@ def SaveData(filePath):
 # Loads build members' truss dimensions, position, rotation from './data/bridge#.csv'					
 def LoadData(filePath):
 	global BUILD_MEMBERS
-	global SIDE_MEMBERS
-	global TOP_MEMBERS
-	global BOT_MEMBERS
 	global SIDE_CLONES
 	global ORDERS
-	global highlightTool
 	global GRAB_LINKS
 	
 	# Play sound
@@ -1463,3 +1471,7 @@ vizact.onbuttonup ( saveBridgeButton3, SaveData, SAVE_FILES[2] )
 vizact.onbuttonup ( loadBridgeButton1, LoadData, SAVE_FILES[0] )
 vizact.onbuttonup ( loadBridgeButton2, LoadData, SAVE_FILES[1] )
 vizact.onbuttonup ( loadBridgeButton3, LoadData, SAVE_FILES[2] )
+
+def showHandPos():
+	print mouseTracker.distance
+vizact.onupdate(0,showHandPos)
