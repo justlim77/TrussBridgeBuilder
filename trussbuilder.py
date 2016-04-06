@@ -9,11 +9,12 @@ Specify truss member dimensions and order materials required to build a 20m-long
 4. Control elevation with Z and X
 3. Interact with floating menus using the VIRTUAL MOUSE
 4. Extend or retract virtual hand with MOUSE SCROLL WHEEL
-5. Grab and hold onto truss members by LEFT MOUSE CLICK when highlighted green
-6. Adjust truss ang le by RIGHT MOUSE CLICK while highlighting truss member
-7. Toggle utilities with MIDDLE MOUSE CLICK
-8. Toggle main menu with SPACE BAR
-9. Grab and release main menu with LEFT CONTROL KEY
+5. Cycle through build modes with TAB KEY
+6. Grab and hold onto truss members by LEFT MOUSE CLICK when highlighted green
+7. Adjust truss ang le by RIGHT MOUSE CLICK while highlighting truss member
+8. Toggle utilities with MIDDLE MOUSE CLICK
+9. Toggle main menu with SPACE BAR
+10. Grab and release main menu with LEFT CONTROL KEY
 """
 import viz
 import vizact
@@ -126,6 +127,7 @@ KEYS = { 'forward'	: 'w'
 		,'interact' : viz.MOUSEBUTTON_LEFT
 		,'utility'	: viz.MOUSEBUTTON_MIDDLE
 		,'rotate'	: viz.MOUSEBUTTON_RIGHT
+		,'cycle'	: viz.KEY_TAB
 		,'proxi'	: 'p'
 		,'collide'	: 'c'
 }
@@ -1248,11 +1250,22 @@ def rotateTruss(obj,slider,label):
 		rotation = int(objToRotate.getEuler()[2])
 		string = str(rotation)
 		rotationLabel.message(string)
-		
+	
+def cycleMode(val):
+	rot = []
+	if val == 'top':
+		rot = TOP_VIEW_ROT
+	elif val == 'bot':
+		rot = BOT_VIEW_ROT
+	else:
+		rot = SIDE_VIEW_ROT
+	print 'target rot:' , rot, 'Top rot:', TOP_VIEW_ROT
+	bridge_root.setEuler(rot)
+vizact.onkeyup(KEYS['cycle'],cycleMode,vizact.choice(['top','bot','side']))
 
 # Setup Callbacks and Events
-def onKeyUp(key,sound=True):	
-	if key == viz.KEY_TAB:
+def onKeyUp(key,sound=True):
+	if key == '-':
 		pass
 	elif key == KEYS['home']:
 		viewport.reset()
@@ -1297,6 +1310,9 @@ def onKeyUp(key,sound=True):
 	elif key == 'l':
 		viz.link(cameraFly,viz.MainView)
 
+def onKeyDown(key):
+	if key == KEYS['snapMenu']:
+		toggleMenuLink()
 		
 def onMouseUp(button):	
 	global isgrabbing
@@ -1410,11 +1426,13 @@ def LoadData(filePath,sound=True):
 		truss.setPosition(truss.order.pos)
 		truss.setEuler(truss.order.euler)
 		SIDE_CLONES.append(cloneSide(truss))
+		viz.grab(bridge_root,truss)
 		
 		
 
 # Events
 viz.callback ( viz.KEYUP_EVENT, onKeyUp )
+viz.callback ( viz.KEYDOWN_EVENT, onKeyDown )
 viz.callback ( viz.MOUSEUP_EVENT, onMouseUp )
 viz.callback ( viz.MOUSEDOWN_EVENT, onMouseDown )
 viz.callback ( viz.SLIDER_EVENT, onSlider )
@@ -1429,8 +1447,6 @@ vizact.onbuttonup ( orderBottomButton, addOrder, ORDERS_BOT_GRID, ORDERS_BOT, OR
 vizact.onbuttonup ( orderBottomButton, clickSound.play )
 vizact.onbuttonup ( doneButton, populateInventory, ORDERS_SIDE, ORDERS_TOP, ORDERS_BOT )
 vizact.onbuttonup ( doneButton, clickSound.play )
-vizact.onkeydown ( KEYS['snapMenu'], toggleMenuLink )
-#vizact.onlist( diameterDropList, diameterListChanged )
 vizact.whilemousedown ( KEYS['rotate'], rotateTruss, objToRotate, rotationSlider, rotationLabel )
 
 # Utility
