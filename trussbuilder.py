@@ -88,6 +88,7 @@ SIDE_MEMBERS = []
 TOP_MEMBERS = []
 BOT_MEMBERS = []
 SIDE_CLONES = []
+GRAB_LINKS = []
 
 BRIDGE_ROOT_POS = [0,4,0]
 SIDE_VIEW_ROT = [0,0,0]
@@ -501,9 +502,8 @@ tabbedMenu.addPanel('Inventory',inventoryPanel)
 tabbedMenu.addPanel('Options',optionPanel)
 
 def initCanvas():	
-	menuCanvas.setRenderWorld(MENU_RES,[20,viz.AUTO_COMPUTE])
-	menuCanvas.setPosition(MENU_POS)
-	menuCanvas.setEuler(0,0,0)
+#	menuCanvas.setRenderWorld(MENU_RES,[20,viz.AUTO_COMPUTE])
+	menuCanvas.setRenderWorldOverlay(MENU_RES,fov=90.0,distance=3.0)
 	updateMouseStyle(menuCanvas)
 	
 	inspectorCanvas.setRenderWorld(RESOLUTION,[20,viz.AUTO_COMPUTE])
@@ -1018,11 +1018,11 @@ grabbedItem = None
 highlightedItem = None
 grabbedRotation = []
 objToRotate = None
-
 def updateHighlightTool(highlightTool):
 	global grabbedItem
 	global grabbedRotation
 	global isgrabbing
+	global GRAB_LINKS
 	
 	global proxyManager
 	global PRE_SNAP_POS
@@ -1037,7 +1037,11 @@ def updateHighlightTool(highlightTool):
 	if state & viz.MOUSEBUTTON_LEFT:
 		if isgrabbing == False:
 			grabbedItem = highlightTool.getSelection()
-			print 'Grabbing onto:', grabbedItem
+			
+			# Break grab links to free truss
+			for link in GRAB_LINKS:
+				link.remove()
+				link = None
 
 			# Enable truss member target nodes
 			proxyManager.addTarget(grabbedItem.targetNodes[0])
@@ -1086,7 +1090,7 @@ def onHighlightGrab():
 vizact.ontimer(0,onHighlightGrab)
 
 
-def onRelease(e=None,sound=True):
+def onRelease(e=None):
 	global INVENTORY
 	global BUILD_MEMBERS
 	global grabbedItem
@@ -1095,16 +1099,19 @@ def onRelease(e=None,sound=True):
 	global PRE_SNAP_ROT
 	global SNAP_TO_POS
 	global VALID_SNAP
+	global bridge_root
+	global GRAB_LINKS
 		
 	if VALID_SNAP:
 		try:			
 			if grabbedItem.isNewMember == True:
 				grabbedItem.orientation = ORIENTATION
 				if ORIENTATION == Orientation.side:				
-					cloneSide(grabbedItem)			
+					cloneSide(grabbedItem)	
+				link = viz.grab(bridge_root,grabbedItem)
+				GRAB_LINKS.append(link)
 				grabbedItem.isNewMember = False
 		except:
-			print 'Not new member'
 			pass
 			
 		# Check facing of truss
@@ -1131,8 +1138,7 @@ def onRelease(e=None,sound=True):
 		proxyManager.addSensor(grabbedItem.sensorNodes[1])
 		
 		# Play snap sound
-		if sound:
-			clickSound.play()
+		clickSound.play()
 	else:
 		try:			
 			# If invalid position and newly-generated truss, destroy it
@@ -1157,9 +1163,13 @@ def onRelease(e=None,sound=True):
 			proxyManager.addSensor(grabbedItem.sensorNodes[1])
 			
 		# Play warning sound
-		if sound:
-			warningSound.play()
-		
+		warningSound.play()
+			
+	# Re-grab existing build members
+	for members in BUILD_MEMBERS:
+		link = viz.grab(bridge_root,members)
+		GRAB_LINKS.append(link)
+	
 	# Disable truss member target nodes on release
 	proxyManager.removeTarget(grabbedItem.targetNodes[0])
 	proxyManager.removeTarget(grabbedItem.targetNodes[1])
@@ -1361,7 +1371,6 @@ def SaveData(filePath):
 							str(truss.getPosition()[0]), str(truss.getPosition()[1]),str(truss.getPosition()[2]),
 							str(truss.getEuler()[0]),str(truss.getEuler()[1]),str(truss.getEuler()[2]),
 							int(truss.orientation.value)])
-			print int(truss.orientation.value)
 	
 		
 # Loads build members' truss dimensions, position, rotation from './data/bridge#.csv'					
@@ -1373,6 +1382,7 @@ def LoadData(filePath):
 	global SIDE_CLONES
 	global ORDERS
 	global highlightTool
+	global GRAB_LINKS
 	
 	# Play sound
 	clickSound.play()
@@ -1380,14 +1390,20 @@ def LoadData(filePath):
 	# Clear previous bridge
 	for member in BUILD_MEMBERS:
 		member.remove()
-		del member
+		member = None
 	BUILD_MEMBERS = []
 	
 	# Clear side clones
 	for clone in SIDE_CLONES:
 		clone.remove()
-		del clone
+		clone = None
 	SIDE_CLONES = []
+	
+	# Clear grab links
+	for link in GRAB_LINKS:
+		link.remove()
+		link = None
+	GRAB_LINKS = []
 	
 	ORDERS = []
 	with open(filePath,'rb') as f:
@@ -1408,7 +1424,8 @@ def LoadData(filePath):
 		truss.orientation = truss.order.orientation
 		if truss.orientation == Orientation.side:
 			SIDE_CLONES.append(cloneSide(truss))
-		viz.grab(bridge_root,truss)
+		link = viz.grab(bridge_root,truss)
+		GRAB_LINKS.append(link)
 				
 
 # Events
