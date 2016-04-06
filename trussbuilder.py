@@ -40,6 +40,8 @@ import themes
 import tools
 import xml.etree.ElementTree as ET
 
+from enum import Enum
+
 # Globals
 RESOLUTION = ([1280,720])
 UTILITY_CANVAS_RES = ([80,80])
@@ -83,12 +85,21 @@ ORDERS_BOT_FLAG = 'bot'
 
 INVENTORY = []
 BUILD_MEMBERS = []
+SIDE_MEMBERS = []
+TOP_MEMBERS = []
+BOT_MEMBERS = []
 SIDE_CLONES = []
 
 BRIDGE_ROOT_POS = [0,4,0]
 SIDE_VIEW_ROT = [0,0,0]
 TOP_VIEW_ROT = [0,-90,0]
 BOT_VIEW_ROT = [0,90,0]
+
+class Orientation(Enum):
+	side=1
+	top=2
+	bottom=3
+ORIENTATION = Orientation.side
 
 PROXY_NODES = []
 TARGET_NODES = []
@@ -309,8 +320,6 @@ viz.grab(rollerSupport,rollerAnchorSphere)
 
 for model in supports:
 	viz.grab(bridge_root,model)
-
-bridge_root.setEuler(TOP_VIEW_ROT)
 
 # Create canvas for displaying GUI objects
 instructionsPanel = vizinfo.InfoPanel(title='Truss Bridge Builder & Visualizer',align=viz.ALIGN_CENTER_BASE,icon=False)
@@ -914,18 +923,6 @@ def generateMembers(loading=False):
 	
 	# Clear ORDERS
 	ORDERS = []
-	
-
-def diameterListChanged(e,sound=True):
-	thicknesses = []
-	index = e.object.getSelection()
-	for thickness in catalogue_root[int(index)]:
-		thicknesses.append(thickness.text)
-	thicknessDropList.clearItems()
-	thicknessDropList.addItems(thicknesses)
-	
-	if sound:
-		clickSound.play()
 
 
 def clearMembers():
@@ -1144,7 +1141,9 @@ def onRelease(e=None,sound=True):
 	if VALID_SNAP:
 		try:			
 			if grabbedItem.isNewMember == True:
-				cloneSide(grabbedItem)			
+				grabbedItem.orientation = ORIENTATION
+				if ORIENTATION == Orientation.side:				
+					cloneSide(grabbedItem)			
 				grabbedItem.isNewMember = False
 		except:
 			print 'Not new member'
@@ -1259,13 +1258,13 @@ def cycleMode(val):
 		rot = BOT_VIEW_ROT
 	else:
 		rot = SIDE_VIEW_ROT
-	print 'target rot:' , rot, 'Top rot:', TOP_VIEW_ROT
 	bridge_root.setEuler(rot)
 vizact.onkeyup(KEYS['cycle'],cycleMode,vizact.choice(['top','bot','side']))
 
+
 # Setup Callbacks and Events
 def onKeyUp(key,sound=True):
-	if key == '-':
+	if key == '=':
 		pass
 	elif key == KEYS['home']:
 		viewport.reset()
@@ -1364,39 +1363,41 @@ def onList(e):
 		
 	if e.object == tabbedPanel.tabGroup:
 		if e.newSel == 0:
-			print 'Side mode'
+			ORIENTATION = Orientation.side
 		if e.newSel == 1:
-			print 'Top mode'
+			ORIENTATION = Orientation.top
 		if e.newSel == 2:
-			print 'Bottom mode'
+			ORIENTATION = Orientation.bottom
 		
 	clickSound.play()
 		
 import csv
 # Saves current build members' truss dimensions, position, rotation to './data/bridge#.csv'
-def SaveData(filePath,sound=True):
+def SaveData(filePath):
 	global BUILD_MEMBERS
 		
-	if sound:
-		clickSound.play()
+	clickSound.play()
 	
 	with open(filePath,'wb') as f:
 		writer = csv.writer(f)
 		for truss in BUILD_MEMBERS:
 			writer.writerow([str(truss.order.diameter),str(truss.order.thickness),str(truss.order.length),str(truss.order.quantity),
 							str(truss.getPosition()[0]), str(truss.getPosition()[1]),str(truss.getPosition()[2]),
-							str(truss.getEuler()[0]),str(truss.getEuler()[1]),str(truss.getEuler()[2])])
+							str(truss.getEuler()[0]),str(truss.getEuler()[1]),str(truss.getEuler()[2]),
+							str(truss.orientation)])
 	
 		
 # Loads build members' truss dimensions, position, rotation from './data/bridge#.csv'					
-def LoadData(filePath,sound=True):
+def LoadData(filePath):
 	global BUILD_MEMBERS
+	global SIDE_MEMBERS
+	global TOP_MEMBERS
+	global BOT_MEMBERS
 	global SIDE_CLONES
 	global ORDERS
 	global highlightTool
 	
-	if sound:
-		clickSound.play()	
+	clickSound.play()
 	
 	# Clear previous bridge
 	for member in BUILD_MEMBERS:
@@ -1416,7 +1417,7 @@ def LoadData(filePath,sound=True):
 		for row in reader:
 			 order = Order(diameter=float(row[0]),thickness=float(row[1]),length=float(row[2]),quantity=int(row[3]))
 			 order.pos = ( [float(row[4]), float(row[5]), float(row[6])] )
-			 order.euler = ( [float(row[7]), float(row[8]), float(row[9])] )
+			 order.euler = ( [float(row[7]), float(row[8]), float(row[9])])
 			 ORDERS.append(order)
 	
 	clearMembers()

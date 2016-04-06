@@ -52,6 +52,8 @@ def EnvironmentRoot(visibility=True):
 	walkway = viz.addChild('resources/walkway.osgb',parent=environment_root)
 	river = viz.addChild('resources/river.osgb', pos=(0,0.75,20),scale=([10,1,10]),parent=environment_root)
 	river.setAnimationSpeed(0.005)
+#	waves = viz.addChild('resources/waves.osgb')
+#	waves.setAnimationLoopMode(viz.LOOP)
 	environment_root.visible(visibility)
 	
 	return environment_root
