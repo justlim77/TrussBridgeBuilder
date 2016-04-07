@@ -61,10 +61,10 @@ INSPECTOR_POS_OFFSET = ( [0,0,2] )
 INSPECTOR_ROT_OFFSET = ( [] )
 INVENTORY_MESSAGE = 'Order truss members from the catalogue and manage'
 
-LEN_MIN = 0.1
-LEN_MAX = 20.0
-QTY_MIN = 1
-QTY_MAX = 20
+LEN_MIN = 0.1				# Min length allowed for truss
+LEN_MAX = 20.0				# Max length allowed for truss
+QTY_MIN = 1					# Min quantity allowed for truss
+QTY_MAX = 20				# Max quantity allowed for truss
 
 GRIDS = []
 
@@ -82,17 +82,16 @@ ORDERS_TOP_FLAG = 'top'
 ORDERS_BOT_FLAG = 'bot'
 
 INVENTORY = []
-BUILD_MEMBERS = []
-SIDE_MEMBERS = []
-TOP_MEMBERS = []
-BOT_MEMBERS = []
-SIDE_CLONES = []
-GRAB_LINKS = []
+BUILD_MEMBERS = []				# Array to store all truss members of bridge for saving/loading
+SIDE_CLONES = []				# Array to store cloned side truss
+GRAB_LINKS = []					# Array to store grab links between bridge root and truss members
 
-BRIDGE_ROOT_POS = [0,4,0]
-SIDE_VIEW_ROT = [0,0,0]
-TOP_VIEW_ROT = [0,-90,0]
-BOT_VIEW_ROT = [0,90,0]
+BRIDGE_SPAN = 10				# Span of bridge in meters
+GRID_Z = -5						# Grid z-position for build members to snap to
+BRIDGE_ROOT_POS = [0,4,0]		# Origin point of bridge group to position and rotate
+SIDE_VIEW_ROT = [0,0,0]			# Rotation of side view
+TOP_VIEW_ROT = [0,-90,0]		# Rotation of top view
+BOT_VIEW_ROT = [0,90,0]			# Rotation of bottom view
 
 class Orientation(Enum):
 	side=1
@@ -1029,7 +1028,9 @@ def updateHighlightTool(highlightTool):
 	global PRE_SNAP_ROT
 	global SNAP_TO_POS
 	
-	highlightTool.highlight()
+	if SHOW_HIGHLIGHTER == True:
+		highlightTool.highlight()
+		
 	if highlightTool.getSelection() is None:
 		return	
 		
@@ -1084,9 +1085,9 @@ def onHighlightGrab():
 	global gloveLink	
 	if grabbedItem != None and isgrabbing == True:
 		xOffset = grabbedItem.getScale()[0] / 2
-		clampedX =  viz.clamp( gloveLink.getPosition()[0],-10 + xOffset,10 - xOffset )
+		clampedX =  viz.clamp( gloveLink.getPosition()[0], (BRIDGE_SPAN * (-0.5)) + xOffset,(BRIDGE_SPAN * 0.5) - xOffset )
 		clampedY =  viz.clamp( gloveLink.getPosition()[1],2,10 )
-		grabbedItem.setPosition( [gloveLink.getPosition()[0],gloveLink.getPosition()[1],-5] )
+		grabbedItem.setPosition( [gloveLink.getPosition()[0],gloveLink.getPosition()[1],GRID_Z] )
 vizact.ontimer(0,onHighlightGrab)
 
 
