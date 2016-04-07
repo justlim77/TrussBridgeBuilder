@@ -11,7 +11,7 @@ Specify truss member dimensions and order materials required to build a 20m-long
 4. Extend or retract virtual hand with MOUSE SCROLL WHEEL
 5. Cycle through build modes with TAB KEY
 6. Grab and hold onto truss members by LEFT MOUSE CLICK when highlighted green
-7. Adjust truss ang le by RIGHT MOUSE CLICK while highlighting truss member
+7. Adjust truss angle by RIGHT MOUSE CLICK while highlighting truss member
 8. Toggle utilities with MIDDLE MOUSE CLICK
 9. Toggle main menu with SPACE BAR
 """
@@ -143,7 +143,7 @@ KEYS = { 'forward'	: 'w'
 }
 
 # Initialize scene
-def initScene(res=([1280,720]),quality=4,stencil=8,stereoMode=viz.STEREO_HORZ,fullscreen=viz.FULLSCREEN,clearColor=viz.BLACK):
+def initScene(res=([1920,1080]),quality=4,stencil=8,stereoMode=viz.STEREO_HORZ,fullscreen=viz.FULLSCREEN,clearColor=viz.BLACK):
 	viz.window.setSize(res)
 	viz.setMultiSample(quality)
 	#viz.fov(FOV)
@@ -237,12 +237,24 @@ def initProxy():
 	
 	return proxyManager
 	
+#Link the grabber to an arrow in order to
+#visualize it's position
+def initTracker(distance=0.5):
+	from vizconnect.util import virtual_trackers
+	tracker = virtual_trackers.ScrollWheel(followMouse=True)
+	tracker.distance = distance
+	return tracker
+
+
+def initLink(modelPath,tracker):
+	model = viz.addChild(modelPath)
+	link = viz.link(tracker,model)
+	link.postMultLinkable(viz.MainView)
+	return link
+
+
 # Initialize
-initScene(RESOLUTION,MULTISAMPLING,STENCIL,STEREOMODE,FULLSCREEN,CLEAR_COLOR)
-cameraRift = initCamera('vizconnect_config_riftDefault')
-#cameraFly = initCamera('vizconnect_config_riftFly')
-hmd = initOculus()
-viewport = initViewport(START_POS)
+initScene(RESOLUTION,MULTISAMPLING,STENCIL,viz.PROMPT,FULLSCREEN,(0.1, 0.1, 0.1, 1.0))
 initMouse()
 initLighting()
 highlightTool = initHighlightTool()
@@ -503,6 +515,7 @@ tabbedMenu.addPanel('Options',optionPanel)
 def initCanvas():	
 #	menuCanvas.setRenderWorld(MENU_RES,[20,viz.AUTO_COMPUTE])
 	menuCanvas.setRenderWorldOverlay(MENU_RES,fov=90.0,distance=3.0)
+	menuCanvas.setPosition(0,0,6)
 	updateMouseStyle(menuCanvas)
 	
 	inspectorCanvas.setRenderWorld(RESOLUTION,[20,viz.AUTO_COMPUTE])
@@ -968,31 +981,11 @@ def toggleUtility(sound=True):
 		else:
 			showMenuSound.play()
 
-	
-#Link the grabber to an arrow in order to
-#visualize it's position
-def initTracker(distance=0.5):
-	from vizconnect.util import virtual_trackers
-	tracker = virtual_trackers.ScrollWheel(followMouse=True)
-	tracker.distance = distance
-	return tracker
-mouseTracker = initTracker(HAND_DISTANCE)
-
-
-def initLink(modelPath):
-	model = viz.addChild(modelPath)
-	link = viz.link(mouseTracker,model)
-	link.postMultLinkable(viz.MainView)
-	return link
-gloveLink = initLink('glove.cfg')
-viz.link(gloveLink,highlightTool)
-
 
 def clampTrackerScroll(tracker,min=0.2,max=20):
 	tracker.distance = viz.clamp(tracker.distance,min,max)
-vizact.ontimer(0,clampTrackerScroll,mouseTracker,SCROLL_MIN,SCROLL_MAX)
 
-menuLink = None
+
 def toggleMenuLink():
 	global menuLink
 	if menuLink:
@@ -1011,7 +1004,7 @@ def toggleCollision(val=viz.TOGGLE):
 	viz.collision(val)
 	
 
-# update code for highlight tool
+# Update code for highlight tool
 isgrabbing = False
 grabbedItem = None
 highlightedItem = None
@@ -1458,7 +1451,6 @@ vizact.onbuttonup ( doneButton, clickSound.play )
 vizact.whilemousedown ( KEYS['rotate'], rotateTruss, objToRotate, rotationSlider, rotationLabel )
 
 # Utility
-#vizact.onbuttonup ( menuButton, toggleMenuLink )
 vizact.onbuttonup ( menuButton, onKeyUp, KEYS['showMenu'], )
 vizact.onbuttonup ( homeButton, onKeyUp, KEYS['home'] )
 vizact.onbuttonup ( buildModeButton, onKeyUp, KEYS['builder'] )
@@ -1473,6 +1465,28 @@ vizact.onbuttonup ( loadBridgeButton1, LoadData, SAVE_FILES[0] )
 vizact.onbuttonup ( loadBridgeButton2, LoadData, SAVE_FILES[1] )
 vizact.onbuttonup ( loadBridgeButton3, LoadData, SAVE_FILES[2] )
 
-def showHandPos():
-	print mouseTracker.distance
-vizact.onupdate(0,showHandPos)
+# Schedule tasks
+def MainTask():
+	while True:
+		yield viztask.waitButtonUp(doneButton)
+		cameraRift = initCamera('vizconnect_config_riftDefault')
+		#cameraFly = initCamera('vizconnect_config_riftFly')
+		
+		menuCanvas.visible(viz.OFF)
+		menuCanvas.setPosition(0,0,0)
+		
+		# Define globals
+		global hmd
+		global viewport
+		global mouseTracker
+		global gloveLink
+		
+		# Initialize remaining
+		hmd = initOculus()
+		viewport = initViewport(START_POS)
+		initMouse()
+		mouseTracker = initTracker(HAND_DISTANCE)
+		gloveLink = initLink('glove.cfg',mouseTracker)
+		viz.link(gloveLink,highlightTool)	
+		vizact.ontimer(0,clampTrackerScroll,mouseTracker,SCROLL_MIN,SCROLL_MAX)
+viztask.schedule( MainTask() )
