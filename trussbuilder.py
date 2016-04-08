@@ -230,7 +230,6 @@ def initProxy():
 	
 	# Register callbacks for proximity SENSOR_NODES
 	def enterProximity(e):
-	#	print 'Entered',e.sensor
 		global SNAP_TO_POS
 		global VALID_SNAP
 		SNAP_TO_POS = e.sensor.getSource().getPosition()
@@ -238,7 +237,6 @@ def initProxy():
 	
 
 	def exitProximity(e):
-	#	print 'Exited',e.sensor
 		global VALID_SNAP
 		VALID_SNAP = False
 
@@ -267,6 +265,7 @@ def initLink(modelPath,tracker):
 initScene(RESOLUTION,MULTISAMPLING,STENCIL,viz.PROMPT,FULLSCREEN,(0.1, 0.1, 0.1, 1.0))
 initMouse()
 initLighting()
+highlightTool = initHighlightTool()
 proxyManager = initProxy()
 grid_root = roots.GridRoot(gridColor=GRID_COLOR,origin=START_POS)
 environment_root = roots.EnvironmentRoot(visibility=False)
@@ -634,7 +633,7 @@ def addOrder(orderTab,orderList=inventory.OrderList(),orderRow=[],flag=''):
 		orderTab.removeRow(row)
 	
 	#Sort lowest to highest (d x Th x l)
-	orderList.sortByAttr()
+	orderList = orderList.sortByAttr()
 	
 	#Populate grid with ORDERS in order list
 	for _order in orderList:
@@ -697,7 +696,6 @@ def createInventory():
 	global bottomRows
 	bottomRows = []
 
-	
 	inventoryGrid.addRow([statPanel,tabbedPanel])
 
 	inventoryCanvas.setRenderWorld([400,200],[1,viz.AUTO_COMPUTE])
@@ -903,6 +901,7 @@ def createTrussNew(order=Order(),path='',loading=False):
 		highlightedItem = truss
 		isgrabbing = True
 		truss.isNewMember = True
+		
 		cycleMode(Mode.add)
 	else:
 		truss.isNewMember = False
@@ -1302,6 +1301,10 @@ def cycleMode(mode):
 	global SHOW_HIGHLIGHTER
 	global MODE
 	
+	# Don't cycle if currently grabbing item
+	if grabbedItem != None:
+		return
+	
 	MODE = mode
 	
 	toggleEnvironment(False)
@@ -1357,7 +1360,9 @@ def onKeyUp(key):
 		toggleGrid(True)
 		clickSound.play()
 	elif key == KEYS['viewer']:
-		cycleMode(Mode.view)
+		global SHOW_HIGHLIGHTER
+		inventoryCanvas.visible(viz.OFF)
+		SHOW_HIGHLIGHTER = False
 		toggleEnvironment(True)
 		proxyManager.setDebug(False)
 		mouseTracker.distance = HAND_DISTANCE
@@ -1585,7 +1590,7 @@ def MainTask():
 		yield viztask.waitButtonUp(doneButton)
 		cameraRift = initCamera('vizconnect_config_riftDefault')
 		#cameraFly = initCamera('vizconnect_config_riftFly')
-		
+
 		menuCanvas.visible(viz.OFF)
 		menuCanvas.setPosition(0,-2,2)
 		
@@ -1601,11 +1606,9 @@ def MainTask():
 		# Initialize remaining
 		hmd = initOculus()
 		viewport = initViewport(START_POS)
-		
-		highlightTool = initHighlightTool()
 		highlightTool.setUpdateFunction(updateHighlightTool)
 		mouseTracker = initTracker(HAND_DISTANCE)
-		
+		initMouse()
 		gloveLink = initLink('glove.cfg',mouseTracker)
 		viz.link(gloveLink,highlightTool)	
 		
