@@ -201,7 +201,7 @@ def initLighting():
 	# Disable the head lamps since we're doing lighting ourselves
 	for window in viz.getWindowList():
 		window.getView().getHeadLight().disable()
-	sky_light = viz.addDirectionalLight(euler=(0,90,0))
+	sky_light = vizfx.addDirectionalLight(euler=(0,90,0))
 	sky_light.color(viz.WHITE)
 	sky_light.ambient([0.8]*3)
 	viz.setOption('viz.lightModel.ambient',[0]*3)
@@ -305,8 +305,8 @@ lightEffect = vizfx.addLightingModel(diffuse=vizfx.DIFFUSE_LAMBERT,specular=None
 vizfx.getComposer().addEffect(lightEffect)
 
 # Bridge pin and roller supports
-pinSupport = viz.addChild('resources/pinSupport.osgb',pos=(-9.5,4,0),scale=[1,1,11])
-rollerSupport = viz.addChild('resources/rollerSupport.osgb',pos=(9.5,4,0),scale=[1,1,11])
+pinSupport = vizfx.addChild('resources/pinSupport.osgb',pos=(-9.5,4,0),scale=[1,1,11])
+rollerSupport = vizfx.addChild('resources/rollerSupport.osgb',pos=(9.5,4,0),scale=[1,1,11])
 supports = [pinSupport,rollerSupport]
 for model in supports:
 	model.texture(env)
@@ -431,15 +431,15 @@ doneButton.length(2)
 inventoryPanel.addItem(bottomRow)
 
 # Create floating inspector panel
-inspectorCanvas = viz.addGUICanvas(align=viz.ALIGN_LEFT_CENTER)
+inspectorCanvas = viz.addGUICanvas(align=viz.ALIGN_CENTER)
 inspector = panels.InspectorPanel()
 statPanel = inspector.GetPanel()
 statPanel.setParent(inspectorCanvas)
-# Link inspector canvas with main view
-inspectorLink = viz.link(viz.MainView, inspectorCanvas)
-#inspectorLink.preMultLinkable(viz.MainView)
-inspectorLink.preTrans( [-2, -3, 5] )
-inspectorLink.preEuler( [-45, 0, 0] )
+## Link inspector canvas with main view
+#inspectorLink = viz.link(viz.MainView, inspectorCanvas)
+##inspectorLink.preMultLinkable(viz.MainView)
+#inspectorLink.preTrans( [-2, -3, 5] )
+#inspectorLink.preEuler( [-45, 0, 0] )
 
 utilityButtons = []
 # Create docked utility panel
@@ -518,8 +518,9 @@ def initCanvas():
 	menuCanvas.setPosition(0,0,6)
 	updateMouseStyle(menuCanvas)
 	
-	inspectorCanvas.setRenderWorld(RESOLUTION,[20,viz.AUTO_COMPUTE])
-	inspectorCanvas.setPosition(0,0,0)
+#	inspectorCanvas.setRenderWorld(RESOLUTION,[20,viz.AUTO_COMPUTE])
+	inspectorCanvas.setRenderWorldOverlay(RESOLUTION,fov=90.0,distance=3.0)
+	inspectorCanvas.setPosition(0,0,2)
 	inspectorCanvas.setEuler(0,0,0)
 	
 	utilityCanvas.setRenderWorld(UTILITY_CANVAS_RES,[1,viz.AUTO_COMPUTE])
@@ -535,13 +536,26 @@ def initCanvas():
 initCanvas()
 		
 		
+#def inspectMember(obj):
+#	inspector.diameter_stat.message('d (mm): ' + str(obj.diameter))
+#	inspector.thickness_stat.message('t (mm): ' + str(obj.thickness))
+#	inspector.length_stat.message('l (m): ' + str(obj.length))
+#	inspector.rotation_stat.message('angle: ' + str(obj.getEuler()[2]))
+
 def inspectMember(obj):
-	inspector.diameter_stat.message('d (mm): ' + str(obj.diameter))
-	inspector.thickness_stat.message('t (mm): ' + str(obj.thickness))
-	inspector.length_stat.message('l (m): ' + str(obj.length))
-	inspector.rotation_stat.message('angle: ' + str(obj.getEuler()[2]))
-
-
+#	inspector.diameter_stat.message('d (mm): ' + str(obj.diameter))
+#	inspector.thickness_stat.message('t (mm): ' + str(obj.thickness))
+#	inspector.length_stat.message('l (m): ' + str(obj.length))
+#	inspector.rotation_stat.message('angle: ' + str(obj.getEuler()[2]))
+	if obj != None:			
+		inspector.SetMessage(str(obj.diameter) + 'mm x ' +
+								str(obj.thickness) + 'mm x' +
+								str(obj.length) + 'm at' +
+								str(int(obj.getEuler()[2])) + 'deg')
+	else:
+		inspector.SetMessage(None)
+	
+	
 class Order(object):
 	'Base class for all ORDERS'
 	orderCount = 0
@@ -635,6 +649,8 @@ def createInventory():
 #	Create inventory panel
 	global inventoryCanvas
 	inventoryCanvas = viz.addGUICanvas(align=viz.ALIGN_CENTER_TOP)
+	
+	statPanel.setParent(inventoryCanvas)
 	
 	global tabbedPanel
 	tabbedPanel = vizdlg.TabPanel(align=viz.ALIGN_CENTER_TOP,layout=vizdlg.LAYOUT_VERT_LEFT,parent=inventoryCanvas)
@@ -787,7 +803,7 @@ def createTruss(order=Order(),path=''):
 	return truss
 
 def createTrussNew(order=Order(),path='',loading=False):
-	truss = viz.addChild(path,cache=viz.CACHE_COPY)
+	truss = vizfx.addChild(path,cache=viz.CACHE_COPY)
 	truss.order = order
 	truss.diameter = float(order.diameter)
 	truss.thickness = float(order.thickness)
@@ -1067,6 +1083,8 @@ def onHighlight(e):
 	if e.new != None and e.new.length != None:
 		inspectMember(e.new)
 		highlightedItem = e.new
+	else:
+		inspectMember(None)
 from tools import highlighter
 viz.callback(highlighter.HIGHLIGHT_EVENT,onHighlight)
 
@@ -1473,7 +1491,9 @@ def MainTask():
 		#cameraFly = initCamera('vizconnect_config_riftFly')
 		
 		menuCanvas.visible(viz.OFF)
-		menuCanvas.setPosition(0,0,0)
+		menuCanvas.setPosition(0,-2,2)
+		
+		viz.clearcolor(CLEAR_COLOR)
 		
 		# Define globals
 		global hmd
