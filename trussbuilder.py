@@ -89,6 +89,8 @@ GRAB_LINKS = []					# Array to store grab links between bridge root and truss me
 BRIDGE_SPAN = 10				# Span of bridge in meters
 GRID_Z = -5						# Grid z-position for build members to snap to
 BRIDGE_ROOT_POS = [0,4,0]		# Origin point of bridge group to position and rotate
+TOP_VIEW_POS = [0,5,0]
+BOT_VIEW_POS = [0,5,0]
 SIDE_VIEW_ROT = [0,0,0]			# Rotation of side view
 TOP_VIEW_ROT = [0,-90,0]		# Rotation of top view
 BOT_VIEW_ROT = [0,90,0]			# Rotation of bottom view
@@ -98,6 +100,13 @@ class Orientation(Enum):
 	top=2
 	bottom=3
 ORIENTATION = Orientation.side
+
+class Mode(Enum):
+	build=0
+	edit=1
+	add=2
+	view=3
+MODE = Mode.build
 
 PROXY_NODES = []
 TARGET_NODES = []
@@ -138,12 +147,13 @@ KEYS = { 'forward'	: 'w'
 		,'utility'	: viz.MOUSEBUTTON_MIDDLE
 		,'rotate'	: viz.MOUSEBUTTON_RIGHT
 		,'cycle'	: viz.KEY_TAB
+		,'mode'		: viz.KEY_SHIFT_L
 		,'proxi'	: 'p'
 		,'collide'	: 'c'
 }
 
 # Initialize scene
-def initScene(res=([1920,1080]),quality=4,stencil=8,stereoMode=viz.STEREO_HORZ,fullscreen=viz.FULLSCREEN,clearColor=viz.BLACK):
+def initScene(res=RESOLUTION,quality=4,stencil=8,stereoMode=viz.STEREO_HORZ,fullscreen=viz.FULLSCREEN,clearColor=viz.BLACK):
 	viz.window.setSize(res)
 	viz.setMultiSample(quality)
 	#viz.fov(FOV)
@@ -247,7 +257,7 @@ def initTracker(distance=0.5):
 
 
 def initLink(modelPath,tracker):
-	model = viz.addChild(modelPath)
+	model = vizfx.addChild(modelPath)
 	link = viz.link(tracker,model)
 	link.postMultLinkable(viz.MainView)
 	return link
@@ -257,7 +267,6 @@ def initLink(modelPath,tracker):
 initScene(RESOLUTION,MULTISAMPLING,STENCIL,viz.PROMPT,FULLSCREEN,(0.1, 0.1, 0.1, 1.0))
 initMouse()
 initLighting()
-highlightTool = initHighlightTool()
 proxyManager = initProxy()
 grid_root = roots.GridRoot(gridColor=GRID_COLOR,origin=START_POS)
 environment_root = roots.EnvironmentRoot(visibility=False)
@@ -496,7 +505,7 @@ utilityLink.preTrans( [0, 0, 1.5] )
 # Rotation Panel
 rotationCanvas = viz.addGUICanvas(align=viz.ALIGN_CENTER)
 rotationPanel = vizdlg.GridPanel(parent=rotationCanvas,align=viz.ALIGN_CENTER)
-rotationSlider = viz.addSlider()
+rotationSlider = viz.addProgressBar('Angle')
 rotationLabel = viz.addText('0')
 row = rotationPanel.addRow([rotationSlider,rotationLabel])
 
@@ -645,12 +654,12 @@ def deleteOrder(order, orderList, index, row, orderRow, orderTab, flag ):
 	orderTab.removeRow(row)
 	orderRow.remove(row)	
 	
+	
 def createInventory():
 #	Create inventory panel
 	global inventoryCanvas
 	inventoryCanvas = viz.addGUICanvas(align=viz.ALIGN_CENTER_TOP)
-	
-	statPanel.setParent(inventoryCanvas)
+	inventoryGrid = vizdlg.GridPanel(align=viz.ALIGN_CENTER_TOP,cellAlign=vizdlg.LAYOUT_VERT_LEFT,parent=inventoryCanvas)
 	
 	global tabbedPanel
 	tabbedPanel = vizdlg.TabPanel(align=viz.ALIGN_CENTER_TOP,layout=vizdlg.LAYOUT_VERT_LEFT,parent=inventoryCanvas)
@@ -688,6 +697,9 @@ def createInventory():
 	global bottomRows
 	bottomRows = []
 
+	
+	inventoryGrid.addRow([statPanel,tabbedPanel])
+
 	inventoryCanvas.setRenderWorld([400,200],[1,viz.AUTO_COMPUTE])
 	updateMouseStyle(inventoryCanvas)
 	# Link rotation canvas with main view
@@ -695,6 +707,7 @@ def createInventory():
 	inventoryLink.preEuler( [0,30,0] )
 	inventoryLink.preTrans( [0,0,1] )
 createInventory()
+
 
 def clearInventory():
 	global sideRows
@@ -762,6 +775,9 @@ def populateInventory(sideList,topList,botList):
 	for order in botList:
 		botList.pop()
 	botList = []
+	
+	# Show menu
+	inventoryCanvas.visible(viz.ON)
 
 
 def createTruss(order=Order(),path=''):
@@ -801,6 +817,7 @@ def createTruss(order=Order(),path=''):
 	truss.sensorNodes = [sensorA,sensorB]
 	
 	return truss
+
 
 def createTrussNew(order=Order(),path='',loading=False):
 	truss = vizfx.addChild(path,cache=viz.CACHE_COPY)
@@ -872,7 +889,10 @@ def createTrussNew(order=Order(),path='',loading=False):
 		listItem.appearance(viz.ENVIRONMENT_MAP)
 		listItem.apply(effect)
 		listItem.apply(lightEffect)		
-	highlightTool.setItems(mergedList)
+	try:
+		highlightTool.setItems(mergedList)
+	except:
+		print 'Highlighter not initialized!'
 	
 	if not loading:
 		global grabbedItem
@@ -883,10 +903,12 @@ def createTrussNew(order=Order(),path='',loading=False):
 		highlightedItem = truss
 		isgrabbing = True
 		truss.isNewMember = True
+		cycleMode(Mode.add)
 	else:
 		truss.isNewMember = False
 	
 	return truss
+
 
 def generateMembers(loading=False):
 	"""Create truss members based on order list"""
@@ -896,6 +918,7 @@ def generateMembers(loading=False):
 	global ORDERS
 	global ROWS
 	global proxyManager
+	global highlightTool
 	
 	#Clear order ROWS
 	for row in ROWS:
@@ -947,7 +970,11 @@ def generateMembers(loading=False):
 		listItem.appearance(viz.ENVIRONMENT_MAP)
 		listItem.apply(effect)
 		listItem.apply(lightEffect)		
-	highlightTool.setItems(mergedList)
+	
+	try:
+		highlightTool.setItems(mergedList)
+	except:
+		print 'Highlighter not initialized!'
 	
 	# Clear ORDERS
 	ORDERS = []
@@ -960,8 +987,12 @@ def clearMembers():
 	global PROXY_NODES
 	global TARGET_NODES
 	global SENSOR_NODES
+	global highlightTool
 	
-	highlightTool.removeItems(INVENTORY)
+	try:
+		highlightTool.removeItems(INVENTORY)
+	except:
+		pass
 	proxyManager.clearTargets()
 			
 	for item in INVENTORY:
@@ -1073,7 +1104,6 @@ def updateHighlightTool(highlightTool):
 		if objToRotate == None:
 			objToRotate = highlightTool.getSelection()
 		updateAngle(objToRotate,rotationSlider,rotationLabel)
-highlightTool.setUpdateFunction(updateHighlightTool)
 
 
 # Register a callback function for the highlight event
@@ -1106,6 +1136,7 @@ def onRelease(e=None):
 	global INVENTORY
 	global BUILD_MEMBERS
 	global grabbedItem
+	global highlightedItem
 	global proxyManager
 	global PRE_SNAP_POS
 	global PRE_SNAP_ROT
@@ -1185,8 +1216,15 @@ def onRelease(e=None):
 	# Disable truss member target nodes on release
 	proxyManager.removeTarget(grabbedItem.targetNodes[0])
 	proxyManager.removeTarget(grabbedItem.targetNodes[1])
-	grabbedItem = None
 	SNAP_TO_POS = []
+	
+	# Clear item references
+	highlightedItem = None
+	grabbedItem = None
+	
+	# Change mode back to build if not editing
+	if MODE != Mode.edit:
+		cycleMode(Mode.build)
 
 
 def cloneSide(truss):
@@ -1199,6 +1237,11 @@ def cloneSide(truss):
 	viz.grab(truss,clone)
 	SIDE_CLONES.append(clone)
 	return clone
+	
+	
+def updateMode():
+	pass
+	
 	
 def updateQuantity(order,button,orderList,inventory,row):
 	if order.quantity > 0:
@@ -1220,6 +1263,7 @@ def updateAngle(obj,slider,label):
 def rotateTruss(obj,slider,label):	
 	if objToRotate != None:
 		# Clamp glove link z-orientation
+		mouseTracker.visible(viz.OFF)
 		mouseTracker.distance = 0.1
 		slider.visible(True)
 		pos = viz.Mouse.getPosition(viz.WINDOW_NORMALIZED)[0]
@@ -1230,26 +1274,58 @@ def rotateTruss(obj,slider,label):
 		string = str(rotation)
 		rotationLabel.message(string)
 	
-def cycleMode(val):
+	
+def cycleOrientation(val):
 	global ORIENTATION
 	global grabbedItem
 	
 	if grabbedItem != None:
 		return
-	
+	pos = []
 	rot = []
 	ORIENTATION = val
 	if val == Orientation.top:
 		rot = TOP_VIEW_ROT
+		pos = TOP_VIEW_POS
 	elif val == Orientation.bottom:
 		rot = BOT_VIEW_ROT
+		pos = BOT_VIEW_POS
 	else:
-		bridge_root.setPosition(BRIDGE_ROOT_POS)
 		rot = SIDE_VIEW_ROT
+		pos = BRIDGE_ROOT_POS
 	bridge_root.setEuler(rot)
-vizact.onkeyup(KEYS['cycle'],cycleMode,vizact.choice([Orientation.top,Orientation.bottom,Orientation.side]))
+	bridge_root.setPosition(pos)
+vizact.onkeyup(KEYS['cycle'],cycleOrientation,vizact.choice([Orientation.top,Orientation.bottom,Orientation.side]))
 
 
+def cycleMode(mode):
+	global SHOW_HIGHLIGHTER
+	global MODE
+	
+	MODE = mode
+	
+	toggleEnvironment(False)
+	toggleGrid(True)
+	proxyManager.setDebug(True)
+	
+	if MODE == Mode.build:
+		SHOW_HIGHLIGHTER = True
+		inventoryCanvas.visible(viz.ON)
+		inventoryCanvas.setMouseStyle(viz.CANVAS_MOUSE_VIRTUAL)
+	if MODE == Mode.edit:
+		SHOW_HIGHLIGHTER = True
+		inventoryCanvas.visible(viz.OFF)
+	if MODE == Mode.add:
+		SHOW_HIGHLIGHTER = True
+		mouseTracker.distance = 10
+		inventoryCanvas.visible(viz.OFF)
+	if MODE == Mode.view:
+		SHOW_HIGHLIGHTER = False
+		inventoryCanvas.visible(viz.OFF)
+		onKeyUp(KEYS['viewer'])
+vizact.onkeyup(KEYS['mode'],cycleMode,vizact.choice([Mode.edit,Mode.build]))		
+	
+	
 # Setup Callbacks and Events
 def onKeyUp(key):
 	if key == '=':
@@ -1273,12 +1349,15 @@ def onKeyUp(key):
 	elif key == KEYS['hand']:
 		mouseTracker.distance = HAND_DISTANCE
 	elif key == KEYS['builder']:
+		global MODE
+		MODE = Mode.edit
 		toggleEnvironment(False)
 		proxyManager.setDebug(True)
 		mouseTracker.distance = HAND_DISTANCE
 		toggleGrid(True)
 		clickSound.play()
 	elif key == KEYS['viewer']:
+		cycleMode(Mode.view)
 		toggleEnvironment(True)
 		proxyManager.setDebug(False)
 		mouseTracker.distance = HAND_DISTANCE
@@ -1292,12 +1371,15 @@ def onKeyUp(key):
 	elif key == KEYS['showMenu']:
 		menuCanvas.visible(viz.TOGGLE)
 		utilityCanvas.visible(viz.OFF)
+		if menuCanvas.getVisible() == viz.ON:
+			inventoryCanvas.visible(viz.OFF)
+		else:
+			if MODE != Mode.edit or MODE != Mode.add:
+				inventoryCanvas.visible(viz.ON)
 		showMenuSound.play()
 	elif key == KEYS['proxi']:
 		proxyManager.setDebug(viz.TOGGLE)
 		clickSound.play()
-	elif key == 'l':
-		viz.link(cameraFly,viz.MainView)
 
 
 def onKeyDown(key):
@@ -1307,18 +1389,31 @@ def onKeyDown(key):
 		
 		
 def onMouseWheel(dir):
+#	global ORIENTATION
+#	global bridge_root
+#	
+#	if ORIENTATION == Orientation.top or ORIENTATION == Orientation.bottom:
+#		pos = bridge_root.getPosition()
+#		if dir > 0:
+#			pos[2] += 0.5	
+#		else:
+#			pos[2] -= 0.5
+#		bridge_root.setPosition(pos)
+	pass
+		
+
+def slideRoot(val):
 	global ORIENTATION
 	global bridge_root
 	
 	if ORIENTATION == Orientation.top or ORIENTATION == Orientation.bottom:
 		pos = bridge_root.getPosition()
-		if dir > 0:
-			pos[2] += 0.5	
-		else:
-			pos[2] -= 0.5
+		pos[2] += val
 		bridge_root.setPosition(pos)
-		
-		
+vizact.whilekeydown('1',slideRoot,-0.2)		
+vizact.whilekeydown('2',slideRoot,0.2)		
+
+
 def onMouseUp(button):	
 	global isgrabbing
 	if button == KEYS['interact']:
@@ -1331,6 +1426,7 @@ def onMouseUp(button):
 	if button == KEYS['rotate']:
 		if objToRotate != None:
 			objToRotate = None
+			mouseTracker.visible(viz.ON)
 			mouseTracker.distance = 10.0
 		rotationSlider.visible(False)
 	
@@ -1500,13 +1596,19 @@ def MainTask():
 		global viewport
 		global mouseTracker
 		global gloveLink
+		global highlightTool
 		
 		# Initialize remaining
 		hmd = initOculus()
 		viewport = initViewport(START_POS)
-		initMouse()
+		
+		highlightTool = initHighlightTool()
+		highlightTool.setUpdateFunction(updateHighlightTool)
 		mouseTracker = initTracker(HAND_DISTANCE)
+		
 		gloveLink = initLink('glove.cfg',mouseTracker)
 		viz.link(gloveLink,highlightTool)	
+		
 		vizact.ontimer(0,clampTrackerScroll,mouseTracker,SCROLL_MIN,SCROLL_MAX)
+		vizact.ontimer(0,updateMode)
 viztask.schedule( MainTask() )
