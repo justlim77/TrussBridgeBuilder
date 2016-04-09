@@ -122,6 +122,8 @@ HAND_DISTANCE = 0.5
 SCROLL_MIN = 0.2
 SCROLL_MAX = 20
 
+CACHED_GLOVE_Z = 0
+
 DEBUG_PROXIMITY = True
 DEBUG_CAMBOUNDS = False
 
@@ -520,6 +522,7 @@ tabbedMenu.addPanel('Instructions',instructionsPanel)
 tabbedMenu.addPanel('Inventory',inventoryPanel)
 tabbedMenu.addPanel('Options',optionPanel)
 
+
 def initCanvas():	
 #	menuCanvas.setRenderWorld(MENU_RES,[20,viz.AUTO_COMPUTE])
 	menuCanvas.setRenderWorldOverlay(MENU_RES,fov=90.0,distance=3.0)
@@ -900,9 +903,10 @@ def createTrussNew(order=Order(),path='',loading=False):
 		grabbedItem = truss		
 		highlightedItem = truss
 		isgrabbing = True
-		truss.isNewMember = True
 		
+		truss.isNewMember = True		
 		cycleMode(Mode.add)
+		print 'New truss: Not loading'
 	else:
 		truss.isNewMember = False
 	
@@ -1144,17 +1148,14 @@ def onRelease(e=None):
 	global bridge_root
 	global GRAB_LINKS
 		
+	print 'Is valid snap: ', VALID_SNAP
+	
 	if VALID_SNAP:
-		try:			
-			if grabbedItem.isNewMember == True:
-				grabbedItem.orientation = ORIENTATION
-				if ORIENTATION == Orientation.side:				
-					cloneSide(grabbedItem)	
-				link = viz.grab(bridge_root,grabbedItem)
-				GRAB_LINKS.append(link)
-				grabbedItem.isNewMember = False
-		except:
-			pass
+		if grabbedItem.isNewMember == True:
+			grabbedItem.orientation = ORIENTATION
+			if ORIENTATION == Orientation.side:				
+				cloneSide(grabbedItem)	
+			grabbedItem.isNewMember = False
 			
 		# Check facing of truss
 		xFacing = 1
@@ -1182,28 +1183,20 @@ def onRelease(e=None):
 		# Play snap sound
 		clickSound.play()
 	else:
-		try:			
-			# If invalid position and newly-generated truss, destroy it
-			if grabbedItem.isNewMember == True:
-				BUILD_MEMBERS.remove(grabbedItem)
-				proxyManager.removeTarget(grabbedItem.targetNodes[0])
-				proxyManager.removeTarget(grabbedItem.targetNodes[1])
-				grabbedItem.remove()
-				highlightedItem = None
-			else:	
-				grabbedItem.setPosition(PRE_SNAP_POS)
-				grabbedItem.setEuler(PRE_SNAP_ROT)
-				# Enable sensor nodes for other members to snap to
-				proxyManager.addSensor(grabbedItem.sensorNodes[0])
-				proxyManager.addSensor(grabbedItem.sensorNodes[1])
-		except:
-			highlightedItem = None
+		
+		# If invalid position and newly-generated truss, destroy it
+		if grabbedItem.isNewMember == True:
+			BUILD_MEMBERS.remove(grabbedItem)
+			proxyManager.removeTarget(grabbedItem.targetNodes[0])
+			proxyManager.removeTarget(grabbedItem.targetNodes[1])
+			grabbedItem.remove()
+		else:	
 			grabbedItem.setPosition(PRE_SNAP_POS)
 			grabbedItem.setEuler(PRE_SNAP_ROT)
 			# Enable sensor nodes for other members to snap to
 			proxyManager.addSensor(grabbedItem.sensorNodes[0])
 			proxyManager.addSensor(grabbedItem.sensorNodes[1])
-			
+		
 		# Play warning sound
 		warningSound.play()
 			
@@ -1236,11 +1229,7 @@ def cloneSide(truss):
 	viz.grab(truss,clone)
 	SIDE_CLONES.append(clone)
 	return clone
-	
-	
-def updateMode():
-	pass
-	
+
 	
 def updateQuantity(order,button,orderList,inventory,row):
 	if order.quantity > 0:
@@ -1280,9 +1269,12 @@ def cycleOrientation(val):
 	
 	if grabbedItem != None:
 		return
+		
 	pos = []
 	rot = []
+	
 	ORIENTATION = val
+
 	if val == Orientation.top:
 		rot = TOP_VIEW_ROT
 		pos = TOP_VIEW_POS
@@ -1292,18 +1284,19 @@ def cycleOrientation(val):
 	else:
 		rot = SIDE_VIEW_ROT
 		pos = BRIDGE_ROOT_POS
+		
 	bridge_root.setEuler(rot)
 	bridge_root.setPosition(pos)
 vizact.onkeyup(KEYS['cycle'],cycleOrientation,vizact.choice([Orientation.top,Orientation.bottom,Orientation.side]))
 
 
-def cycleMode(mode):
+def cycleMode(mode=Mode.add):
 	global SHOW_HIGHLIGHTER
 	global MODE
-	
-	# Don't cycle if currently grabbing item
-	if grabbedItem != None:
-		return
+
+#	# Don't cycle if currently grabbing item
+#	if grabbedItem != None:
+#		return
 	
 	MODE = mode
 	
@@ -1320,12 +1313,14 @@ def cycleMode(mode):
 		inventoryCanvas.visible(viz.OFF)
 	if MODE == Mode.add:
 		SHOW_HIGHLIGHTER = True
-		mouseTracker.distance = 10
+#		mouseTracker.distance = 10
 		inventoryCanvas.visible(viz.OFF)
 	if MODE == Mode.view:
 		SHOW_HIGHLIGHTER = False
 		inventoryCanvas.visible(viz.OFF)
 		onKeyUp(KEYS['viewer'])
+		
+	print 'Mode cycle: ', MODE
 vizact.onkeyup(KEYS['mode'],cycleMode,vizact.choice([Mode.edit,Mode.build]))		
 	
 	
@@ -1424,15 +1419,16 @@ def onMouseUp(button):
 	if button == KEYS['interact']:
 		if isgrabbing == True:
 			onRelease()
-			mouseTracker.distance = 10.0
+#			mouseTracker.distance = 10.0
 			isgrabbing = False
-
+	
+	global CACHED_GLOVE_Z
 	global objToRotate
 	if button == KEYS['rotate']:
 		if objToRotate != None:
 			objToRotate = None
 			mouseTracker.visible(viz.ON)
-			mouseTracker.distance = 10.0
+			mouseTracker.distance = CACHED_GLOVE_Z
 		rotationSlider.visible(False)
 	
 	if button == KEYS['utility']:
@@ -1441,8 +1437,11 @@ def onMouseUp(button):
 
 def onMouseDown(button):
 	global objToRotate
+	global CACHED_GLOVE_Z
 	if button == KEYS['rotate']:
+		CACHED_GLOVE_Z = mouseTracker.distance
 		if objToRotate != None:
+			print 'Rotating', objToRotate.name, CACHED_GLOVE_Z
 			rotationSlider.visible(True)
 
 
@@ -1540,6 +1539,7 @@ def LoadData(filePath):
 	generateMembers(loading=True)
 
 	for truss in BUILD_MEMBERS:
+		truss.isNewMember = False
 		truss.setPosition(truss.order.pos)
 		truss.setEuler(truss.order.euler)
 		truss.orientation = truss.order.orientation
@@ -1613,5 +1613,4 @@ def MainTask():
 		viz.link(gloveLink,highlightTool)	
 		
 		vizact.ontimer(0,clampTrackerScroll,mouseTracker,SCROLL_MIN,SCROLL_MAX)
-		vizact.ontimer(0,updateMode)
 viztask.schedule( MainTask() )
