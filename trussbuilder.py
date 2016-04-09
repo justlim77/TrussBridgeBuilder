@@ -15,6 +15,7 @@ Specify truss member dimensions and order materials required to build a 20m-long
 8. Toggle utilities with MIDDLE MOUSE CLICK
 9. Toggle main menu with SPACE BAR
 """
+# Imports
 import viz
 import vizact
 import vizcam
@@ -27,7 +28,6 @@ import vizmenu
 import vizproximity
 import vizshape
 import viztask
-
 import inventory
 import mathlite
 import oculuslite
@@ -37,7 +37,9 @@ import sys
 import themes
 import tools
 import xml.etree.ElementTree as ET
-
+import vizfx.postprocess
+from vizfx.postprocess.color import GrayscaleEffect
+from vizfx.postprocess.composite import BlendEffect
 from enum import Enum
 
 # Globals
@@ -51,6 +53,8 @@ FULLSCREEN = 0
 CLEAR_COLOR = viz.GRAY
 GRID_COLOR = viz.BLACK
 BUTTON_SCALE = 0.5
+SOUNDS = []
+
 BUILD_ROAM_LIMIT = ([12,-12,-10,10])	# Front,back,left,right limits in meters(m)
 START_POS = ([0,5.82,-17])				# Set at 5m + avatar height above ground and 17m back fron center
 BUILD_ROTATION = ([0,0,0])				# Zero-rotation to face dead center
@@ -68,7 +72,6 @@ QTY_MAX = 20				# Max quantity allowed for truss
 
 GRIDS = []
 
-# Setup order lists
 ORDERS = []
 ORDERS_SIDE = inventory.OrderList()
 ORDERS_TOP = inventory.OrderList()
@@ -86,9 +89,10 @@ BUILD_MEMBERS = []				# Array to store all truss members of bridge for saving/lo
 SIDE_CLONES = []				# Array to store cloned side truss
 GRAB_LINKS = []					# Array to store grab links between bridge root and truss members
 
+BRIDGE_LENGTH = 20				# Length of bridge in meters
 BRIDGE_SPAN = 10				# Span of bridge in meters
 GRID_Z = -5						# Grid z-position for build members to snap to
-BRIDGE_ROOT_POS = [0,4,0]		# Origin point of bridge group to position and rotate
+BRIDGE_ROOT_POS = [0,5,0]		# Origin point of bridge group to position and rotate
 TOP_VIEW_POS = [0,5,0]
 BOT_VIEW_POS = [0,5,0]
 SIDE_VIEW_ROT = [0,0,0]			# Rotation of side view
@@ -126,10 +130,6 @@ CACHED_GLOVE_Z = 0
 
 DEBUG_PROXIMITY = True
 DEBUG_CAMBOUNDS = False
-
-SAVE_FILES = [	 './data/bridge1.csv'
-				,'./data/bridge2.csv'
-				,'./data/bridge3.csv' ]
 
 # Setup key commands
 KEYS = { 'forward'	: 'w'
@@ -282,22 +282,18 @@ hideMenuSound = viz.addAudio('./resources/sounds/hide_menu.wav')
 viewChangeSound = viz.addAudio('./resources/sounds/page_advance.wav')
 warningSound = viz.addAudio('./resources/sounds/out_of_bounds_warning.wav')
 
+SOUNDS = [ startSound,buttonHighlightSound,clickSound,showMenuSound,
+			hideMenuSound,viewChangeSound,warningSound ]
+
 # Set volume
-startSound.volume(.5)
-buttonHighlightSound.volume(.5)
-clickSound.volume(.5)
-showMenuSound.volume(.5)
-hideMenuSound.volume(.5)
-viewChangeSound.volume(.5)
-warningSound.volume(.05)
-
-viewChangeSound.play()
-
+for sound in SOUNDS:
+	sound.volume(0.5)
+warningSound.volume(0.05)
 
 # Parse catalogue from data subdirectory
 def getCatalogue(path):
 	return ET.parse(str(path)).getroot()
-catalogue_root = getCatalogue('data/catalogue_CHS.xml')
+catalogue_root = getCatalogue('data/catalogues/catalogue_CHS.xml')
 
 
 def updateMouseStyle(canvas):
@@ -318,21 +314,16 @@ vizfx.getComposer().addEffect(lightEffect)
 pinSupport = vizfx.addChild('resources/pinSupport.osgb',pos=(-9.5,4,0),scale=[1,1,11])
 rollerSupport = vizfx.addChild('resources/rollerSupport.osgb',pos=(9.5,4,0),scale=[1,1,11])
 supports = [pinSupport,rollerSupport]
-for model in supports:
-	model.texture(env)
-	model.appearance(viz.ENVIRONMENT_MAP)
-	model.apply(effect)
-	model.apply(lightEffect)
 
 #Setup anchor points for truss members
-pinAnchorSphere = vizshape.addSphere(0.2,pos=([-10,5,-5]))
+pinAnchorSphere = vizshape.addSphere(0.2,pos=([-BRIDGE_SPAN,BRIDGE_ROOT_POS[1],-(BRIDGE_SPAN*0.5)]))
 pinAnchorSphere.visible(False)
 pinLink = viz.link(pinAnchorSphere,viz.NullLinkable)
 pinAnchorSensor = vizproximity.Sensor(vizproximity.Sphere(0.3,center=[0,0.1,0]),pinLink)
 proxyManager.addSensor(pinAnchorSensor)
 viz.grab(pinSupport,pinAnchorSphere)
 
-rollerAnchorSphere = vizshape.addSphere(0.2,pos=([10,5,-5]))
+rollerAnchorSphere = vizshape.addSphere(0.2,pos=([BRIDGE_SPAN,BRIDGE_ROOT_POS[1],-(BRIDGE_SPAN*0.5)]))
 rollerAnchorSphere.visible(False)
 rollerLink = viz.link(rollerAnchorSphere,viz.NullLinkable)
 rollerAnchorSensor = vizproximity.Sensor(vizproximity.Sphere(0.3,center=[0,0.1,0]), rollerLink)
@@ -340,6 +331,10 @@ proxyManager.addSensor(rollerAnchorSensor)
 viz.grab(rollerSupport,rollerAnchorSphere)
 
 for model in supports:
+	model.texture(env)
+	model.appearance(viz.ENVIRONMENT_MAP)
+	model.apply(effect)
+	model.apply(lightEffect)
 	viz.grab(bridge_root,model)
 
 # Create canvas for displaying GUI objects
@@ -349,15 +344,9 @@ instructionsPanel.getTitleBar().fontSize(36)
 # Options panel
 optionPanel = vizinfo.InfoPanel(text='Settings', title='Options', align=viz.ALIGN_CENTER_BASE, icon=False)
 optionPanel.getTitleBar().fontSize(36)
-optionPanel.addSection('Save')
-saveBridgeButton1 = optionPanel.addItem(viz.addButtonLabel('Bridge 01'))
-saveBridgeButton2 = optionPanel.addItem(viz.addButtonLabel('Bridge 02'))
-saveBridgeButton3 = optionPanel.addItem(viz.addButtonLabel('Bridge 03'))
-optionPanel.addSeparator()
-optionPanel.addSection('Load')
-loadBridgeButton1 = optionPanel.addItem(viz.addButtonLabel('Bridge 01'))
-loadBridgeButton2 = optionPanel.addItem(viz.addButtonLabel('Bridge 02'))
-loadBridgeButton3 = optionPanel.addItem(viz.addButtonLabel('Bridge 03'))
+optionPanel.addSection('File')
+saveButton = optionPanel.addItem(viz.addButtonLabel('Save'))
+loadButton = optionPanel.addItem(viz.addButtonLabel('Load'))
 
 # Initialize order panel containing mainRow and midRow
 #inventoryPanel = vizdlg.Panel(layout=vizdlg.LAYOUT_VERT_CENTER,align=viz.ALIGN_CENTER,spacing=0,margin=(0,0))
@@ -368,7 +357,7 @@ inventoryPanel.getTitleBar().fontSize(36)
 # Initialize midRow
 midRow = vizdlg.Panel(layout=vizdlg.LAYOUT_HORZ_CENTER,align=viz.ALIGN_CENTER_TOP,border=False,background=False,spacing=20)
 # Initialize orderPanel box
-orderPanel = midRow.addItem(vizinfo.InfoPanel('Fill in all required fields',align=None,margin=(0,0),icon=False),align=viz.ALIGN_LEFT_TOP)
+orderPanel = midRow.addItem(vizinfo.InfoPanel('Fill in all required fields',align=viz.ALIGN_LEFT_TOP,margin=(0,0),icon=False))
 orderPanel.setTitle( 'Order' )	
 orderPanel.getTitleBar().fontSize(28)
 orderPanel.addSeparator()
@@ -404,12 +393,12 @@ quantitySlider.set(qtyProgressPos)
 quantity = orderPanel.addLabelItem('Quantity', quantitySlider)
 
 # Initialize ordering buttons
-orderSideButton = orderPanel.addItem(viz.addButtonLabel('ADD TO SIDE'),align=viz.ALIGN_CENTER_BOTTOM)
-orderTopButton = orderPanel.addItem(viz.addButtonLabel('ADD TO TOP'),align=viz.ALIGN_CENTER_BOTTOM)
-orderBottomButton = orderPanel.addItem(viz.addButtonLabel('ADD TO BOTTOM'),align=viz.ALIGN_CENTER_BOTTOM)
+orderSideButton = orderPanel.addItem(viz.addButtonLabel('Add to Side'),align=viz.ALIGN_RIGHT_BOTTOM)
+orderTopButton = orderPanel.addItem(viz.addButtonLabel('Add to Top'),align=viz.ALIGN_RIGHT_BOTTOM)
+orderBottomButton = orderPanel.addItem(viz.addButtonLabel('Add to Bottom'),align=viz.ALIGN_RIGHT_BOTTOM)
 
 # Initialize stockPanel
-stockMainPanel = vizinfo.InfoPanel('Ordered truss members',align=None,margin=(0,0),icon=False)
+stockMainPanel = vizinfo.InfoPanel('Ordered truss members',align=viz.ALIGN_CENTER_TOP,margin=(0,0),icon=False)
 stockMainPanel.setTitle( 'Stock' )
 stockMainPanel.getTitleBar().fontSize(28)
 stockMainPanel.addSeparator()
@@ -1128,10 +1117,15 @@ def onHighlightGrab():
 	global isgrabbing
 	global gloveLink	
 	if grabbedItem != None and isgrabbing == True:
+#		dir = gloveLink.getLineForward().getDir()
+		
 		xOffset = grabbedItem.getScale()[0] / 2
-		clampedX =  viz.clamp( gloveLink.getPosition()[0], (BRIDGE_SPAN * (-0.5)) + xOffset,(BRIDGE_SPAN * 0.5) - xOffset )
+		clampedX =  viz.clamp( gloveLink.getPosition()[0], (BRIDGE_LENGTH * (-0.5)) + xOffset,(BRIDGE_LENGTH * 0.5) - xOffset )
 		clampedY =  viz.clamp( gloveLink.getPosition()[1],2,10 )
-		grabbedItem.setPosition( [gloveLink.getPosition()[0],gloveLink.getPosition()[1],GRID_Z] )
+#		pos = [ (BRIDGE_LENGTH)*(dir[0]*dir[2]), gloveLink.getPosition()[1], GRID_Z ]
+		pos = [ gloveLink.getPosition()[0] , gloveLink.getPosition()[1] , GRID_Z ]
+
+		grabbedItem.setPosition(pos)
 vizact.ontimer(0,onHighlightGrab)
 
 
@@ -1147,8 +1141,6 @@ def onRelease(e=None):
 	global VALID_SNAP
 	global bridge_root
 	global GRAB_LINKS
-		
-	print 'Is valid snap: ', VALID_SNAP
 	
 	if VALID_SNAP:
 		if grabbedItem.isNewMember == True:
@@ -1183,7 +1175,6 @@ def onRelease(e=None):
 		# Play snap sound
 		clickSound.play()
 	else:
-		
 		# If invalid position and newly-generated truss, destroy it
 		if grabbedItem.isNewMember == True:
 			BUILD_MEMBERS.remove(grabbedItem)
@@ -1241,11 +1232,12 @@ def updateQuantity(order,button,orderList,inventory,row):
 		
 
 def updateAngle(obj,slider,label):
-	rot = obj.getEuler()
-	pos = mathlite.getNewRange(rot[2],90,-90,0,1)
-	slider.set(pos)
-	string = str(int(rot[2]))
-	label.message(string)
+	if obj != None:
+		rot = obj.getEuler()
+		pos = mathlite.getNewRange(rot[2],90,-90,0,1)
+		slider.set(pos)
+		string = str(int(rot[2]))
+		label.message(string)
 
 
 def rotateTruss(obj,slider,label):	
@@ -1349,10 +1341,10 @@ def onKeyUp(key):
 	elif key == KEYS['builder']:
 		global MODE
 		MODE = Mode.edit
+		toggleGrid(True)
 		toggleEnvironment(False)
 		proxyManager.setDebug(True)
 		mouseTracker.distance = HAND_DISTANCE
-		toggleGrid(True)
 		clickSound.play()
 	elif key == KEYS['viewer']:
 		global SHOW_HIGHLIGHTER
@@ -1371,10 +1363,10 @@ def onKeyUp(key):
 	elif key == KEYS['showMenu']:
 		menuCanvas.visible(viz.TOGGLE)
 		utilityCanvas.visible(viz.OFF)
-		if menuCanvas.getVisible() == viz.ON:
+		if menuCanvas.getVisible() == viz.ON or MODE == Mode.edit or MODE == Mode.view:
 			inventoryCanvas.visible(viz.OFF)
 		else:
-			if MODE != Mode.edit or MODE != Mode.add:
+			if MODE == Mode.build:
 				inventoryCanvas.visible(viz.ON)
 		showMenuSound.play()
 	elif key == KEYS['proxi']:
@@ -1410,8 +1402,18 @@ def slideRoot(val):
 		pos = bridge_root.getPosition()
 		pos[2] += val
 		bridge_root.setPosition(pos)
-vizact.whilekeydown('1',slideRoot,-0.2)		
-vizact.whilekeydown('2',slideRoot,0.2)		
+vizact.whilekeydown('1',slideRoot,-0.1)		
+vizact.whilekeydown('2',slideRoot,0.1)		
+
+
+def onMouseDown(button):
+	global objToRotate
+	global CACHED_GLOVE_Z
+	if button == KEYS['rotate']:
+		CACHED_GLOVE_Z = mouseTracker.distance
+		if objToRotate != None:
+			print 'Rotating', objToRotate.name, CACHED_GLOVE_Z
+			rotationSlider.visible(True)
 
 
 def onMouseUp(button):	
@@ -1419,7 +1421,6 @@ def onMouseUp(button):
 	if button == KEYS['interact']:
 		if isgrabbing == True:
 			onRelease()
-#			mouseTracker.distance = 10.0
 			isgrabbing = False
 	
 	global CACHED_GLOVE_Z
@@ -1433,16 +1434,6 @@ def onMouseUp(button):
 	
 	if button == KEYS['utility']:
 		toggleUtility()
-
-
-def onMouseDown(button):
-	global objToRotate
-	global CACHED_GLOVE_Z
-	if button == KEYS['rotate']:
-		CACHED_GLOVE_Z = mouseTracker.distance
-		if objToRotate != None:
-			print 'Rotating', objToRotate.name, CACHED_GLOVE_Z
-			rotationSlider.visible(True)
 
 
 def onSlider(obj,pos):
@@ -1482,11 +1473,14 @@ def onList(e):
 		
 import csv
 # Saves current build members' truss dimensions, position, rotation to './data/bridge#.csv'
-def SaveData(filePath):
+def SaveData():
 	global BUILD_MEMBERS
 		
 	# Play sound
 	clickSound.play()
+	
+	filePath = vizinput.fileSave(file='bridge01')		
+	print filePath
 	
 	with open(filePath,'wb') as f:
 		writer = csv.writer(f)
@@ -1496,9 +1490,12 @@ def SaveData(filePath):
 							str(truss.getEuler()[0]),str(truss.getEuler()[1]),str(truss.getEuler()[2]),
 							int(truss.orientation.value)])
 	
+	# Save successful feedback
+	FlashScreen()
+	
 		
 # Loads build members' truss dimensions, position, rotation from './data/bridge#.csv'					
-def LoadData(filePath):
+def LoadData():
 	global BUILD_MEMBERS
 	global SIDE_CLONES
 	global ORDERS
@@ -1506,6 +1503,13 @@ def LoadData(filePath):
 	
 	# Play sound
 	clickSound.play()
+	
+	filePath = vizinput.fileOpen(filter=[('CSV Files','*.csv')],directory='/data')		
+	if filePath == '':
+		return	
+	
+	# Load success feedback
+	FlashScreen()
 	
 	# Clear previous bridge
 	for member in BUILD_MEMBERS:
@@ -1577,16 +1581,40 @@ vizact.onbuttonup ( viewerModeButton, onKeyUp, KEYS['viewer'] )
 vizact.onbuttonup ( resetOriButton, onKeyUp, KEYS['reset'] )
 vizact.onbuttonup ( toggleEnvButton, onKeyUp, KEYS['env'] )
 vizact.onbuttonup ( toggleGridButton, onKeyUp, KEYS['grid'] )
-vizact.onbuttonup ( saveBridgeButton1, SaveData, SAVE_FILES[0] )
-vizact.onbuttonup ( saveBridgeButton2, SaveData, SAVE_FILES[1] )
-vizact.onbuttonup ( saveBridgeButton3, SaveData, SAVE_FILES[2] )
-vizact.onbuttonup ( loadBridgeButton1, LoadData, SAVE_FILES[0] )
-vizact.onbuttonup ( loadBridgeButton2, LoadData, SAVE_FILES[1] )
-vizact.onbuttonup ( loadBridgeButton3, LoadData, SAVE_FILES[2] )
+vizact.onbuttonup ( saveButton, SaveData )
+vizact.onbuttonup ( loadButton, LoadData )
+
+
+FLASH_TIME = 3.0			# Time to flash screen
+
+# Create flash screen quad
+flash_quad = viz.addTexQuad(parent=viz.ORTHO)
+flash_quad.color(viz.WHITE)
+flash_quad.drawOrder(-10)
+flash_quad.blendFunc(viz.GL_ONE,viz.GL_ONE)
+flash_quad.visible(False)
+flash_quad.setBoxTransform(viz.BOX_ENABLED)
+
+def FlashScreen():
+	"""Flash screen and fade out"""
+	flash_quad.visible(True)
+	flash_quad.color(viz.WHITE)
+	fade_out = vizact.fadeTo(viz.BLACK,time=FLASH_TIME,interpolate=vizact.easeOutStrong)
+	flash_quad.runAction(vizact.sequence(fade_out,vizact.method.visible(False)))
+
+# Create post process effect for blending to gray scale
+gray_effect = BlendEffect(None,GrayscaleEffect(),blend=0.0)
+gray_effect.setEnabled(False)
+vizfx.postprocess.addEffect(gray_effect)
 
 # Schedule tasks
 def MainTask():
+	viewChangeSound.play()	
+	
 	while True:
+		
+		FlashScreen()
+		
 		yield viztask.waitButtonUp(doneButton)
 		cameraRift = initCamera('vizconnect_config_riftDefault')
 		#cameraFly = initCamera('vizconnect_config_riftFly')
@@ -1614,3 +1642,12 @@ def MainTask():
 		
 		vizact.ontimer(0,clampTrackerScroll,mouseTracker,SCROLL_MIN,SCROLL_MAX)
 viztask.schedule( MainTask() )
+
+# Pre-load sounds
+viz.playSound('./resources/sounds/return_to_holodeck.wav',viz.SOUND_PRELOAD)
+viz.playSound('./resources/sounds/button_highlight.wav',viz.SOUND_PRELOAD) 
+viz.playSound('./resources/sounds/click.wav',viz.SOUND_PRELOAD)
+viz.playSound('./resources/sounds/show_menu.wav',viz.SOUND_PRELOAD)
+viz.playSound('./resources/sounds/hide_menu.wav',viz.SOUND_PRELOAD)
+viz.playSound('./resources/sounds/page_advance.wav',viz.SOUND_PRELOAD)
+viz.playSound('./resources/sounds/out_of_bounds_warning.wav',viz.SOUND_PRELOAD)
