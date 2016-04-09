@@ -213,10 +213,15 @@ def initLighting():
 	# Disable the head lamps since we're doing lighting ourselves
 	for window in viz.getWindowList():
 		window.getView().getHeadLight().disable()
-	sky_light = vizfx.addDirectionalLight(euler=(0,90,0))
-	sky_light.color(viz.WHITE)
+	# Create directional light
+	sky_light = vizfx.addDirectionalLight(euler=(0,90,0),color=[0.7,0.7,0.7])
+#	light1 = vizfx.addDirectionalLight(euler=(40,20,0), color=[0.7,0.7,0.7])
+#	light2 = vizfx.addDirectionalLight(euler=(-65,15,0), color=[0.5,0.25,0.0])
+#	sky_light.color(viz.WHITE)
+	# Adjust ambient color
 	sky_light.ambient([0.8]*3)
 	viz.setOption('viz.lightModel.ambient',[0]*3)
+#	vizfx.setAmbientColor([0.3,0.3,0.4])
 
 	
 # Highlighter	
@@ -313,7 +318,11 @@ vizfx.getComposer().addEffect(lightEffect)
 # Bridge pin and roller supports
 pinSupport = vizfx.addChild('resources/pinSupport.osgb',pos=(-9.5,4,0),scale=[1,1,11])
 rollerSupport = vizfx.addChild('resources/rollerSupport.osgb',pos=(9.5,4,0),scale=[1,1,11])
-supports = [pinSupport,rollerSupport]
+clamp_L = vizfx.addChild('resources/clamp.osgb',pos=(-22,-2.5,0),euler=(-90,0,0),scale=(0.5,1,1.1))
+clamp_R = vizfx.addChild('resources/clamp.osgb',pos=(22,-2.5,0),euler=(90,0,0),scale=(0.5,1,1.1))
+road = vizfx.addChild('resources/road.osgb',pos=(0,5,0),scale=(1,1,2.1))
+supports = [pinSupport,rollerSupport,clamp_L,clamp_R,road]
+
 
 #Setup anchor points for truss members
 pinAnchorSphere = vizshape.addSphere(0.2,pos=([-BRIDGE_SPAN,BRIDGE_ROOT_POS[1],-(BRIDGE_SPAN*0.5)]))
@@ -331,11 +340,13 @@ proxyManager.addSensor(rollerAnchorSensor)
 viz.grab(rollerSupport,rollerAnchorSphere)
 
 for model in supports:
-	model.texture(env)
-	model.appearance(viz.ENVIRONMENT_MAP)
+#	model.texture(env)
+#	model.appearance(viz.ENVIRONMENT_MAP)
 	model.apply(effect)
 	model.apply(lightEffect)
 	viz.grab(bridge_root,model)
+
+initLighting()
 
 # Create canvas for displaying GUI objects
 instructionsPanel = vizinfo.InfoPanel(title='Truss Bridge Builder & Visualizer',align=viz.ALIGN_CENTER_BASE,icon=False)
