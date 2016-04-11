@@ -1,6 +1,6 @@
 ﻿"""
 [Objective]
-Specify truss member dimensions and order materials required to build a 20m-long bridge.
+Specify truss member dimensions and order materials required to build a 20m-long bridge across the Singapore River
 
 [Controls]
 1. Look around and orient the highlighter with the VR HEADSET
@@ -15,6 +15,16 @@ Specify truss member dimensions and order materials required to build a 20m-long
 8. Toggle utilities with MIDDLE MOUSE CLICK
 9. Toggle main menu with SPACE BAR
 """
+
+LOAD_MESSAGE = """Any unsaved progress will be lost! 
+Are you sure you want to proceed?"""
+
+CLEAR_MESSAGE = """Your current bridge will be wiped! 
+Are you sure you want to proceed?"""
+
+QUIT_MESSAGE = """Any unsaved progress will be lost! 
+Are you sure you want to proceed?"""
+
 # Imports
 import viz
 import vizact
@@ -61,10 +71,11 @@ BUILD_ROTATION = ([0,0,0])				# Zero-rotation to face dead center
 WALK_POS = ([35,8.7,-13])
 WALK_ROT = ([-30,0,0])
 
-MENU_RES = ([800,750])
+MENU_RES = ([1000,750])
 MENU_POS = ([0,18,-8])
 INSPECTOR_POS_OFFSET = ( [0,0,2] )
 INSPECTOR_ROT_OFFSET = ( [] )
+HEADER_TEXT = 'Truss Bridge Builder & Visualizer'
 INVENTORY_MESSAGE = 'Order truss members from the catalogue and manage'
 
 LEN_MIN = 0.1				# Min length allowed for truss
@@ -140,6 +151,7 @@ KEYS = { 'forward'	: 'w'
 		,'left'		: 'a'
 		,'right'	: 'd'
 		,'reset'	: 'r'
+		,'restart'	: viz.KEY_END
 		,'home'		: viz.KEY_HOME
 		,'builder'	: 'b'
 		,'viewer'	: 'v'
@@ -225,14 +237,14 @@ def initLighting():
 	for window in viz.getWindowList():
 		window.getView().getHeadLight().disable()
 	# Create directional light
-	sky_light = vizfx.addDirectionalLight(euler=(0,70,0),color=[0.7,0.7,0.7])
+	sky_light = vizfx.addDirectionalLight(euler=(0,90,0),color=[0.7,0.7,0.7])
 #	light1 = vizfx.addDirectionalLight(euler=(40,20,0), color=[0.7,0.7,0.7])
 #	light2 = vizfx.addDirectionalLight(euler=(-65,15,0), color=[0.5,0.25,0.0])
 #	sky_light.color(viz.WHITE)
 	# Adjust ambient color
-#	sky_light.ambient([0.8]*3)
-#	viz.setOption('viz.lightModel.ambient',[0]*3)
-#	vizfx.setAmbientColor([0.3,0.3,0.4])
+	sky_light.ambient([0.8]*3)
+	viz.setOption('viz.lightModel.ambient',[0]*3)
+	vizfx.setAmbientColor([0.3,0.3,0.4])
 
 
 # Highlighter	
@@ -253,7 +265,6 @@ def initProxy():
 		SNAP_TO_POS = e.sensor.getSource().getPosition()
 		VALID_SNAP = True
 	
-
 	def exitProximity(e):
 		global VALID_SNAP
 		VALID_SNAP = False
@@ -263,8 +274,7 @@ def initProxy():
 	
 	return proxyManager
 	
-#Link the grabber to an arrow in order to
-#visualize it's position
+	
 def initTracker(distance=0.5):
 	from vizconnect.util import virtual_trackers
 	tracker = virtual_trackers.ScrollWheel(followMouse=True)
@@ -331,9 +341,6 @@ vizfx.getComposer().addEffect(lightEffect)
 # Bridge pin and roller supports
 pinSupport = vizfx.addChild('resources/pinSupport.osgb',pos=(-9.5,4,0),scale=[1,1,11])
 rollerSupport = vizfx.addChild('resources/rollerSupport.osgb',pos=(9.5,4,0),scale=[1,1,11])
-#clamp_L = vizfx.addChild('resources/clamp.osgb',pos=(-22,-2.5,0),euler=(-90,0,0),scale=(0.5,1,1.1))
-#clamp_R = vizfx.addChild('resources/clamp.osgb',pos=(22,-2.5,0),euler=(90,0,0),scale=(0.5,1,1.1))
-#road = vizfx.addChild('resources/road.osgb',pos=(0,5,0),scale=(1,1,2.1))
 supports = [pinSupport,rollerSupport]
 
 
@@ -352,7 +359,6 @@ rollerAnchorSensor = vizproximity.Sensor(vizproximity.Sphere(0.3,center=[0,0.1,0
 proxyManager.addSensor(rollerAnchorSensor)
 viz.grab(rollerSupport,rollerAnchorSphere)
 
-
 for model in supports:
 #	model.texture(env)
 #	model.appearance(viz.ENVIRONMENT_MAP)
@@ -360,25 +366,29 @@ for model in supports:
 	model.apply(lightEffect)
 	model.collideMesh()
 	model.disable(viz.DYNAMICS)
-	model.enable(viz.COLLIDE_NOTIFY)
 	viz.grab(bridge_root,model)
 
-initLighting()
-
 # Create canvas for displaying GUI objects
-instructionsPanel = vizinfo.InfoPanel(title='Truss Bridge Builder & Visualizer',align=viz.ALIGN_CENTER_BASE,icon=False)
+instructionsPanel = vizinfo.InfoPanel(title=HEADER_TEXT,align=viz.ALIGN_CENTER_BASE,icon=False)
 instructionsPanel.getTitleBar().fontSize(36)
 
 # Options panel
-optionPanel = vizinfo.InfoPanel(text='Settings', title='Options', align=viz.ALIGN_CENTER_BASE, icon=False)
+optionPanel = vizinfo.InfoPanel(title=HEADER_TEXT, text='Options',align=viz.ALIGN_CENTER_TOP,icon=False)
 optionPanel.getTitleBar().fontSize(36)
 optionPanel.addSection('File')
 saveButton = optionPanel.addItem(viz.addButtonLabel('Save'))
+saveButton.length(2)
 loadButton = optionPanel.addItem(viz.addButtonLabel('Load'))
+loadButton.length(2)
+optionPanel.addSection('Game')
+resetButton = optionPanel.addItem(viz.addButtonLabel('Reset'))
+resetButton.length(2)
+quitButton = optionPanel.addItem(viz.addButtonLabel('Quit'))
+quitButton.length(2)
 
 # Initialize order panel containing mainRow and midRow
 #inventoryPanel = vizdlg.Panel(layout=vizdlg.LAYOUT_VERT_CENTER,align=viz.ALIGN_CENTER,spacing=0,margin=(0,0))
-inventoryPanel = vizinfo.InfoPanel(title='Truss Member Inventory Management',text='Order & Manage truss members from the catalogue', align=viz.ALIGN_CENTER_BASE, icon=False)
+inventoryPanel = vizinfo.InfoPanel(title=HEADER_TEXT,text='Order truss members from the catalogue & manage your inventory', align=viz.ALIGN_CENTER_BASE, icon=False)
 inventoryPanel.getTitleBar().fontSize(36)
 
 # Initialize mainRow
@@ -587,7 +597,34 @@ def inspectMember(obj):
 								str(int(obj.getEuler()[2])) + 'deg')
 	else:
 		inspector.SetMessage(None)
+
+
+def showdialog(message,func):
+	dialog = vizdlg.MessageDialog(message=message, title='Warning', accept='Yes (Enter)', cancel='No (Esc)')
+	dialog.setScreenAlignment(viz.ALIGN_CENTER)
 	
+	warningSound.play()
+	
+	while True:
+
+		yield dialog.show()
+
+		if dialog.accepted:
+			func()
+		else:
+			pass
+			
+		dialog.remove()			
+		yield viztask.waitTime(1)
+		
+def clearBridge():
+	viztask.schedule(showdialog(CLEAR_MESSAGE,clearMembers))
+
+def quitGame():
+	viztask.schedule(showdialog(QUIT_MESSAGE,viz.quit))
+	
+def loadBridge():
+	viztask.schedule(showdialog(LOAD_MESSAGE,LoadData))
 	
 class Order(object):
 	'Base class for all ORDERS'
@@ -1007,17 +1044,20 @@ def generateMembers(loading=False):
 
 def clearMembers():
 	"""Delete truss members"""
-	global INVENTORY
-	global BUILD_MEMBERS
+	global highlightTool
 	global PROXY_NODES
 	global TARGET_NODES
 	global SENSOR_NODES
-	global highlightTool
+	global INVENTORY
+	global BUILD_MEMBERS
+	global SIDE_CLONES
+	global GRAB_LINKS
 	
 	try:
 		highlightTool.removeItems(INVENTORY)
 	except:
 		pass
+		
 	proxyManager.clearTargets()
 			
 	for item in INVENTORY:
@@ -1029,12 +1069,31 @@ def clearMembers():
 		del node
 	PROXY_NODES = []
 	for target in TARGET_NODES:
+		target = None
 		del target
 	TARGET_NODES = []
 	for sensor in SENSOR_NODES:
 		proxyManager.removeSensor(sensor)
 		del sensor
 	SENSOR_NODES = []
+	
+	# Clear previous bridge
+	for member in BUILD_MEMBERS:
+		member.remove()
+		member = None
+	BUILD_MEMBERS = []
+	
+	# Clear side clones
+	for clone in SIDE_CLONES:
+		clone.remove()
+		clone = None
+	SIDE_CLONES = []
+	
+	# Clear grab links
+	for link in GRAB_LINKS:
+		link.remove()
+		link = None
+	GRAB_LINKS = []
 
 	
 def toggleEnvironment(value=viz.TOGGLE):
@@ -1112,9 +1171,16 @@ def updateHighlightTool(highlightTool):
 			grabbedItem = highlightTool.getSelection()
 			
 			# Break grab links to free truss
-			for link in GRAB_LINKS:
-				link.remove()
-				link = None
+#			for link in GRAB_LINKS:
+#				link.remove()
+#				link = None
+			try:
+				GRAB_LINKS.remove(grabbedItem.link)
+				grabbedItem.link.remove()
+				grabbedItem.link = None
+			except:
+				print 'No link'
+				
 
 			# Enable truss member target nodes
 			proxyManager.addTarget(grabbedItem.targetNodes[0])
@@ -1232,9 +1298,12 @@ def onRelease(e=None):
 		warningSound.play()
 			
 	# Re-grab existing build members
-	for members in BUILD_MEMBERS:
-		link = viz.grab(bridge_root,members)
-		GRAB_LINKS.append(link)
+#	for members in BUILD_MEMBERS:
+#		link = viz.grab(bridge_root,members)
+#		GRAB_LINKS.append(link)
+	link = viz.grab(bridge_root,grabbedItem)
+	GRAB_LINKS.append(link)
+	grabbedItem.link = link
 	
 	# Disable truss member target nodes on release
 	proxyManager.removeTarget(grabbedItem.targetNodes[0])
@@ -1328,10 +1397,6 @@ vizact.onkeyup(KEYS['cycle'],cycleOrientation,vizact.choice([Orientation.top,Ori
 def cycleMode(mode=Mode.add):
 	global SHOW_HIGHLIGHTER
 	global MODE
-
-#	# Don't cycle if currently grabbing item
-#	if grabbedItem != None:
-#		return
 	
 	MODE = mode
 	
@@ -1363,7 +1428,6 @@ def cycleMode(mode=Mode.add):
 		proxyManager.setDebug(False)
 		bridge_root.setPosition(BRIDGE_ROOT_POS)
 		bridge_root.setEuler(SIDE_VIEW_ROT)
-		clickSound.play()
 	if MODE == Mode.walk:
 		SHOW_HIGHLIGHTER = False
 		inventoryCanvas.visible(viz.OFF)
@@ -1375,7 +1439,8 @@ def cycleMode(mode=Mode.add):
 		bridge_root.setEuler(SIDE_VIEW_ROT)
 		viewport.getNode3d().setPosition(WALK_POS)
 		viewport.getNode3d().setEuler(WALK_ROT)
-		
+	
+	clickSound.play()
 	print 'Mode cycle: ', MODE
 vizact.onkeyup(KEYS['mode'],cycleMode,vizact.choice([Mode.edit,Mode.build]))		
 	
@@ -1570,27 +1635,8 @@ def LoadData():
 	filePath = vizinput.fileOpen(filter=[('CSV Files','*.csv')],directory='/data')		
 	if filePath == '':
 		return	
-	
-	# Load success feedback
-	FlashScreen()
-	
-	# Clear previous bridge
-	for member in BUILD_MEMBERS:
-		member.remove()
-		member = None
-	BUILD_MEMBERS = []
-	
-	# Clear side clones
-	for clone in SIDE_CLONES:
-		clone.remove()
-		clone = None
-	SIDE_CLONES = []
-	
-	# Clear grab links
-	for link in GRAB_LINKS:
-		link.remove()
-		link = None
-	GRAB_LINKS = []
+
+	clearMembers()
 	
 	currentOrientation = ORIENTATION
 	cycleOrientation(Orientation.side)
@@ -1605,7 +1651,6 @@ def LoadData():
 			 order.orientation = Orientation(int(row[10]))
 			 ORDERS.append(order)
 	
-	clearMembers()
 	generateMembers(loading=True)
 
 	for truss in BUILD_MEMBERS:
@@ -1616,13 +1661,12 @@ def LoadData():
 		if truss.orientation == Orientation.side:
 			SIDE_CLONES.append(cloneSide(truss))
 		link = viz.grab(bridge_root,truss)
+		truss.link = link
 		GRAB_LINKS.append(link)
 	
 	cycleOrientation(currentOrientation)
 
 # Events
-viz.callback ( viz.KEYUP_EVENT, onKeyUp )
-viz.callback ( viz.KEYDOWN_EVENT, onKeyDown )
 viz.callback ( viz.MOUSEUP_EVENT, onMouseUp )
 viz.callback ( viz.MOUSEDOWN_EVENT, onMouseDown )
 viz.callback ( viz.MOUSEWHEEL_EVENT, onMouseWheel )
@@ -1638,6 +1682,10 @@ vizact.onbuttonup ( orderBottomButton, addOrder, ORDERS_BOT_GRID, ORDERS_BOT, OR
 vizact.onbuttonup ( orderBottomButton, clickSound.play )
 vizact.onbuttonup ( doneButton, populateInventory, ORDERS_SIDE, ORDERS_TOP, ORDERS_BOT )
 vizact.onbuttonup ( doneButton, clickSound.play )
+vizact.onbuttonup ( resetButton, clearBridge )
+vizact.onbuttonup ( resetButton, clickSound.play )
+vizact.onbuttonup ( quitButton, quitGame )
+vizact.onbuttonup ( quitButton, clickSound.play )
 vizact.whilemousedown ( KEYS['rotate'], rotateTruss, objToRotate, rotationSlider, rotationLabel )
 
 # Utility
@@ -1650,7 +1698,7 @@ vizact.onbuttonup ( resetOriButton, onKeyUp, KEYS['reset'] )
 vizact.onbuttonup ( toggleEnvButton, onKeyUp, KEYS['env'] )
 vizact.onbuttonup ( toggleGridButton, onKeyUp, KEYS['grid'] )
 vizact.onbuttonup ( saveButton, SaveData )
-vizact.onbuttonup ( loadButton, LoadData )
+vizact.onbuttonup ( loadButton, loadBridge )
 
 
 FLASH_TIME = 3.0			# Time to flash screen
@@ -1709,6 +1757,10 @@ def MainTask():
 		viz.link(gloveLink,highlightTool)	
 		
 		vizact.ontimer(0,clampTrackerScroll,mouseTracker,SCROLL_MIN,SCROLL_MAX)
+		
+		# Setup callbacks
+		viz.callback ( viz.KEYUP_EVENT, onKeyUp )
+		viz.callback ( viz.KEYDOWN_EVENT, onKeyDown )
 viztask.schedule( MainTask() )
 
 # Pre-load sounds

@@ -50,16 +50,16 @@ def GridRoot(gridColor=viz.CYAN,origin=([0,0,0])):
 	
 def EnvironmentRoot(visibility=True):
 	environment_root = viz.addGroup()
-	day = vizfx.addChild('resources/sky_day.osgb', scale=([5,5,5]),parent=environment_root)
+	day = viz.add('resources/sky_day.osgb', scale=([5,5,5]),parent=environment_root)
 	environment = vizfx.addChild('resources/environment.osgb',parent=environment_root)
 	walkway = vizfx.addChild('resources/walkway.osgb',parent=environment_root)	
 	river = vizfx.addChild('resources/river.osgb', pos=(0,0.75,20),scale=([10,1,10]),parent=environment_root)
 	river.setAnimationSpeed(0.005)
-	road = vizfx.addChild('resources/road3.osgb',pos=(0,5,0),euler=(90,0,0),scale=(.5,.25,.5))
+	road = viz.addChild('resources/road3.osgb',pos=(0,5,0),euler=(90,0,0),scale=(.5,.25,.5))
 	road.setParent(environment_root)
-	clamp_L = vizfx.addChild('resources/clamp3.osgb',pos=(-21,-1.5,0),euler=(-90,0,0),scale=(0.5,0.5,0.5))
+	clamp_L = viz.addChild('resources/clamp3.osgb',pos=(-21,-1.5,0),euler=(-90,0,0),scale=(0.5,0.5,0.5))
 	clamp_L.setParent(environment_root)
-	clamp_R = vizfx.addChild('resources/clamp3.osgb',pos=(21,-1.5,0),euler=(90,0,0),scale=(0.5,0.5,0.5))
+	clamp_R = viz.addChild('resources/clamp3.osgb',pos=(21,-1.5,0),euler=(90,0,0),scale=(0.5,0.5,0.5))
 	clamp_R.setParent(environment_root)
 	
 	environment_root.visible(visibility)
