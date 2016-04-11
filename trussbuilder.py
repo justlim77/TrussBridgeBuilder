@@ -58,7 +58,7 @@ SOUNDS = []
 BUILD_ROAM_LIMIT = ([12,-12,-10,10])	# Front,back,left,right limits in meters(m)
 START_POS = ([0,5.82,-17])				# Set at 5m + avatar height above ground and 17m back fron center
 BUILD_ROTATION = ([0,0,0])				# Zero-rotation to face dead center
-WALK_POS = ([35,7.7,-13])
+WALK_POS = ([35,8.7,-13])
 WALK_ROT = ([-30,0,0])
 
 MENU_RES = ([800,750])
@@ -225,13 +225,13 @@ def initLighting():
 	for window in viz.getWindowList():
 		window.getView().getHeadLight().disable()
 	# Create directional light
-	sky_light = vizfx.addDirectionalLight(euler=(0,90,0),color=[0.7,0.7,0.7])
+	sky_light = vizfx.addDirectionalLight(euler=(0,70,0),color=[0.7,0.7,0.7])
 #	light1 = vizfx.addDirectionalLight(euler=(40,20,0), color=[0.7,0.7,0.7])
 #	light2 = vizfx.addDirectionalLight(euler=(-65,15,0), color=[0.5,0.25,0.0])
 #	sky_light.color(viz.WHITE)
 	# Adjust ambient color
-	sky_light.ambient([0.8]*3)
-	viz.setOption('viz.lightModel.ambient',[0]*3)
+#	sky_light.ambient([0.8]*3)
+#	viz.setOption('viz.lightModel.ambient',[0]*3)
 #	vizfx.setAmbientColor([0.3,0.3,0.4])
 
 
@@ -306,6 +306,7 @@ for sound in SOUNDS:
 	sound.volume(0.5)
 warningSound.volume(0.05)
 
+
 # Parse catalogue from data subdirectory
 def getCatalogue(path):
 	return ET.parse(str(path)).getroot()
@@ -326,13 +327,14 @@ vizfx.getComposer().addEffect(effect)
 lightEffect = vizfx.addLightingModel(diffuse=vizfx.DIFFUSE_LAMBERT,specular=None)
 vizfx.getComposer().addEffect(lightEffect)
 
+
 # Bridge pin and roller supports
 pinSupport = vizfx.addChild('resources/pinSupport.osgb',pos=(-9.5,4,0),scale=[1,1,11])
 rollerSupport = vizfx.addChild('resources/rollerSupport.osgb',pos=(9.5,4,0),scale=[1,1,11])
-clamp_L = vizfx.addChild('resources/clamp.osgb',pos=(-22,-2.5,0),euler=(-90,0,0),scale=(0.5,1,1.1))
-clamp_R = vizfx.addChild('resources/clamp.osgb',pos=(22,-2.5,0),euler=(90,0,0),scale=(0.5,1,1.1))
-road = vizfx.addChild('resources/road.osgb',pos=(0,5,0),scale=(1,1,2.1))
-supports = [pinSupport,rollerSupport,clamp_L,clamp_R,road]
+#clamp_L = vizfx.addChild('resources/clamp.osgb',pos=(-22,-2.5,0),euler=(-90,0,0),scale=(0.5,1,1.1))
+#clamp_R = vizfx.addChild('resources/clamp.osgb',pos=(22,-2.5,0),euler=(90,0,0),scale=(0.5,1,1.1))
+#road = vizfx.addChild('resources/road.osgb',pos=(0,5,0),scale=(1,1,2.1))
+supports = [pinSupport,rollerSupport]
 
 
 #Setup anchor points for truss members
@@ -349,6 +351,7 @@ rollerLink = viz.link(rollerAnchorSphere,viz.NullLinkable)
 rollerAnchorSensor = vizproximity.Sensor(vizproximity.Sphere(0.3,center=[0,0.1,0]), rollerLink)
 proxyManager.addSensor(rollerAnchorSensor)
 viz.grab(rollerSupport,rollerAnchorSphere)
+
 
 for model in supports:
 #	model.texture(env)
@@ -1296,6 +1299,9 @@ def cycleOrientation(val):
 	global ORIENTATION
 	global grabbedItem
 	
+	if MODE == Mode.view or MODE == Mode.walk:
+		return
+	
 	if grabbedItem != None:
 		return
 		
@@ -1341,16 +1347,23 @@ def cycleMode(mode=Mode.add):
 	if MODE == Mode.edit:
 		SHOW_HIGHLIGHTER = True
 		inventoryCanvas.visible(viz.OFF)
+		toggleGrid(True)
+		toggleEnvironment(False)
+		proxyManager.setDebug(True)
 		viewport.getNode3d().setPosition(START_POS)
 	if MODE == Mode.add:
 		SHOW_HIGHLIGHTER = True
-#		mouseTracker.distance = 10
 		inventoryCanvas.visible(viz.OFF)
 		viewport.getNode3d().setPosition(START_POS)
 	if MODE == Mode.view:
 		SHOW_HIGHLIGHTER = False
 		inventoryCanvas.visible(viz.OFF)
-		onKeyUp(KEYS['viewer'])
+		toggleGrid(False)
+		toggleEnvironment(True)
+		proxyManager.setDebug(False)
+		bridge_root.setPosition(BRIDGE_ROOT_POS)
+		bridge_root.setEuler(SIDE_VIEW_ROT)
+		clickSound.play()
 	if MODE == Mode.walk:
 		SHOW_HIGHLIGHTER = False
 		inventoryCanvas.visible(viz.OFF)
@@ -1391,24 +1404,14 @@ def onKeyUp(key):
 		clickSound.play()
 	elif key == KEYS['hand']:
 		mouseTracker.distance = HAND_DISTANCE
+		clickSound.play()
 	elif key == KEYS['builder']:
-		global MODE
-		MODE = Mode.edit
-		toggleGrid(True)
-		toggleEnvironment(False)
-		proxyManager.setDebug(True)
+		cycleMode(Mode.edit)
 		mouseTracker.distance = HAND_DISTANCE
 		clickSound.play()
 	elif key == KEYS['viewer']:
-		global SHOW_HIGHLIGHTER
-		inventoryCanvas.visible(viz.OFF)
-		SHOW_HIGHLIGHTER = False
-		toggleEnvironment(True)
-		proxyManager.setDebug(False)
+		cycleMode(Mode.view)
 		mouseTracker.distance = HAND_DISTANCE
-		toggleGrid(False)
-		bridge_root.setPosition(BRIDGE_ROOT_POS)
-		bridge_root.setEuler(SIDE_VIEW_ROT)
 		clickSound.play()
 	elif key == KEYS['walk']:
 		cycleMode(Mode.walk)
