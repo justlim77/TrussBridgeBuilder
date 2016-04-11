@@ -234,7 +234,7 @@ def initLighting():
 	viz.setOption('viz.lightModel.ambient',[0]*3)
 #	vizfx.setAmbientColor([0.3,0.3,0.4])
 
-	
+
 # Highlighter	
 def initHighlightTool():
 	from tools import highlighter
