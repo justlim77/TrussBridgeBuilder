@@ -11,7 +11,7 @@ def GridRoot(gridColor=viz.CYAN,origin=([0,0,0])):
 	grid_front.setPosition(0,5,-5)
 	grid_front.setEuler(0,90,0)
 	grid_front.setParent(grid_root)
-	
+
 	# Create back grid
 	grid_back = vizshape.addGrid(size=(20,10))
 	grid_back.color(gridColor)
@@ -55,6 +55,10 @@ def EnvironmentRoot(visibility=True):
 	river = vizfx.addChild('resources/river.osgb', pos=(0,0.75,20),scale=([10,1,10]),parent=environment_root)
 	river.setAnimationSpeed(0.005)
 	environment_root.visible(visibility)
+	
+	walkway.collidePlane()
+	walkway.disable(viz.DYNAMICS)
+	walkway.enable(viz.COLLIDE_NOTIFY)
 	
 	print 'Creating environment...'
 	return environment_root

@@ -58,6 +58,8 @@ SOUNDS = []
 BUILD_ROAM_LIMIT = ([12,-12,-10,10])	# Front,back,left,right limits in meters(m)
 START_POS = ([0,5.82,-17])				# Set at 5m + avatar height above ground and 17m back fron center
 BUILD_ROTATION = ([0,0,0])				# Zero-rotation to face dead center
+WALK_POS = ([35,7.7,-13])
+WALK_ROT = ([-30,0,0])
 
 MENU_RES = ([800,750])
 MENU_POS = ([0,18,-8])
@@ -110,6 +112,7 @@ class Mode(Enum):
 	edit=1
 	add=2
 	view=3
+	walk=4
 MODE = Mode.build
 
 PROXY_NODES = []
@@ -152,6 +155,7 @@ KEYS = { 'forward'	: 'w'
 		,'mode'		: viz.KEY_SHIFT_L
 		,'proxi'	: 'p'
 		,'collide'	: 'c'
+		,'walk'		: '/'
 }
 
 # Initialize scene
@@ -199,6 +203,13 @@ def initViewport(position):
 	# Add a viewpoint so the user starts at the specified position
 	vp = vizconnect.addViewpoint(pos=position,euler=(0,0,0))
 	vp.add(vizconnect.getDisplay())
+	#Start collision detection.
+	viz.MainView.collision( viz.ON )
+	viz.phys.enable()
+	#Make gravity weaker.
+#	viz.MainView.gravity(2)
+
+	viz.stepsize(0.5)
 	return vp
 	
 	
@@ -344,6 +355,9 @@ for model in supports:
 #	model.appearance(viz.ENVIRONMENT_MAP)
 	model.apply(effect)
 	model.apply(lightEffect)
+	model.collideMesh()
+	model.disable(viz.DYNAMICS)
+	model.enable(viz.COLLIDE_NOTIFY)
 	viz.grab(bridge_root,model)
 
 initLighting()
@@ -454,7 +468,7 @@ statPanel.setParent(inspectorCanvas)
 utilityButtons = []
 # Create docked utility panel
 utilityCanvas = viz.addGUICanvas(align=viz.ALIGN_CENTER)
-points = mathlite.getPointsInCircum(30,7)
+points = mathlite.getPointsInCircum(30,8)
 # Circle backdrop
 circleBackdrop = viz.addButton(parent=utilityCanvas)
 circleBackdrop.texture(viz.addTexture('resources/GUI/dropdownarrow-128.png'))
@@ -479,6 +493,11 @@ viewerModeButton = viz.addButton(parent=utilityCanvas)
 viewerModeButton.texture(viz.addTexture('resources/GUI/viewer-128.png'))
 viewerModeButton.setPosition(0,0)
 viewerModeButton.setScale(BUTTON_SCALE,BUTTON_SCALE)
+# Walk mode button
+walkModeButton = viz.addButton(parent=utilityCanvas)
+walkModeButton.texture(viz.addTexture('resources/GUI/walking-128.png'))
+walkModeButton.setPosition(0,0)
+walkModeButton.setScale(BUTTON_SCALE,BUTTON_SCALE)
 # Toggle environment button
 toggleEnvButton = viz.addButton(parent=utilityCanvas)
 toggleEnvButton.texture(viz.addTexture('resources/GUI/environment-128.png'))
@@ -495,7 +514,7 @@ resetOriButton.texture(viz.addTexture('resources/GUI/compass-128.png'))
 resetOriButton.setPosition(0,0)
 resetOriButton.setScale(BUTTON_SCALE,BUTTON_SCALE)
 
-utilityButtons = ( [menuButton,homeButton,buildModeButton,viewerModeButton,toggleEnvButton,toggleGridButton,resetOriButton] )
+utilityButtons = ( [menuButton,homeButton,buildModeButton,viewerModeButton,walkModeButton,toggleEnvButton,toggleGridButton,resetOriButton] )
 for i, button in enumerate(utilityButtons):
 	button.setPosition(0.5 + points[i][0], 0.5 + points[i][1])
 	
@@ -1052,7 +1071,14 @@ def toggleMenuLink():
 		
 def toggleCollision(val=viz.TOGGLE):
 	viz.collision(val)
-	
+	if val == 1:
+		viz.phys.enable()
+		print 'Physics: ON | Collision: ', val
+		
+	else:
+		viz.phys.disable()
+		print 'Physics: OFF | Collision: ', val
+
 
 # Update code for highlight tool
 isgrabbing = False
@@ -1311,28 +1337,44 @@ def cycleMode(mode=Mode.add):
 		SHOW_HIGHLIGHTER = True
 		inventoryCanvas.visible(viz.ON)
 		inventoryCanvas.setMouseStyle(viz.CANVAS_MOUSE_VIRTUAL)
+		viewport.getNode3d().setPosition(START_POS)
 	if MODE == Mode.edit:
 		SHOW_HIGHLIGHTER = True
 		inventoryCanvas.visible(viz.OFF)
+		viewport.getNode3d().setPosition(START_POS)
 	if MODE == Mode.add:
 		SHOW_HIGHLIGHTER = True
 #		mouseTracker.distance = 10
 		inventoryCanvas.visible(viz.OFF)
+		viewport.getNode3d().setPosition(START_POS)
 	if MODE == Mode.view:
 		SHOW_HIGHLIGHTER = False
 		inventoryCanvas.visible(viz.OFF)
 		onKeyUp(KEYS['viewer'])
+	if MODE == Mode.walk:
+		SHOW_HIGHLIGHTER = False
+		inventoryCanvas.visible(viz.OFF)
+		toggleEnvironment(True)
+		toggleGrid(False)
+		proxyManager.setDebug(False)
+		mouseTracker.distance = HAND_DISTANCE
+		bridge_root.setPosition(BRIDGE_ROOT_POS)
+		bridge_root.setEuler(SIDE_VIEW_ROT)
+		viewport.getNode3d().setPosition(WALK_POS)
+		viewport.getNode3d().setEuler(WALK_ROT)
 		
 	print 'Mode cycle: ', MODE
 vizact.onkeyup(KEYS['mode'],cycleMode,vizact.choice([Mode.edit,Mode.build]))		
 	
-	
+
 # Setup Callbacks and Events
 def onKeyUp(key):
 	if key == '=':
 		pass
 	elif key == KEYS['home']:
 		viewport.reset()
+		viewport.getNode3d().setPosition(START_POS)
+		viewport.getNode3d().setEuler(0,0,0)
 		mouseTracker.distance = HAND_DISTANCE
 		viewChangeSound.play()
 	elif key == ',':
@@ -1367,6 +1409,9 @@ def onKeyUp(key):
 		toggleGrid(False)
 		bridge_root.setPosition(BRIDGE_ROOT_POS)
 		bridge_root.setEuler(SIDE_VIEW_ROT)
+		clickSound.play()
+	elif key == KEYS['walk']:
+		cycleMode(Mode.walk)
 		clickSound.play()
 	elif key == KEYS['grid']:
 		toggleGrid(viz.TOGGLE)
@@ -1491,7 +1536,11 @@ def SaveData():
 	clickSound.play()
 	
 	filePath = vizinput.fileSave(file='bridge01')		
-	print filePath
+	if filePath == '':
+		return
+		
+	currentOrientation = ORIENTATION
+	cycleOrientation(Orientation.side)
 	
 	with open(filePath,'wb') as f:
 		writer = csv.writer(f)
@@ -1503,7 +1552,7 @@ def SaveData():
 	
 	# Save successful feedback
 	FlashScreen()
-	
+	cycleOrientation(currentOrientation)
 		
 # Loads build members' truss dimensions, position, rotation from './data/bridge#.csv'					
 def LoadData():
@@ -1540,6 +1589,9 @@ def LoadData():
 		link = None
 	GRAB_LINKS = []
 	
+	currentOrientation = ORIENTATION
+	cycleOrientation(Orientation.side)
+	
 	ORDERS = []
 	with open(filePath,'rb') as f:
 		reader = csv.reader(f)
@@ -1562,7 +1614,8 @@ def LoadData():
 			SIDE_CLONES.append(cloneSide(truss))
 		link = viz.grab(bridge_root,truss)
 		GRAB_LINKS.append(link)
-				
+	
+	cycleOrientation(currentOrientation)
 
 # Events
 viz.callback ( viz.KEYUP_EVENT, onKeyUp )
@@ -1589,6 +1642,7 @@ vizact.onbuttonup ( menuButton, onKeyUp, KEYS['showMenu'], )
 vizact.onbuttonup ( homeButton, onKeyUp, KEYS['home'] )
 vizact.onbuttonup ( buildModeButton, onKeyUp, KEYS['builder'] )
 vizact.onbuttonup ( viewerModeButton, onKeyUp, KEYS['viewer'] )
+vizact.onbuttonup ( walkModeButton, onKeyUp, KEYS['walk'] )
 vizact.onbuttonup ( resetOriButton, onKeyUp, KEYS['reset'] )
 vizact.onbuttonup ( toggleEnvButton, onKeyUp, KEYS['env'] )
 vizact.onbuttonup ( toggleGridButton, onKeyUp, KEYS['grid'] )
