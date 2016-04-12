@@ -10,6 +10,7 @@ Specify truss member dimensions and order materials required to build a 20m-long
 3. Interact with floating menus using the VIRTUAL MOUSE
 4. Extend or retract virtual hand with MOUSE SCROLL WHEEL
 5. Cycle through Build modes with TAB KEY
+6. Slide bridge towards you with "1" KEY and away from you with "2" key in Top / Bottom View
 6. Grab and hold onto truss members by LEFT MOUSE CLICK when highlighted green
 7. Adjust truss angle by RIGHT MOUSE CLICK while highlighting truss member
 8. Toggle utilities with MIDDLE MOUSE CLICK
@@ -552,11 +553,10 @@ rotationPanel = vizdlg.GridPanel(parent=rotationCanvas,align=viz.ALIGN_CENTER)
 rotationSlider = viz.addProgressBar('Angle')
 rotationLabel = viz.addText('0')
 row = rotationPanel.addRow([rotationSlider,rotationLabel])
-
 # Link rotation canvas with main View
-rotationLink = viz.link(viz.MainView,rotationCanvas)
-rotationLink.preEuler( [0,30,0] )
-rotationLink.preTrans( [0,0.1,1] )
+#rotationLink = viz.link(viz.MainView,rotationCanvas)
+#rotationLink.preEuler( [0,30,0] )
+#rotationLink.preTrans( [0,0.1,1] )
 
 # Add tabbed panels to main menu canvas
 menuCanvas = viz.addGUICanvas(align=viz.ALIGN_CENTER_TOP)
@@ -1313,7 +1313,26 @@ def onHighlightGrab():
 		pos = [ gloveLink.getPosition()[0] , gloveLink.getPosition()[1] , GRID_Z ]
 
 		grabbedItem.setPosition(pos)
-vizact.ontimer(0,onHighlightGrab)
+#vizact.ontimer(0,onHighlightGrab)
+
+def onHighlightGrab2():
+	""" Clamp grabbed member to front glove position and grid z """
+	global grabbedItem
+	global isgrabbing
+	if grabbedItem != None and isgrabbing == True:
+		startPos = highlightTool.getRayCaster().getPosition()
+		dist = mathlite.math.fabs(startPos[2] - GRID_Z)
+		raycaster = highlightTool.getRayCaster().getLineForward()
+		newPos = raycaster.endFromDistance(dist)
+		newPos[2] = GRID_Z
+#		print newPos
+#		print startPos
+#		pos[0] += -dir[0]*GRID_Z
+#		pos[1] += -dir[1]*GRID_Z
+#		pos[2] = GRID_Z
+#		newPos = pos + (dir * dist)
+		grabbedItem.setPosition(newPos)
+vizact.ontimer(0,onHighlightGrab2)
 
 
 def onRelease(e=None):
@@ -1328,6 +1347,7 @@ def onRelease(e=None):
 	global VALID_SNAP
 	global bridge_root
 	global GRAB_LINKS
+	global SHOW_HIGHLIGHTER
 	
 	if VALID_SNAP:
 		if grabbedItem.isNewMember == True:
@@ -1367,7 +1387,11 @@ def onRelease(e=None):
 			BUILD_MEMBERS.remove(grabbedItem)
 			proxyManager.removeTarget(grabbedItem.targetNodes[0])
 			proxyManager.removeTarget(grabbedItem.targetNodes[1])
+			grabbedItem.setPosition(0,10,-5)
 			grabbedItem.remove()
+			highlightedItem = None
+			grabbedItem = None
+#			viztask.schedule(delayedDelete(grabbedItem))
 		else:	
 			grabbedItem.setPosition(PRE_SNAP_POS)
 			grabbedItem.setEuler(PRE_SNAP_ROT)
@@ -1382,13 +1406,15 @@ def onRelease(e=None):
 #	for members in BUILD_MEMBERS:
 #		link = viz.grab(bridge_root,members)
 #		GRAB_LINKS.append(link)
-	link = viz.grab(bridge_root,grabbedItem)
-	GRAB_LINKS.append(link)
-	grabbedItem.link = link
+	if grabbedItem != None:
+		link = viz.grab(bridge_root,grabbedItem)
+		GRAB_LINKS.append(link)
+		grabbedItem.link = link
 	
-	# Disable truss member target nodes on release
-	proxyManager.removeTarget(grabbedItem.targetNodes[0])
-	proxyManager.removeTarget(grabbedItem.targetNodes[1])
+		# Disable truss member target nodes on release
+		proxyManager.removeTarget(grabbedItem.targetNodes[0])
+		proxyManager.removeTarget(grabbedItem.targetNodes[1])
+		
 	SNAP_TO_POS = []
 	
 	# Clear item references
@@ -1399,6 +1425,9 @@ def onRelease(e=None):
 	if MODE != Mode.Edit:
 		cycleMode(Mode.Build)
 
+def delayedDelete(obj):
+	yield viztask.waitTime(1)
+	obj = None
 
 def cloneSide(truss):
 	pos = truss.getPosition()
@@ -1433,6 +1462,7 @@ def updateAngle(obj,slider,label):
 def rotateTruss(obj,slider,label):	
 	if objToRotate != None:
 		# Clamp glove link z-orientation
+		rotationCanvas.visible(viz.ON)
 		mouseTracker.visible(viz.OFF)
 		mouseTracker.distance = 0.1
 		slider.visible(True)
@@ -1619,7 +1649,7 @@ def onMouseDown(button):
 		CACHED_GLOVE_Z = mouseTracker.distance
 		if objToRotate != None:
 			print 'Rotating', objToRotate.name, CACHED_GLOVE_Z
-			rotationSlider.visible(True)
+			rotationCanvas.visible(True)
 
 
 def onMouseUp(button):	
@@ -1636,7 +1666,7 @@ def onMouseUp(button):
 			objToRotate = None
 			mouseTracker.visible(viz.ON)
 			mouseTracker.distance = CACHED_GLOVE_Z
-		rotationSlider.visible(False)
+		rotationCanvas.visible(False)
 	
 	if button == KEYS['utility']:
 		toggleUtility()
@@ -1818,8 +1848,7 @@ vizfx.postprocess.addEffect(gray_effect)
 def MainTask():
 	viewChangeSound.play()	
 	
-	while True:
-		
+	while True:		
 		FlashScreen()
 		
 		yield viztask.waitButtonUp(doneButton)
@@ -1853,9 +1882,10 @@ def MainTask():
 		
 		inventoryCanvas.setEuler( [0,30,0] )
 		inventoryCanvas.setPosition ( [0,viewPos[1]+1,viewPos[2]+1] )
-#		inventoryGrab = viz.grab(viz.MainView,inventoryCanvas,mask=viz.LINK_POS)
+		rotationCanvas.setEuler( [0,30,0] )
+		rotationCanvas.setPosition ( [0,viewPos[1]+1.1,viewPos[2]+1] )
+		rotationCanvas.visible(viz.OFF)
 		
-#		vizact.ontimer(0,printPos,pos)
 		vizact.ontimer(0,clampTrackerScroll,mouseTracker,SCROLL_MIN,SCROLL_MAX)
 		
 		# Setup callbacks
