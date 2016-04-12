@@ -1147,17 +1147,9 @@ def clearMembers():
 		member = None
 	BUILD_MEMBERS = []
 	
-	for member in TOP_MEMBERS:
-		member.remove()
-		member = None
-	
-	for member in SIDE_MEMBERS:
-		member.remove()
-		member = None
-		
-	for member in BOT_MEMBERS:
-		member.remove()
-		member = None
+	SIDE_MEMBERS.remove(children=True)
+	TOP_MEMBERS.remove(children=True)
+	BOT_MEMBERS.remove(children=True)
 	
 	# Clear Side clones
 	for clone in SIDE_CLONES:
@@ -1352,8 +1344,13 @@ def onRelease(e=None):
 	if VALID_SNAP:
 		if grabbedItem.isNewMember == True:
 			grabbedItem.orientation = ORIENTATION
-			if ORIENTATION == Orientation.Side:				
-				cloneSide(grabbedItem)	
+			if ORIENTATION == Orientation.Side:		
+				grabbedItem.setParent(SIDE_MEMBERS)
+				cloneSide(grabbedItem)
+			elif ORIENTATION == Orientation.Top:
+				grabbedItem.setParent(TOP_MEMBERS)
+			elif ORIENTATION == Orientation.Bottom:
+				grabbedItem.setParent(BOT_MEMBERS)
 			grabbedItem.isNewMember = False
 			
 		# Check facing of truss
@@ -1391,7 +1388,6 @@ def onRelease(e=None):
 			grabbedItem.remove()
 			highlightedItem = None
 			grabbedItem = None
-#			viztask.schedule(delayedDelete(grabbedItem))
 		else:	
 			grabbedItem.setPosition(PRE_SNAP_POS)
 			grabbedItem.setEuler(PRE_SNAP_ROT)
@@ -1425,9 +1421,6 @@ def onRelease(e=None):
 	if MODE != Mode.Edit:
 		cycleMode(Mode.Build)
 
-def delayedDelete(obj):
-	yield viztask.waitTime(1)
-	obj = None
 
 def cloneSide(truss):
 	pos = truss.getPosition()
@@ -1438,6 +1431,7 @@ def cloneSide(truss):
 	clone.setPosition(pos)
 	viz.grab(truss,clone)
 	SIDE_CLONES.append(clone)
+	clone.visible(False)
 	return clone
 
 	
@@ -1493,12 +1487,30 @@ def cycleOrientation(val):
 	if val == Orientation.Top:
 		rot = TOP_VIEW_ROT
 		pos = TOP_VIEW_POS
+		
+		for member in SIDE_CLONES:
+			member.visible(viz.OFF)
+		SIDE_MEMBERS.visible(viz.OFF)
+		BOT_MEMBERS.visible(viz.OFF)
+		TOP_MEMBERS.visible(viz.ON)
 	elif val == Orientation.Bottom:
 		rot = BOT_VIEW_ROT
 		pos = BOT_VIEW_POS
+		
+		for member in SIDE_CLONES:
+			member.visible(viz.OFF)
+		SIDE_MEMBERS.visible(viz.OFF)
+		TOP_MEMBERS.visible(viz.OFF)
+		BOT_MEMBERS.visible(viz.ON)
 	else:
 		rot = SIDE_VIEW_ROT
 		pos = BRIDGE_ROOT_POS
+		
+		for member in SIDE_CLONES:
+			member.visible(viz.OFF)
+		SIDE_MEMBERS.visible(viz.ON)
+		TOP_MEMBERS.visible(viz.OFF)
+		BOT_MEMBERS.visible(viz.OFF)
 		
 	bridge_root.setEuler(rot)
 	bridge_root.setPosition(pos)
@@ -1527,6 +1539,13 @@ def cycleMode(mode=Mode.Add):
 		SHOW_HIGHLIGHTER = True
 		inventoryCanvas.visible(viz.OFF)
 		viewport.getNode3d().setPosition(START_POS)
+		
+		# Hide all but side
+		for member in SIDE_CLONES:
+			member.visible(viz.OFF)
+		SIDE_MEMBERS.visible(viz.ON)
+		TOP_MEMBERS.visible(viz.OFF)
+		BOT_MEMBERS.visible(viz.OFF)
 	if MODE == Mode.Add:
 		SHOW_HIGHLIGHTER = True
 		inventoryCanvas.visible(viz.OFF)
@@ -1539,6 +1558,13 @@ def cycleMode(mode=Mode.Add):
 		proxyManager.setDebug(False)
 		bridge_root.setPosition(BRIDGE_ROOT_POS)
 		bridge_root.setEuler(SIDE_VIEW_ROT)
+		
+		# Show all members
+		for member in SIDE_CLONES:
+			member.visible(viz.ON)
+		SIDE_MEMBERS.visible(viz.ON)
+		TOP_MEMBERS.visible(viz.ON)
+		BOT_MEMBERS.visible(viz.ON)
 	if MODE == Mode.Walk:
 		SHOW_HIGHLIGHTER = False
 		inventoryCanvas.visible(viz.OFF)
@@ -1550,10 +1576,17 @@ def cycleMode(mode=Mode.Add):
 		bridge_root.setEuler(SIDE_VIEW_ROT)
 		viewport.getNode3d().setPosition(WALK_POS)
 		viewport.getNode3d().setEuler(WALK_ROT)
+		
+		# Show all members
+		for member in SIDE_CLONES:
+			member.visible(viz.ON)
+		SIDE_MEMBERS.visible(viz.ON)
+		TOP_MEMBERS.visible(viz.ON)
+		BOT_MEMBERS.visible(viz.ON)
 	
 	runFeedbackTask(str(MODE.name))
 	clickSound.play()
-	print 'Mode cycle: ', MODE
+#	print 'Mode cycle: ', MODE
 vizact.onkeyup(KEYS['mode'],cycleMode,vizact.choice([Mode.Edit,Mode.Build]))		
 	
 
@@ -1738,6 +1771,9 @@ def SaveData():
 # Loads Build members' truss dimensions, position, rotation from './data/bridge#.csv'					
 def LoadData():
 	global BUILD_MEMBERS
+	global SIDE_MEMBERS
+	global TOP_MEMBERS
+	global BOT_MEMBERS
 	global SIDE_CLONES
 	global ORDERS
 	global GRAB_LINKS
