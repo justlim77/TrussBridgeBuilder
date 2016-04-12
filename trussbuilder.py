@@ -5,19 +5,22 @@ Specify truss member dimensions and order materials required to build a 20m-long
 [Controls]
 1. Look around and orient the highlighter with the VR HEADSET
 2. Navigate using WASD-keys
-3. Manually turn view using Q and E
+3. Manually turn View using Q and E
 4. Control elevation with Z and X
 3. Interact with floating menus using the VIRTUAL MOUSE
 4. Extend or retract virtual hand with MOUSE SCROLL WHEEL
-5. Cycle through build modes with TAB KEY
+5. Cycle through Build modes with TAB KEY
 6. Grab and hold onto truss members by LEFT MOUSE CLICK when highlighted green
 7. Adjust truss angle by RIGHT MOUSE CLICK while highlighting truss member
 8. Toggle utilities with MIDDLE MOUSE CLICK
 9. Toggle main menu with SPACE BAR
 """
 
+FEEDBACK_MESSAGE = """<FEEDBACK>"""
+
 LOAD_MESSAGE = """Any unsaved progress will be lost! 
-Are you sure you want to proceed?"""
+Are you sure you want to proceed?
+(Please remove headset if proceeding)"""
 
 CLEAR_MESSAGE = """Your current bridge will be wiped! 
 Are you sure you want to proceed?"""
@@ -93,38 +96,38 @@ ROWS = []
 ORDERS_SIDE_ROWS = []
 ORDERS_TOP_ROWS = []
 ORDERS_BOT_ROWS = []
-ORDERS_SIDE_FLAG = 'side'
-ORDERS_TOP_FLAG = 'top'
+ORDERS_SIDE_FLAG = 'Side'
+ORDERS_TOP_FLAG = 'Top'
 ORDERS_BOT_FLAG = 'bot'
 
 INVENTORY = []
 BUILD_MEMBERS = []				# Array to store all truss members of bridge for saving/loading
-SIDE_CLONES = []				# Array to store cloned side truss
+SIDE_CLONES = []				# Array to store cloned Side truss
 GRAB_LINKS = []					# Array to store grab links between bridge root and truss members
 
 BRIDGE_LENGTH = 20				# Length of bridge in meters
 BRIDGE_SPAN = 10				# Span of bridge in meters
-GRID_Z = -5						# Grid z-position for build members to snap to
+GRID_Z = -5						# Grid z-position for Build members to snap to
 BRIDGE_ROOT_POS = [0,5,0]		# Origin point of bridge group to position and rotate
 TOP_VIEW_POS = [0,5,0]
 BOT_VIEW_POS = [0,5,0]
-SIDE_VIEW_ROT = [0,0,0]			# Rotation of side view
-TOP_VIEW_ROT = [0,-90,0]		# Rotation of top view
-BOT_VIEW_ROT = [0,90,0]			# Rotation of bottom view
+SIDE_VIEW_ROT = [0,0,0]			# Rotation of Side View
+TOP_VIEW_ROT = [0,-90,0]		# Rotation of Top View
+BOT_VIEW_ROT = [0,90,0]			# Rotation of Bottom View
 
 class Orientation(Enum):
-	side=1
-	top=2
-	bottom=3
-ORIENTATION = Orientation.side
+	Side=1
+	Top=2
+	Bottom=3
+ORIENTATION = Orientation.Side
 
 class Mode(Enum):
-	build=0
-	edit=1
-	add=2
-	view=3
-	walk=4
-MODE = Mode.build
+	Build=0
+	Edit=1
+	Add=2
+	View=3
+	Walk=4
+MODE = Mode.Build
 
 PROXY_NODES = []
 TARGET_NODES = []
@@ -188,7 +191,7 @@ def initCamera(configPath):
 
 
 def initOculus():
-	# Reset view
+	# Reset View
 	from oculuslite import oculus
 	hmd = oculus.Rift()
 	if hmd.getSensor():
@@ -376,14 +379,16 @@ instructionsPanel.getTitleBar().fontSize(36)
 optionPanel = vizinfo.InfoPanel(title=HEADER_TEXT, text='Options',align=viz.ALIGN_CENTER_TOP,icon=False)
 optionPanel.getTitleBar().fontSize(36)
 optionPanel.addSection('File')
-saveButton = optionPanel.addItem(viz.addButtonLabel('Save'))
+saveButton = optionPanel.addItem(viz.addButtonLabel('Save Bridge'))
 saveButton.length(2)
-loadButton = optionPanel.addItem(viz.addButtonLabel('Load'))
+loadButton = optionPanel.addItem(viz.addButtonLabel('Load Bridge'))
 loadButton.length(2)
 optionPanel.addSection('Game')
-resetButton = optionPanel.addItem(viz.addButtonLabel('Reset'))
+soundButton = optionPanel.addItem(viz.addButtonLabel('Audio: ON'))
+soundButton.length(2)
+resetButton = optionPanel.addItem(viz.addButtonLabel('Clear Bridge'))
 resetButton.length(2)
-quitButton = optionPanel.addItem(viz.addButtonLabel('Quit'))
+quitButton = optionPanel.addItem(viz.addButtonLabel('Quit Game'))
 quitButton.length(2)
 
 # Initialize order panel containing mainRow and midRow
@@ -441,7 +446,7 @@ stockMainPanel.setTitle( 'Stock' )
 stockMainPanel.getTitleBar().fontSize(28)
 stockMainPanel.addSeparator()
 
-# Initialize side order tab
+# Initialize Side order tab
 stockPanel = vizdlg.TabPanel()
 
 # Side orders inventory
@@ -463,7 +468,7 @@ midRow.addItem(stockMainPanel,align=viz.ALIGN_LEFT_TOP)
 inventoryPanel.addItem(midRow)
 
 bottomRow = vizdlg.Panel(layout=vizdlg.LAYOUT_HORZ_CENTER,align=viz.ALIGN_CENTER_TOP,border=False,background=False,spacing=20)
-doneButton = bottomRow.addItem(viz.addButtonLabel('DONE'),align=viz.ALIGN_CENTER_TOP)
+doneButton = bottomRow.addItem(viz.addButtonLabel('Confirm order and start building in VR'),align=viz.ALIGN_CENTER_TOP)
 doneButton.length(2)
 inventoryPanel.addItem(bottomRow)
 
@@ -472,7 +477,7 @@ inspectorCanvas = viz.addGUICanvas(align=viz.ALIGN_CENTER)
 inspector = panels.InspectorPanel()
 statPanel = inspector.GetPanel()
 statPanel.setParent(inspectorCanvas)
-## Link inspector canvas with main view
+## Link inspector canvas with main View
 #inspectorLink = viz.link(viz.MainView, inspectorCanvas)
 ##inspectorLink.preMultLinkable(viz.MainView)
 #inspectorLink.preTrans( [-2, -3, 5] )
@@ -483,15 +488,15 @@ utilityButtons = []
 utilityCanvas = viz.addGUICanvas(align=viz.ALIGN_CENTER)
 points = mathlite.getPointsInCircum(30,8)
 # Circle backdrop
-circleBackdrop = viz.addButton(parent=utilityCanvas)
-circleBackdrop.texture(viz.addTexture('resources/GUI/dropdownarrow-128.png'))
-circleBackdrop.setScale(1.5,1.5)
+#circleBackdrop = viz.addButton(parent=utilityCanvas)
+#circleBackdrop.texture(viz.addTexture('resources/GUI/dropdownarrow-128.png'))
+#circleBackdrop.setScale(1.5,1.5)
 # Menu button
 menuButton = viz.addButton(parent=utilityCanvas)
 menuButton.texture(viz.addTexture('resources/GUI/menu-128.png'))
 menuButton.setPosition(0,0)
 menuButton.setScale(BUTTON_SCALE,BUTTON_SCALE)
-# Reset view button
+# Reset View button
 homeButton = viz.addButton(parent=utilityCanvas)
 homeButton.texture(viz.addTexture('resources/GUI/reset-128.png'))
 homeButton.setPosition(0,0)
@@ -531,7 +536,7 @@ utilityButtons = ( [menuButton,homeButton,buildModeButton,viewerModeButton,walkM
 for i, button in enumerate(utilityButtons):
 	button.setPosition(0.5 + points[i][0], 0.5 + points[i][1])
 	
-# Link utility canvas with main view
+# Link utility canvas with main View
 utilityLink = viz.link(viz.MainView,utilityCanvas)
 utilityLink.preTrans( [0, 0, 1.5] )
 
@@ -542,7 +547,7 @@ rotationSlider = viz.addProgressBar('Angle')
 rotationLabel = viz.addText('0')
 row = rotationPanel.addRow([rotationSlider,rotationLabel])
 
-# Link rotation canvas with main view
+# Link rotation canvas with main View
 rotationLink = viz.link(viz.MainView,rotationCanvas)
 rotationLink.preEuler( [0,30,0] )
 rotationLink.preTrans( [0,0.1,1] )
@@ -554,12 +559,35 @@ tabbedMenu.addPanel('Instructions',instructionsPanel)
 tabbedMenu.addPanel('Inventory',inventoryPanel)
 tabbedMenu.addPanel('Options',optionPanel)
 
+# Add dialog canvas
+dialogCanvas = viz.addGUICanvas(align=viz.ALIGN_CENTER)
+dialogCanvas.visible(viz.OFF)
+
+# Add feedback canvas
+feedbackCanvas = viz.addGUICanvas(align=viz.ALIGN_CENTER)
+feedbackQuad = viz.addTexQuad(size=[500,100],parent=feedbackCanvas)
+blackTex = viz.addTexture('resources/textures/blackTex.bmp',parent=feedbackQuad)
+blackTex.wrap(viz.WRAP_S,viz.REPEAT) 
+blackTex.wrap(viz.WRAP_T,viz.REPEAT)
+feedbackText = viz.addText(FEEDBACK_MESSAGE,parent=feedbackQuad,align=viz.ALIGN_CENTER)
+feedbackQuad.texture(blackTex)
+feedbackQuad.alpha(0.5) 
+feedbackText.color(viz.WHITE)
+feedbackText.fontSize(50)
+feedbackCanvas.visible(viz.OFF)
 
 def initCanvas():	
 #	menuCanvas.setRenderWorld(MENU_RES,[20,viz.AUTO_COMPUTE])
 	menuCanvas.setRenderWorldOverlay(MENU_RES,fov=90.0,distance=3.0)
 	menuCanvas.setPosition(0,0,6)
 	updateMouseStyle(menuCanvas)
+	
+	dialogCanvas.setRenderWorldOverlay(MENU_RES,fov=90.0,distance=3.0)
+	dialogCanvas.setPosition(0,0,6)
+	updateMouseStyle(dialogCanvas)
+	
+	feedbackCanvas.setRenderWorldOverlay(MENU_RES,fov=90.0,distance=3.0)
+	feedbackCanvas.setPosition(0,0,6)	
 	
 #	inspectorCanvas.setRenderWorld(RESOLUTION,[20,viz.AUTO_COMPUTE])
 	inspectorCanvas.setRenderWorldOverlay(RESOLUTION,fov=90.0,distance=3.0)
@@ -599,9 +627,33 @@ def inspectMember(obj):
 		inspector.SetMessage(None)
 
 
+def showFeedback():
+	while True:
+		feedbackCanvas.runAction(vizact.fadeTo(.5,begin=0,time=0.5))
+		feedbackText.runAction(vizact.fadeTo(1,begin=0,time=0.5))
+		yield viztask.waitTime(1)
+		feedbackCanvas.runAction(vizact.fadeTo(0,begin=.5,time=0.25))
+		feedbackText.runAction(vizact.fadeTo(0,begin=1,time=0.25))
+		break
+
+
+task = viztask.schedule( showFeedback() )
+def runFeedbackTask(message='Welcome'):
+	global task
+	task.kill()
+	
+	feedbackCanvas.alpha(0)
+	feedbackText.alpha(0)
+	feedbackText.message(message)
+	feedbackCanvas.visible(viz.ON)
+	task = viztask.schedule( showFeedback() )
+	
+
 def showdialog(message,func):
-	dialog = vizdlg.MessageDialog(message=message, title='Warning', accept='Yes (Enter)', cancel='No (Esc)')
+	menuCanvas.setMouseStyle(viz.CANVAS_MOUSE_VISIBLE)
+	dialog = vizdlg.MessageDialog(message=message, title='Warning', accept='Yes (Enter)', cancel='No (Esc)',parent=dialogCanvas)
 	dialog.setScreenAlignment(viz.ALIGN_CENTER)
+	dialogCanvas.visible(viz.ON)
 	
 	warningSound.play()
 	
@@ -614,7 +666,9 @@ def showdialog(message,func):
 		else:
 			pass
 			
-		dialog.remove()			
+		dialog.remove()
+		dialogCanvas.visible(viz.OFF)
+		menuCanvas.setMouseStyle(viz.CANVAS_MOUSE_VIRTUAL)
 		yield viztask.waitTime(1)
 		
 def clearBridge():
@@ -762,7 +816,7 @@ def createInventory():
 
 	inventoryCanvas.setRenderWorld([400,200],[1,viz.AUTO_COMPUTE])
 	updateMouseStyle(inventoryCanvas)
-	# Link rotation canvas with main view
+	# Link rotation canvas with main View
 	inventoryLink = viz.link(viz.MainView,inventoryCanvas)
 	inventoryLink.preEuler( [0,30,0] )
 	inventoryLink.preTrans( [0,0,1] )
@@ -964,7 +1018,7 @@ def createTrussNew(order=Order(),path='',loading=False):
 		isgrabbing = True
 		
 		truss.isNewMember = True		
-		cycleMode(Mode.add)
+		cycleMode(Mode.Add)
 		print 'New truss: Not loading'
 	else:
 		truss.isNewMember = False
@@ -1083,7 +1137,7 @@ def clearMembers():
 		member = None
 	BUILD_MEMBERS = []
 	
-	# Clear side clones
+	# Clear Side clones
 	for clone in SIDE_CLONES:
 		clone.remove()
 		clone = None
@@ -1094,13 +1148,18 @@ def clearMembers():
 		link.remove()
 		link = None
 	GRAB_LINKS = []
+	
+	# Show feedback
+	runFeedbackTask('Bridge cleared!')
 
 	
 def toggleEnvironment(value=viz.TOGGLE):
 	environment_root.visible(value)
+	runFeedbackTask('Environment')
 
 def toggleGrid(value=viz.TOGGLE):
 	grid_root.visible(value)
+	runFeedbackTask('Grid')
 			
 def toggleUtility(sound=True):
 	utilityCanvas.visible(viz.TOGGLE)
@@ -1251,7 +1310,7 @@ def onRelease(e=None):
 	if VALID_SNAP:
 		if grabbedItem.isNewMember == True:
 			grabbedItem.orientation = ORIENTATION
-			if ORIENTATION == Orientation.side:				
+			if ORIENTATION == Orientation.Side:				
 				cloneSide(grabbedItem)	
 			grabbedItem.isNewMember = False
 			
@@ -1297,7 +1356,7 @@ def onRelease(e=None):
 		# Play warning sound
 		warningSound.play()
 			
-	# Re-grab existing build members
+	# Re-grab existing Build members
 #	for members in BUILD_MEMBERS:
 #		link = viz.grab(bridge_root,members)
 #		GRAB_LINKS.append(link)
@@ -1314,9 +1373,9 @@ def onRelease(e=None):
 	highlightedItem = None
 	grabbedItem = None
 	
-	# Change mode back to build if not editing
-	if MODE != Mode.edit:
-		cycleMode(Mode.build)
+	# Change mode back to Build if not editing
+	if MODE != Mode.Edit:
+		cycleMode(Mode.Build)
 
 
 def cloneSide(truss):
@@ -1368,7 +1427,7 @@ def cycleOrientation(val):
 	global ORIENTATION
 	global grabbedItem
 	
-	if MODE == Mode.view or MODE == Mode.walk:
+	if MODE == Mode.View or MODE == Mode.Walk:
 		return
 	
 	if grabbedItem != None:
@@ -1379,10 +1438,10 @@ def cycleOrientation(val):
 	
 	ORIENTATION = val
 
-	if val == Orientation.top:
+	if val == Orientation.Top:
 		rot = TOP_VIEW_ROT
 		pos = TOP_VIEW_POS
-	elif val == Orientation.bottom:
+	elif val == Orientation.Bottom:
 		rot = BOT_VIEW_ROT
 		pos = BOT_VIEW_POS
 	else:
@@ -1391,10 +1450,13 @@ def cycleOrientation(val):
 		
 	bridge_root.setEuler(rot)
 	bridge_root.setPosition(pos)
-vizact.onkeyup(KEYS['cycle'],cycleOrientation,vizact.choice([Orientation.top,Orientation.bottom,Orientation.side]))
+	
+	# Show feedback
+	runFeedbackTask(str(ORIENTATION.name))
+vizact.onkeyup(KEYS['cycle'],cycleOrientation,vizact.choice([Orientation.Top,Orientation.Bottom,Orientation.Side]))
 
 
-def cycleMode(mode=Mode.add):
+def cycleMode(mode=Mode.Add):
 	global SHOW_HIGHLIGHTER
 	global MODE
 	
@@ -1404,23 +1466,20 @@ def cycleMode(mode=Mode.add):
 	toggleGrid(True)
 	proxyManager.setDebug(True)
 	
-	if MODE == Mode.build:
+	if MODE == Mode.Build:
 		SHOW_HIGHLIGHTER = True
 		inventoryCanvas.visible(viz.ON)
 		inventoryCanvas.setMouseStyle(viz.CANVAS_MOUSE_VIRTUAL)
 		viewport.getNode3d().setPosition(START_POS)
-	if MODE == Mode.edit:
-		SHOW_HIGHLIGHTER = True
-		inventoryCanvas.visible(viz.OFF)
-		toggleGrid(True)
-		toggleEnvironment(False)
-		proxyManager.setDebug(True)
-		viewport.getNode3d().setPosition(START_POS)
-	if MODE == Mode.add:
+	if MODE == Mode.Edit:
 		SHOW_HIGHLIGHTER = True
 		inventoryCanvas.visible(viz.OFF)
 		viewport.getNode3d().setPosition(START_POS)
-	if MODE == Mode.view:
+	if MODE == Mode.Add:
+		SHOW_HIGHLIGHTER = True
+		inventoryCanvas.visible(viz.OFF)
+		viewport.getNode3d().setPosition(START_POS)
+	if MODE == Mode.View:
 		SHOW_HIGHLIGHTER = False
 		inventoryCanvas.visible(viz.OFF)
 		toggleGrid(False)
@@ -1428,7 +1487,7 @@ def cycleMode(mode=Mode.add):
 		proxyManager.setDebug(False)
 		bridge_root.setPosition(BRIDGE_ROOT_POS)
 		bridge_root.setEuler(SIDE_VIEW_ROT)
-	if MODE == Mode.walk:
+	if MODE == Mode.Walk:
 		SHOW_HIGHLIGHTER = False
 		inventoryCanvas.visible(viz.OFF)
 		toggleEnvironment(True)
@@ -1440,9 +1499,10 @@ def cycleMode(mode=Mode.add):
 		viewport.getNode3d().setPosition(WALK_POS)
 		viewport.getNode3d().setEuler(WALK_ROT)
 	
+	runFeedbackTask(str(MODE.name))
 	clickSound.play()
 	print 'Mode cycle: ', MODE
-vizact.onkeyup(KEYS['mode'],cycleMode,vizact.choice([Mode.edit,Mode.build]))		
+vizact.onkeyup(KEYS['mode'],cycleMode,vizact.choice([Mode.Edit,Mode.Build]))		
 	
 
 # Setup Callbacks and Events
@@ -1471,15 +1531,15 @@ def onKeyUp(key):
 		mouseTracker.distance = HAND_DISTANCE
 		clickSound.play()
 	elif key == KEYS['builder']:
-		cycleMode(Mode.edit)
+		cycleMode(Mode.Edit)
 		mouseTracker.distance = HAND_DISTANCE
 		clickSound.play()
 	elif key == KEYS['viewer']:
-		cycleMode(Mode.view)
+		cycleMode(Mode.View)
 		mouseTracker.distance = HAND_DISTANCE
 		clickSound.play()
 	elif key == KEYS['walk']:
-		cycleMode(Mode.walk)
+		cycleMode(Mode.Walk)
 		clickSound.play()
 	elif key == KEYS['grid']:
 		toggleGrid(viz.TOGGLE)
@@ -1487,10 +1547,10 @@ def onKeyUp(key):
 	elif key == KEYS['showMenu']:
 		menuCanvas.visible(viz.TOGGLE)
 		utilityCanvas.visible(viz.OFF)
-		if menuCanvas.getVisible() == viz.ON or MODE == Mode.edit or MODE == Mode.view:
+		if menuCanvas.getVisible() == viz.ON or MODE == Mode.Edit or MODE == Mode.View:
 			inventoryCanvas.visible(viz.OFF)
 		else:
-			if MODE == Mode.build:
+			if MODE == Mode.Build:
 				inventoryCanvas.visible(viz.ON)
 		showMenuSound.play()
 	elif key == KEYS['proxi']:
@@ -1508,7 +1568,7 @@ def onMouseWheel(dir):
 #	global ORIENTATION
 #	global bridge_root
 #	
-#	if ORIENTATION == Orientation.top or ORIENTATION == Orientation.bottom:
+#	if ORIENTATION == Orientation.Top or ORIENTATION == Orientation.Bottom:
 #		pos = bridge_root.getPosition()
 #		if dir > 0:
 #			pos[2] += 0.5	
@@ -1522,7 +1582,7 @@ def slideRoot(val):
 	global ORIENTATION
 	global bridge_root
 	
-	if ORIENTATION == Orientation.top or ORIENTATION == Orientation.bottom:
+	if ORIENTATION == Orientation.Top or ORIENTATION == Orientation.Bottom:
 		pos = bridge_root.getPosition()
 		pos[2] += val
 		bridge_root.setPosition(pos)
@@ -1586,29 +1646,29 @@ def onList(e):
 		
 	if e.object == tabbedPanel.tabGroup:
 		if e.newSel == 0:
-			ORIENTATION = Orientation.side
+			ORIENTATION = Orientation.Side
 		if e.newSel == 1:
-			ORIENTATION = Orientation.top
+			ORIENTATION = Orientation.Top
 		if e.newSel == 2:
-			ORIENTATION = Orientation.bottom
+			ORIENTATION = Orientation.Bottom
 		
 	clickSound.play()
 	
 		
 import csv
-# Saves current build members' truss dimensions, position, rotation to './data/bridge#.csv'
+# Saves current Build members' truss dimensions, position, rotation to './data/bridge#.csv'
 def SaveData():
 	global BUILD_MEMBERS
 		
 	# Play sound
 	clickSound.play()
 	
-	filePath = vizinput.fileSave(file='bridge01')		
+	filePath = vizinput.fileSave(file='bridge01',filter=[('CSV Files','*.csv')],directory='/data/saves')		
 	if filePath == '':
 		return
 		
 	currentOrientation = ORIENTATION
-	cycleOrientation(Orientation.side)
+	cycleOrientation(Orientation.Side)
 	
 	with open(filePath,'wb') as f:
 		writer = csv.writer(f)
@@ -1618,11 +1678,12 @@ def SaveData():
 							str(truss.getEuler()[0]),str(truss.getEuler()[1]),str(truss.getEuler()[2]),
 							int(truss.orientation.value)])
 	
-	# Save successful feedback
-	FlashScreen()
 	cycleOrientation(currentOrientation)
+	
+	# Save successful feedback
+	runFeedbackTask('Save success!')
 		
-# Loads build members' truss dimensions, position, rotation from './data/bridge#.csv'					
+# Loads Build members' truss dimensions, position, rotation from './data/bridge#.csv'					
 def LoadData():
 	global BUILD_MEMBERS
 	global SIDE_CLONES
@@ -1632,14 +1693,14 @@ def LoadData():
 	# Play sound
 	clickSound.play()
 	
-	filePath = vizinput.fileOpen(filter=[('CSV Files','*.csv')],directory='/data')		
+	filePath = vizinput.fileOpen(filter=[('CSV Files','*.csv')],directory='/data/saves')		
 	if filePath == '':
 		return	
 
 	clearMembers()
 	
 	currentOrientation = ORIENTATION
-	cycleOrientation(Orientation.side)
+	cycleOrientation(Orientation.Side)
 	
 	ORDERS = []
 	with open(filePath,'rb') as f:
@@ -1658,13 +1719,16 @@ def LoadData():
 		truss.setPosition(truss.order.pos)
 		truss.setEuler(truss.order.euler)
 		truss.orientation = truss.order.orientation
-		if truss.orientation == Orientation.side:
+		if truss.orientation == Orientation.Side:
 			SIDE_CLONES.append(cloneSide(truss))
 		link = viz.grab(bridge_root,truss)
 		truss.link = link
 		GRAB_LINKS.append(link)
 	
 	cycleOrientation(currentOrientation)
+	
+	# Show load feedback
+	runFeedbackTask('Load success!')
 
 # Events
 viz.callback ( viz.MOUSEUP_EVENT, onMouseUp )
@@ -1737,6 +1801,8 @@ def MainTask():
 
 		menuCanvas.visible(viz.OFF)
 		menuCanvas.setPosition(0,-2,2)
+		dialogCanvas.setPosition(0,-2,2)
+		feedbackCanvas.setPosition(0,-2,2)
 		
 		viz.clearcolor(CLEAR_COLOR)
 		
@@ -1762,6 +1828,7 @@ def MainTask():
 		viz.callback ( viz.KEYUP_EVENT, onKeyUp )
 		viz.callback ( viz.KEYDOWN_EVENT, onKeyDown )
 viztask.schedule( MainTask() )
+
 
 # Pre-load sounds
 viz.playSound('./resources/sounds/return_to_holodeck.wav',viz.SOUND_PRELOAD)

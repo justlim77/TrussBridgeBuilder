@@ -50,7 +50,7 @@ def GridRoot(gridColor=viz.CYAN,origin=([0,0,0])):
 	
 def EnvironmentRoot(visibility=True):
 	environment_root = viz.addGroup()
-	day = viz.add('resources/sky_day.osgb', scale=([5,5,5]),parent=environment_root)
+	day = vizfx.addChild('resources/sky_day.osgb', scale=([5,5,5]),parent=environment_root)
 	environment = vizfx.addChild('resources/environment.osgb',parent=environment_root)
 	walkway = vizfx.addChild('resources/walkway.osgb',parent=environment_root)	
 	river = vizfx.addChild('resources/river.osgb', pos=(0,0.75,20),scale=([10,1,10]),parent=environment_root)
