@@ -98,11 +98,14 @@ ORDERS_TOP_ROWS = []
 ORDERS_BOT_ROWS = []
 ORDERS_SIDE_FLAG = 'Side'
 ORDERS_TOP_FLAG = 'Top'
-ORDERS_BOT_FLAG = 'bot'
+ORDERS_BOT_FLAG = 'Bot'
 
 INVENTORY = []
 BUILD_MEMBERS = []				# Array to store all truss members of bridge for saving/loading
+SIDE_MEMBERS = viz.addGroup()
 SIDE_CLONES = []				# Array to store cloned Side truss
+TOP_MEMBERS = viz.addGroup()
+BOT_MEMBERS = viz.addGroup()
 GRAB_LINKS = []					# Array to store grab links between bridge root and truss members
 
 BRIDGE_LENGTH = 20				# Length of bridge in meters
@@ -115,11 +118,13 @@ SIDE_VIEW_ROT = [0,0,0]			# Rotation of Side View
 TOP_VIEW_ROT = [0,-90,0]		# Rotation of Top View
 BOT_VIEW_ROT = [0,90,0]			# Rotation of Bottom View
 
+
 class Orientation(Enum):
 	Side=1
 	Top=2
 	Bottom=3
 ORIENTATION = Orientation.Side
+
 
 class Mode(Enum):
 	Build=0
@@ -128,6 +133,7 @@ class Mode(Enum):
 	View=3
 	Walk=4
 MODE = Mode.Build
+
 
 PROXY_NODES = []
 TARGET_NODES = []
@@ -219,8 +225,8 @@ def initViewport(position):
 	vp = vizconnect.addViewpoint(pos=position,euler=(0,0,0))
 	vp.add(vizconnect.getDisplay())
 	#Start collision detection.
-	viz.MainView.collision( viz.ON )
-	viz.phys.enable()
+#	viz.MainView.collision( viz.ON )
+#	viz.phys.enable()
 	#Make gravity weaker.
 #	viz.MainView.gravity(2)
 
@@ -817,9 +823,10 @@ def createInventory():
 	inventoryCanvas.setRenderWorld([400,200],[1,viz.AUTO_COMPUTE])
 	updateMouseStyle(inventoryCanvas)
 	# Link rotation canvas with main View
-	inventoryLink = viz.link(viz.MainView,inventoryCanvas)
-	inventoryLink.preEuler( [0,30,0] )
-	inventoryLink.preTrans( [0,0,1] )
+#	inventoryLink = viz.link(viz.MainView,inventoryCanvas)
+
+#	inventoryLink.preEuler( [0,30,0] )
+#	inventoryLink.preTrans( [0,0,1] )
 createInventory()
 
 
@@ -849,7 +856,7 @@ def populateInventory(sideList,topList,botList):
 	for sideOrder in sideList:
 		msg = '{}mm(d) x {}mm(th) x {}m(l) [{}]'.format ( sideOrder.diameter, sideOrder.thickness, sideOrder.length, sideOrder.quantity )
 		sideButton = viz.addButtonLabel ( msg )
-		vizact.onbuttonup ( sideButton, createTrussNew, sideOrder, 'resources/CHS.osgb' )
+		vizact.onbuttonup ( sideButton, createTrussNew, sideOrder, 'resources/chs.osgb' )
 		row = sideInventory.addRow ( [sideButton] )
 		sideRows.append ( row )
 		vizact.onbuttonup ( sideButton, updateQuantity, sideOrder, sideButton, sideList, sideInventory, row )
@@ -857,7 +864,7 @@ def populateInventory(sideList,topList,botList):
 	for topOrder in topList:
 		msg = '{}mm(d) x {}mm(th) x {}m(l) [{}]'.format ( topOrder.diameter, topOrder.thickness, topOrder.length, topOrder.quantity )
 		topButton = viz.addButtonLabel ( msg )
-		vizact.onbuttonup ( topButton, createTrussNew, topOrder, 'resources/CHS.osgb' )
+		vizact.onbuttonup ( topButton, createTrussNew, topOrder, 'resources/chs.osgb' )
 		row = topInventory.addRow( [topButton] )
 		topRows.append ( row )
 		vizact.onbuttonup ( topButton, updateQuantity, topOrder, topButton, topList, topInventory, row )
@@ -865,7 +872,7 @@ def populateInventory(sideList,topList,botList):
 	for botOrder in botList:
 		msg = '{}mm(d) x {}mm(th) x {}m(l) [{}]'.format ( botOrder.diameter, botOrder.thickness, botOrder.length, botOrder.quantity )
 		botButton = viz.addButtonLabel ( msg )
-		vizact.onbuttonup ( botButton, createTrussNew, botOrder, 'resources/CHS.osgb' )
+		vizact.onbuttonup ( botButton, createTrussNew, botOrder, 'resources/chs.osgb' )
 		row = bottomInventory.addRow ( [botButton] )
 		bottomRows.append ( row )
 		vizact.onbuttonup ( botButton, updateQuantity, botOrder, botButton, botList, bottomInventory, row )
@@ -902,17 +909,17 @@ def createTruss(order=Order(),path=''):
 	truss.length = float(order.length)
 	truss.quantity = int(order.quantity)
 	
-	truss.setScale([truss.length,truss.diameter/1000,truss.diameter/1000])	
+	truss.setScale([truss.length,truss.diameter*0.001,truss.diameter*0.001])	
 
 	posA = truss.getPosition()
-	posA[0] -= truss.length / 2
+	posA[0] -= truss.length * 0.5
 	nodeA = vizshape.addSphere(0.2,pos=posA)
 	nodeA.disable(viz.PICKING)
 	nodeA.visible(False)
 	viz.grab(truss,nodeA)
 	
 	posB = truss.getPosition()
-	posB[0] += truss.length / 2
+	posB[0] += truss.length * 0.5
 	nodeB = vizshape.addSphere(0.2,pos=posB)
 	nodeB.disable(viz.PICKING)
 	nodeB.visible(False)
@@ -942,17 +949,17 @@ def createTrussNew(order=Order(),path='',loading=False):
 	truss.quantity = int(order.quantity)
 	truss.orientation = ORIENTATION
 	
-	truss.setScale([truss.length,truss.diameter/1000,truss.diameter/1000])	
+	truss.setScale([truss.length,truss.diameter*0.001,truss.diameter*0.001])	
 
 	# Setup proximity-based snapping nodes
 	posA = truss.getPosition()
-	posA[0] -= truss.length / 2
+	posA[0] -= truss.length * 0.5
 	nodeA = vizshape.addSphere(0.2,pos=posA)
 	nodeA.visible(False)
 	viz.grab(truss,nodeA)
 	
 	posB = truss.getPosition()
-	posB[0] += truss.length / 2
+	posB[0] += truss.length * 0.5
 	nodeB = vizshape.addSphere(0.2,pos=posB)
 	nodeB.visible(False)
 	viz.grab(truss,nodeB)
@@ -1058,7 +1065,7 @@ def generateMembers(loading=False):
 #	clearMembers()
 	
 	for i, order in enumerate(ORDERS):
-		trussMember = createTruss(order,'resources/CHS.osgb')
+		trussMember = createTruss(order,'resources/chs.osgb')
 		trussMember.order = order
 		trussMember.setEuler([0,0,0])
 		qty = int(trussMember.order.quantity)
@@ -1104,6 +1111,9 @@ def clearMembers():
 	global SENSOR_NODES
 	global INVENTORY
 	global BUILD_MEMBERS
+	global SIDE_MEMBERS
+	global TOP_MEMBERS
+	global BOT_MEMBERS
 	global SIDE_CLONES
 	global GRAB_LINKS
 	
@@ -1136,6 +1146,18 @@ def clearMembers():
 		member.remove()
 		member = None
 	BUILD_MEMBERS = []
+	
+	for member in TOP_MEMBERS:
+		member.remove()
+		member = None
+	
+	for member in SIDE_MEMBERS:
+		member.remove()
+		member = None
+		
+	for member in BOT_MEMBERS:
+		member.remove()
+		member = None
 	
 	# Clear Side clones
 	for clone in SIDE_CLONES:
@@ -1720,7 +1742,12 @@ def LoadData():
 		truss.setEuler(truss.order.euler)
 		truss.orientation = truss.order.orientation
 		if truss.orientation == Orientation.Side:
+			truss.setParent(SIDE_MEMBERS)
 			SIDE_CLONES.append(cloneSide(truss))
+		elif truss.orientation == Orientation.Top:
+			truss.setParent(TOP_MEMBERS)
+		elif truss.orientation == Orientation.Bottom:
+			truss.setParent(BOT_MEMBERS)
 		link = viz.grab(bridge_root,truss)
 		truss.link = link
 		GRAB_LINKS.append(link)
@@ -1822,6 +1849,13 @@ def MainTask():
 		gloveLink = initLink('glove.cfg',mouseTracker)
 		viz.link(gloveLink,highlightTool)	
 		
+		viewPos = viewport.getNode3d().getPosition()
+		
+		inventoryCanvas.setEuler( [0,30,0] )
+		inventoryCanvas.setPosition ( [0,viewPos[1]+1,viewPos[2]+1] )
+#		inventoryGrab = viz.grab(viz.MainView,inventoryCanvas,mask=viz.LINK_POS)
+		
+#		vizact.ontimer(0,printPos,pos)
 		vizact.ontimer(0,clampTrackerScroll,mouseTracker,SCROLL_MIN,SCROLL_MAX)
 		
 		# Setup callbacks
@@ -1829,6 +1863,8 @@ def MainTask():
 		viz.callback ( viz.KEYDOWN_EVENT, onKeyDown )
 viztask.schedule( MainTask() )
 
+def printPos(val):
+	print val
 
 # Pre-load sounds
 viz.playSound('./resources/sounds/return_to_holodeck.wav',viz.SOUND_PRELOAD)
