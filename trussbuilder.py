@@ -72,6 +72,7 @@ FULLSCREEN = 0
 CLEAR_COLOR = viz.GRAY
 GRID_COLOR = viz.BLACK
 BUTTON_SCALE = 0.5
+INITIALIZED = False
 SOUNDS = []
 
 BUILD_ROAM_LIMIT = ([12,-12,-10,10])	# Front,back,left,right limits in meters(m)
@@ -108,10 +109,10 @@ ORDERS_BOT_FLAG = 'Bot'
 
 INVENTORY = []
 BUILD_MEMBERS = []				# Array to store all truss members of bridge for saving/loading
-SIDE_MEMBERS = viz.addGroup()
+SIDE_MEMBERS = []
 SIDE_CLONES = []				# Array to store cloned Side truss
-TOP_MEMBERS = viz.addGroup()
-BOT_MEMBERS = viz.addGroup()
+TOP_MEMBERS = []
+BOT_MEMBERS = []
 GRAB_LINKS = []					# Array to store grab links between bridge root and truss members
 
 BRIDGE_LENGTH = 20				# Length of bridge in meters
@@ -332,8 +333,8 @@ SOUNDS = [ startSound,buttonHighlightSound,clickSound,showMenuSound,
 			hideMenuSound,viewChangeSound,warningSound ]
 
 # Set volume
-for sound in SOUNDS:
-	sound.volume(0.5)
+for MUTE in SOUNDS:
+	MUTE.volume(0.5)
 warningSound.volume(0.05)
 
 
@@ -398,6 +399,7 @@ instructionsPanel.getTitleBar().fontSize(36)
 optionPanel = vizinfo.InfoPanel(title=HEADER_TEXT, text='Options',align=viz.ALIGN_CENTER_TOP,icon=False)
 optionPanel.getTitleBar().fontSize(36)
 optionPanel.addSection('File')
+saveHeader = optionPanel.addItem(viz.addText('Append ".csv" when saving'))
 saveButton = optionPanel.addItem(viz.addButtonLabel('Save Bridge'))
 saveButton.length(2)
 loadButton = optionPanel.addItem(viz.addButtonLabel('Load Bridge'))
@@ -566,9 +568,9 @@ rotationSlider = viz.addProgressBar('Angle')
 rotationLabel = viz.addText('0')
 row = rotationPanel.addRow([rotationSlider,rotationLabel])
 # Link rotation canvas with main View
-#rotationLink = viz.link(viz.MainView,rotationCanvas)
-#rotationLink.preEuler( [0,30,0] )
-#rotationLink.preTrans( [0,0.1,1] )
+rotationLink = viz.link(viz.MainView,rotationCanvas)
+rotationLink.preEuler( [0,30,0] )
+rotationLink.preTrans( [0,0.1,1] )
 
 # Add tabbed panels to main menu canvas
 menuCanvas = viz.addGUICanvas(align=viz.ALIGN_CENTER_TOP)
@@ -618,8 +620,9 @@ def initCanvas():
 	utilityCanvas.visible(viz.OFF)
 	updateMouseStyle(utilityCanvas)
 	
-	rotationCanvas.setRenderWorld([300,100],[1,viz.AUTO_COMPUTE])
-	rotationCanvas.setPosition(0,0,0)
+#	rotationCanvas.setRenderWorldOverlay([300,100],[1,viz.AUTO_COMPUTE])
+	rotationCanvas.setRenderWorldOverlay(MENU_RES,fov=90.0,distance=3.0)
+	rotationCanvas.setPosition(0,0,2)
 	rotationCanvas.setEuler(0,0,0)
 #	rotationCanvas.visible(viz.OFF)
 initCanvas()
@@ -1023,9 +1026,12 @@ def createTrussNew(order=Order(),path='',loading=False):
 		listItem.apply(effect)
 		listItem.apply(lightEffect)		
 	try:
-		highlightTool.setItems(mergedList)
+		# Clear highlighter
+		highlightTool.clear()
+		currentTruss = [truss]
+		highlightTool.setItems(currentTruss)
 	except:
-		print 'Highlighter not initialized!'
+		print 'Failed: Highlighter not initialized!'
 	
 	if not loading:
 		global grabbedItem
@@ -1106,10 +1112,10 @@ def generateMembers(loading=False):
 		listItem.apply(effect)
 		listItem.apply(lightEffect)		
 	
-	try:
-		highlightTool.setItems(mergedList)
-	except:
-		print 'Highlighter not initialized!'
+#	try:
+#		highlightTool.setItems(mergedList)1
+#	except:
+#		print 'Highlighter not initialized!'
 	
 	# Clear ORDERS
 	ORDERS = []
@@ -1158,16 +1164,22 @@ def clearMembers():
 		member.remove()
 		member = None
 	BUILD_MEMBERS = []
-	
-	SIDE_MEMBERS.remove(children=True)
-	TOP_MEMBERS.remove(children=True)
-	BOT_MEMBERS.remove(children=True)
-	
-	# Clear Side clones
 	for clone in SIDE_CLONES:
 		clone.remove()
 		clone = None
 	SIDE_CLONES = []
+	for member in SIDE_MEMBERS:
+		member.remove()
+		member = None
+	SIDE_MEMBERS = []
+	for member in TOP_MEMBERS:
+		member.remove()
+		member = None
+	TOP_MEMBERS = []
+	for member in BOT_MEMBERS:
+		member.remove()
+		member = None
+	BOT_MEMBERS = []
 	
 	# Clear grab links
 	for link in GRAB_LINKS:
@@ -1187,11 +1199,11 @@ def toggleGrid(value=viz.TOGGLE):
 	grid_root.visible(value)
 	runFeedbackTask('Grid')
 			
-def toggleUtility(sound=True):
+def toggleUtility(MUTE=True):
 	utilityCanvas.visible(viz.TOGGLE)
 	menuCanvas.visible(viz.OFF)
 	
-	if sound:
+	if MUTE:
 		if utilityCanvas.getVisible == False:
 			hideMenuSound.play()
 		else:
@@ -1355,17 +1367,21 @@ def onRelease(e=None):
 	global bridge_root
 	global GRAB_LINKS
 	global SHOW_HIGHLIGHTER
+	global highlightTool
 	
 	if VALID_SNAP:
 		if grabbedItem.isNewMember == True:
 			grabbedItem.orientation = ORIENTATION
 			if ORIENTATION == Orientation.Side:		
-				grabbedItem.setParent(SIDE_MEMBERS)
+#				grabbedItem.setParent(SIDE_MEMBERS)
+				SIDE_MEMBERS.append(grabbedItem)
 				cloneSide(grabbedItem)
 			elif ORIENTATION == Orientation.Top:
-				grabbedItem.setParent(TOP_MEMBERS)
+#				grabbedItem.setParent(TOP_MEMBERS)
+				TOP_MEMBERS.append(grabbedItem)
 			elif ORIENTATION == Orientation.Bottom:
-				grabbedItem.setParent(BOT_MEMBERS)
+#				grabbedItem.setParent(BOT_MEMBERS)
+				BOT_MEMBERS.append(grabbedItem)
 			grabbedItem.isNewMember = False
 			
 		# Check facing of truss
@@ -1391,11 +1407,12 @@ def onRelease(e=None):
 		proxyManager.addSensor(grabbedItem.sensorNodes[0])
 		proxyManager.addSensor(grabbedItem.sensorNodes[1])
 		
-		# Play snap sound
+		# Play snap MUTE
 		clickSound.play()
 	else:
 		# If invalid position and newly-generated truss, destroy it
 		if grabbedItem.isNewMember == True:
+			highlightTool.clear()
 			BUILD_MEMBERS.remove(grabbedItem)
 			proxyManager.removeTarget(grabbedItem.targetNodes[0])
 			proxyManager.removeTarget(grabbedItem.targetNodes[1])
@@ -1410,7 +1427,7 @@ def onRelease(e=None):
 			proxyManager.addSensor(grabbedItem.sensorNodes[0])
 			proxyManager.addSensor(grabbedItem.sensorNodes[1])
 		
-		# Play warning sound
+		# Play warning MUTE
 		warningSound.play()
 			
 	# Re-grab existing Build members
@@ -1518,10 +1535,12 @@ def cycleOrientation(val):
 		
 		for member in SIDE_CLONES:
 			member.visible(viz.OFF)
-		SIDE_MEMBERS.visible(viz.OFF)
-		TOP_MEMBERS.visible(viz.OFF)
-		BOT_MEMBERS.visible(viz.ON)
-		
+		for member in SIDE_MEMBERS:
+			member.visible(viz.OFF)
+		for member in TOP_MEMBERS:
+			member.visible(viz.OFF)
+		for member in BOT_MEMBERS:
+			member.visible(viz.ON)
 		for model in supports:
 			model.alpha(0.2)
 	else:
@@ -1530,10 +1549,12 @@ def cycleOrientation(val):
 		
 		for member in SIDE_CLONES:
 			member.visible(viz.OFF)
-		SIDE_MEMBERS.visible(viz.ON)
-		TOP_MEMBERS.visible(viz.OFF)
-		BOT_MEMBERS.visible(viz.OFF)
-		
+		for member in SIDE_MEMBERS:
+			member.visible(viz.ON)
+		for member in TOP_MEMBERS:
+			member.visible(viz.OFF)
+		for member in BOT_MEMBERS:
+			member.visible(viz.OFF)
 		for model in supports:
 			model.alpha(0.2)
 		
@@ -1547,6 +1568,7 @@ def cycleOrientation(val):
 def cycleMode(mode=Mode.Add):
 	global SHOW_HIGHLIGHTER
 	global MODE
+	global highlightTool
 	
 	MODE = mode
 	
@@ -1561,11 +1583,21 @@ def cycleMode(mode=Mode.Add):
 		inventoryCanvas.visible(viz.ON)
 		inventoryCanvas.setMouseStyle(viz.CANVAS_MOUSE_VIRTUAL)
 		viewport.getNode3d().setPosition(START_POS)
+		
+		# Clear highlighter
+		highlightTool.clear()
+		highlightTool.setItems([])
+		
 		cycleOrientation(ORIENTATION)
 	if MODE == Mode.Edit:
 		SHOW_HIGHLIGHTER = True
 		inventoryCanvas.visible(viz.OFF)
 		viewport.getNode3d().setPosition(START_POS)
+		
+		# Clear highlighter
+		highlightTool.clear()
+		highlightTool.setItems(BUILD_MEMBERS)
+		
 		cycleOrientation(ORIENTATION)
 	if MODE == Mode.Add:
 		SHOW_HIGHLIGHTER = True
@@ -1583,9 +1615,16 @@ def cycleMode(mode=Mode.Add):
 		# Show all members
 		for member in SIDE_CLONES:
 			member.visible(viz.ON)
-		SIDE_MEMBERS.visible(viz.ON)
-		TOP_MEMBERS.visible(viz.ON)
-		BOT_MEMBERS.visible(viz.ON)
+		for member in SIDE_MEMBERS:
+			member.visible(viz.ON)
+		for member in TOP_MEMBERS:
+			member.visible(viz.ON)
+		for member in BOT_MEMBERS:
+			member.visible(viz.ON)
+		
+		# Clear highlighter
+		highlightTool.clear()
+		highlightTool.setItems([])
 		
 		for model in supports:
 			model.alpha(0)
@@ -1604,10 +1643,17 @@ def cycleMode(mode=Mode.Add):
 		# Show all members
 		for member in SIDE_CLONES:
 			member.visible(viz.ON)
-		SIDE_MEMBERS.visible(viz.ON)
-		TOP_MEMBERS.visible(viz.ON)
-		BOT_MEMBERS.visible(viz.ON)
+		for member in SIDE_MEMBERS:
+			member.visible(viz.ON)
+		for member in TOP_MEMBERS:
+			member.visible(viz.ON)
+		for member in BOT_MEMBERS:
+			member.visible(viz.ON)
 	
+		# Clear highlighter
+		highlightTool.clear()
+		highlightTool.setItems([])
+		
 		for model in supports:
 			model.alpha(0)
 	runFeedbackTask(str(MODE.name))
@@ -1778,13 +1824,13 @@ import csv
 def SaveData():
 	global BUILD_MEMBERS
 		
-	# Play sound
+	# Play MUTE
 	clickSound.play()
 	
-	filePath = vizinput.fileSave(file='bridge01',filter=[('CSV Files','*.csv')],directory='/data/saves')		
+	filePath = vizinput.fileSave(file='bridge01.csv',filter=[('CSV Files','*.csv')],directory='/data/saves')		
 	if filePath == '':
 		return
-		
+	
 	currentOrientation = ORIENTATION
 	cycleOrientation(Orientation.Side)
 	
@@ -1811,7 +1857,7 @@ def LoadData():
 	global ORDERS
 	global GRAB_LINKS
 	
-	# Play sound
+	# Play MUTE
 	clickSound.play()
 	
 	filePath = vizinput.fileOpen(filter=[('CSV Files','*.csv')],directory='/data/saves')		
@@ -1841,12 +1887,12 @@ def LoadData():
 		truss.setEuler(truss.order.euler)
 		truss.orientation = truss.order.orientation
 		if truss.orientation == Orientation.Side:
-			truss.setParent(SIDE_MEMBERS)
+			SIDE_MEMBERS.append(truss)
 			SIDE_CLONES.append(cloneSide(truss))
 		elif truss.orientation == Orientation.Top:
-			truss.setParent(TOP_MEMBERS)
+			TOP_MEMBERS.append(truss)
 		elif truss.orientation == Orientation.Bottom:
-			truss.setParent(BOT_MEMBERS)
+			BOT_MEMBERS.append(truss)
 		link = viz.grab(bridge_root,truss)
 		truss.link = link
 		GRAB_LINKS.append(link)
@@ -1876,7 +1922,6 @@ vizact.onbuttonup ( resetButton, clearBridge )
 vizact.onbuttonup ( resetButton, clickSound.play )
 vizact.onbuttonup ( quitButton, quitGame )
 vizact.onbuttonup ( quitButton, clickSound.play )
-vizact.whilemousedown ( KEYS['rotate'], rotateTruss, objToRotate, rotationSlider, rotationLabel )
 
 # Utility
 vizact.onbuttonup ( menuButton, onKeyUp, KEYS['showMenu'], )
@@ -1915,12 +1960,14 @@ vizfx.postprocess.addEffect(gray_effect)
 
 # Schedule tasks
 def MainTask():
+	global INITIALIZED
 	viewChangeSound.play()	
 	
 	while True:		
 		FlashScreen()
 		
 		yield viztask.waitButtonUp(doneButton)
+		
 		cameraRift = initCamera('vizconnect_config_riftDefault')
 		#cameraFly = initCamera('vizconnect_config_riftFly')
 
@@ -1951,17 +1998,19 @@ def MainTask():
 		
 		inventoryCanvas.setEuler( [0,30,0] )
 		inventoryCanvas.setPosition ( [0,viewPos[1]+1,viewPos[2]+1] )
-		rotationCanvas.setEuler( [0,30,0] )
-		rotationCanvas.setPosition ( [0,viewPos[1]+1.1,viewPos[2]+1] )
-		rotationCanvas.visible(viz.OFF)
-		
-		vizact.ontimer(0,clampTrackerScroll,mouseTracker,SCROLL_MIN,SCROLL_MAX)
+#		rotationCanvas.setEuler( [0,30,0] )
+#		rotationCanvas.setPosition ( [0,viewPos[1]+1.1,viewPos[2]+1] )
+#		rotationCanvas.visible(viz.OFF)
 		
 		# Setup callbacks
 		viz.callback ( viz.KEYUP_EVENT, onKeyUp )
 		viz.callback ( viz.KEYDOWN_EVENT, onKeyDown )
 		vizact.onkeyup(KEYS['mode'],cycleMode,vizact.choice([Mode.Edit,Mode.Build]))
 		vizact.onkeyup(KEYS['cycle'],cycleOrientation,vizact.choice([Orientation.Top,Orientation.Bottom,Orientation.Side]))
+		vizact.whilemousedown ( KEYS['rotate'], rotateTruss, objToRotate, rotationSlider, rotationLabel )
+		vizact.ontimer(0,clampTrackerScroll,mouseTracker,SCROLL_MIN,SCROLL_MAX)
+
+		INITIALIZED = True
 viztask.schedule( MainTask() )
 
 
