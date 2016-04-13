@@ -24,6 +24,8 @@ Order truss members required to build a 20m-long bridge across the Singapore Riv
 
 FEEDBACK_MESSAGE = """<FEEDBACK>"""
 
+VIEW_MESSAGE = """[ 1 | 2 ] Slide bridge towards or away from you"""
+
 LOAD_MESSAGE = """Any unsaved progress will be lost! 
 Are you sure you want to proceed?
 (Please remove headset if proceeding)"""
@@ -119,8 +121,8 @@ BRIDGE_LENGTH = 20				# Length of bridge in meters
 BRIDGE_SPAN = 10				# Span of bridge in meters
 GRID_Z = -5						# Grid z-position for Build members to snap to
 BRIDGE_ROOT_POS = [0,5,0]		# Origin point of bridge group to position and rotate
-TOP_VIEW_POS = [0,5,0]
-BOT_VIEW_POS = [0,5,0]
+TOP_VIEW_POS = [0,5,GRID_Z]		# Position of Top View Bridge Root
+BOT_VIEW_POS = [0,5,GRID_Z]		# Position of bottom view bridge root
 SIDE_VIEW_ROT = [0,0,0]			# Rotation of Side View
 TOP_VIEW_ROT = [0,-90,0]		# Rotation of Top View
 BOT_VIEW_ROT = [0,90,0]			# Rotation of Bottom View
@@ -1266,15 +1268,12 @@ def updateHighlightTool(highlightTool):
 	state = viz.mouse.getState()
 	if state & viz.MOUSEBUTTON_LEFT:
 		if isgrabbing == False:
+			# Prevent grabbing truss of other orientation groups
 			if highlightTool.getSelection().orientation != ORIENTATION:
 				return
-			else:
-				grabbedItem = highlightTool.getSelection()
-			
-			# Break grab links to free truss
-#			for link in GRAB_LINKS:
-#				link.remove()
-#				link = None
+
+			grabbedItem = highlightTool.getSelection()
+				
 			try:
 				GRAB_LINKS.remove(grabbedItem.link)
 				grabbedItem.link.remove()
@@ -1371,18 +1370,15 @@ def onRelease(e=None):
 	global highlightTool
 	
 	if VALID_SNAP:
-		print 'Valid snap: ', VALID_SNAP
+		# If new member, group appropriately
 		if grabbedItem.isNewMember == True:
 			grabbedItem.orientation = ORIENTATION
 			if ORIENTATION == Orientation.Side:		
-#				grabbedItem.setParent(SIDE_MEMBERS)
 				SIDE_MEMBERS.append(grabbedItem)
 				cloneSide(grabbedItem)
 			elif ORIENTATION == Orientation.Top:
-#				grabbedItem.setParent(TOP_MEMBERS)
 				TOP_MEMBERS.append(grabbedItem)
 			elif ORIENTATION == Orientation.Bottom:
-#				grabbedItem.setParent(BOT_MEMBERS)
 				BOT_MEMBERS.append(grabbedItem)
 			grabbedItem.isNewMember = False
 			
@@ -1393,16 +1389,21 @@ def onRelease(e=None):
 		yFacing = 1
 		if grabbedItem.getPosition()[1] < SNAP_TO_POS[1]:
 			yFacing = -1
-		
+		zFacing = 1
+		if grabbedItem.getPosition()[2] < SNAP_TO_POS[2]:
+			zFacing = -1
+			
 		# Check if vertical truss
 		xOffset = mathlite.math.fabs(grabbedItem.proxyNodes[1].getPosition()[0] - grabbedItem.proxyNodes[0].getPosition()[0]) / 2
-		yOffset = mathlite.math.fabs(grabbedItem.proxyNodes[1].getPosition()[1] - grabbedItem.proxyNodes[0].getPosition()[1]) / 2
 		xOffset *= xFacing
+		yOffset = mathlite.math.fabs(grabbedItem.proxyNodes[1].getPosition()[1] - grabbedItem.proxyNodes[0].getPosition()[1]) / 2
 		yOffset *= yFacing
-		
+		zOffset = mathlite.math.fabs(grabbedItem.proxyNodes[1].getPosition()[2] - grabbedItem.proxyNodes[0].getPosition()[2]) / 2
+		zOffset *= zFacing
+
 		clampedX =  viz.clamp(grabbedItem.getPosition()[0],-10 + xOffset,10 - xOffset)
 		clampedY =  viz.clamp(grabbedItem.getPosition()[1],2,10)
-		grabbedItem.setPosition( [SNAP_TO_POS[0] + xOffset, SNAP_TO_POS[1] + yOffset, SNAP_TO_POS[2]] )
+		grabbedItem.setPosition( [SNAP_TO_POS[0] + xOffset, SNAP_TO_POS[1] + yOffset, SNAP_TO_POS[2] + zOffset] )
 		grabbedItem.setEuler( [0,0,grabbedItem.getEuler()[2]] )
 		
 		# Enable sensor nodes for other members to snap to
@@ -1607,11 +1608,11 @@ def cycleMode(mode=Mode.Add):
 		
 		cycleOrientation(ORIENTATION)
 	if MODE == Mode.Edit:
-		SHOW_HIGHLIGHTER = True
 		inventoryCanvas.visible(viz.OFF)
 		viewport.getNode3d().setPosition(START_POS)
 		
 		# Clear highlighter
+		SHOW_HIGHLIGHTER = True
 		highlightTool.clear()
 		highlightTool.setItems(BUILD_MEMBERS)
 		
@@ -1728,6 +1729,7 @@ def onKeyUp(key):
 		utilityCanvas.visible(viz.OFF)
 		if menuCanvas.getVisible() == viz.ON or MODE == Mode.Edit or MODE == Mode.View:
 			inventoryCanvas.visible(viz.OFF)
+			runFeedbackTask('Menu')
 		else:
 			if MODE == Mode.Build:
 				inventoryCanvas.visible(viz.ON)
