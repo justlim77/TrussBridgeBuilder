@@ -76,6 +76,9 @@ GRID_COLOR = viz.BLACK
 BUTTON_SCALE = 0.5
 INITIALIZED = False
 SOUNDS = []
+SFX_VOLUME = 0.5
+WARNING_VOLUME = 0.05
+ISMUTED = False
 
 BUILD_ROAM_LIMIT = ([12,-12,-10,10])	# Front,back,left,right limits in meters(m)
 START_POS = ([0,5.82,-17])				# Set at 5m + avatar height above ground and 17m back fron center
@@ -109,25 +112,28 @@ ORDERS_SIDE_FLAG = 'Side'
 ORDERS_TOP_FLAG = 'Top'
 ORDERS_BOT_FLAG = 'Bot'
 
-INVENTORY = []
+INVENTORY = []					# Deprecated
 BUILD_MEMBERS = []				# Array to store all truss members of bridge for saving/loading
-SIDE_MEMBERS = []
+SIDE_MEMBERS = []				# Array to store Side truss
 SIDE_CLONES = []				# Array to store cloned Side truss
-TOP_MEMBERS = []
-BOT_MEMBERS = []
+TOP_MEMBERS = []				# Array to store Top truss
+BOT_MEMBERS = []				# Array to store Bottom truss
 GRAB_LINKS = []					# Array to store grab links between bridge root and truss members
 
 BRIDGE_LENGTH = 20				# Length of bridge in meters
 BRIDGE_SPAN = 10				# Span of bridge in meters
 GRID_Z = -5						# Grid z-position for Build members to snap to
 BRIDGE_ROOT_POS = [0,5,0]		# Origin point of bridge group to position and rotate
-TOP_VIEW_POS = [0,5,GRID_Z]		# Position of Top View Bridge Root
-BOT_VIEW_POS = [0,5,GRID_Z]		# Position of bottom view bridge root
+TOP_VIEW_POS = [0,5,-4]			# Position of Top View Bridge Root
+BOT_VIEW_POS = [0,5,-5]			# Position of bottom view bridge root
 SIDE_VIEW_ROT = [0,0,0]			# Rotation of Side View
 TOP_VIEW_ROT = [0,-90,0]		# Rotation of Top View
 BOT_VIEW_ROT = [0,90,0]			# Rotation of Bottom View
-TOP_CACHED_Z = 0				# Cache z-position of Top Bridge View
-BOT_CACHED_Z = 0				# Cache z-position of Bot Bridge View
+TOP_CACHED_Z = -4				# Cache z-position of Top Bridge View
+TOP_Z_MIN = -4					# Minimum z-position of Top Bridge Root
+BOT_CACHED_Z = -5				# Cache z-position of Bot Bridge View
+BOT_Z_MIN = -5					# Minimum z-position of Bottom Bridge Root
+SLIDE_MAX = 100					# Max z-position of bridge root sliding
 SLIDE_INTERVAL = 0.05			# Interval to slide bridge root in TOP/BOTTOM View
 SUPPORT_ALPHA = 0.25			# Alpha value for bridge red supports	
 
@@ -319,9 +325,11 @@ initMouse()
 initLighting()
 highlightTool = initHighlightTool()
 proxyManager = initProxy()
-grid_root = roots.GridRoot(gridColor=GRID_COLOR,origin=START_POS)
 environment_root = roots.EnvironmentRoot(visibility=False)
 bridge_root = roots.BridgeRoot(BRIDGE_ROOT_POS,SIDE_VIEW_ROT)
+grid_root = roots.GridRoot(gridColor=GRID_COLOR,origin=START_POS)
+orientation_text = viz.addText3D('SIDE VIEW',pos=[0,13.5,-5],scale=(2,2,.5),parent=grid_root,align=viz.ALIGN_CENTER)
+info_text = viz.addText3D('<< Info >>',pos=[0,12,-5],scale=(.5,.5,.5),parent=grid_root,align=viz.ALIGN_CENTER)
 
 # Setup audio
 startSound = viz.addAudio('./resources/sounds/return_to_holodeck.wav')
@@ -336,9 +344,9 @@ SOUNDS = [ startSound,buttonHighlightSound,clickSound,showMenuSound,
 			hideMenuSound,viewChangeSound,warningSound ]
 
 # Set volume
-for MUTE in SOUNDS:
-	MUTE.volume(0.5)
-warningSound.volume(0.05)
+for sound in SOUNDS:
+	sound.volume(SFX_VOLUME)
+warningSound.volume(WARNING_VOLUME)
 
 
 # Parse catalogue from data subdirectory
@@ -408,7 +416,7 @@ saveButton.length(2)
 loadButton = optionPanel.addItem(viz.addButtonLabel('Load Bridge'))
 loadButton.length(2)
 optionPanel.addSection('Game')
-soundButton = optionPanel.addItem(viz.addButtonLabel('Audio: ON'))
+soundButton = optionPanel.addItem(viz.addButtonLabel('Toggle Audio'))
 soundButton.length(2)
 resetButton = optionPanel.addItem(viz.addButtonLabel('Clear Bridge'))
 resetButton.length(2)
@@ -739,7 +747,18 @@ def addOrder(orderTab,orderList=inventory.OrderList(),orderRow=[],flag=''):
 	
 	_diameter = diameterDropList.getItem(diameterDropList.getSelection())
 	_thickness = thicknessDropList.getItem(thicknessDropList.getSelection())
-	_length = viz.clamp(float(lengthTextbox.get()),LEN_MIN,LEN_MAX)
+#	_length = float(lengthTextbox().get())
+#	if _length < 0:
+#		runFeedbackTask('Invalid length!')
+#		lengthTextbox.message('')
+#		return	
+	try:
+		_length = viz.clamp(float(lengthTextbox.get()),LEN_MIN,LEN_MAX)
+	except:
+		runFeedbackTask('Invalid length!')
+		warningSound.play()
+		lengthTextbox.message('')
+		return
 	_quantity = mathlite.getNewRange(quantitySlider.get(),0.0,1.0,QTY_MIN,QTY_MAX)
 	
 	setattr(newOrder, 'diameter', float(_diameter))
@@ -773,7 +792,8 @@ def addOrder(orderTab,orderList=inventory.OrderList(),orderRow=[],flag=''):
 		orderTab.removeRow(row)
 	
 	#Sort lowest to highest (d x Th x l)
-	orderList = orderList.sortByAttr()
+	sortedOrderList = orderList.sortByAttr()
+	orderList = sortedOrderList
 	
 	#Populate grid with ORDERS in order list
 	for _order in orderList:
@@ -1193,6 +1213,21 @@ def clearMembers():
 	# Show feedback
 	runFeedbackTask('Bridge cleared!')
 
+def toggleAudio(value=viz.TOGGLE):
+	global ISMUTED
+	if ISMUTED:
+		for sound in SOUNDS:
+			sound.volume(SFX_VOLUME)
+		warningSound.volume(WARNING_VOLUME)
+		runFeedbackTask('Sound ON')
+	else:
+		for sound in SOUNDS:
+			sound.volume(0)
+		runFeedbackTask('Sound OFF')
+
+	ISMUTED = not ISMUTED
+	clickSound.play()
+	
 	
 def toggleEnvironment(value=viz.TOGGLE):
 	environment_root.visible(value)
@@ -1261,6 +1296,10 @@ def updateHighlightTool(highlightTool):
 	
 	if SHOW_HIGHLIGHTER == True:
 		highlightTool.highlight()
+	else:
+#		highlightTool.clear()
+#		highlightTool.setItems([])
+		return
 		
 	if highlightTool.getSelection() is None:
 		return	
@@ -1338,7 +1377,7 @@ def onHighlightGrab2():
 	""" Clamp grabbed member to front glove position and grid z """
 	global grabbedItem
 	global isgrabbing
-	if grabbedItem != None and isgrabbing == True:
+	if grabbedItem != None and isgrabbing == True:		
 		startPos = highlightTool.getRayCaster().getPosition()
 		dist = mathlite.math.fabs(startPos[2] - GRID_Z)
 		raycaster = highlightTool.getRayCaster().getLineForward()
@@ -1368,7 +1407,7 @@ def onRelease(e=None):
 	global GRAB_LINKS
 	global SHOW_HIGHLIGHTER
 	global highlightTool
-	
+		
 	if VALID_SNAP:
 		# If new member, group appropriately
 		if grabbedItem.isNewMember == True:
@@ -1389,21 +1428,16 @@ def onRelease(e=None):
 		yFacing = 1
 		if grabbedItem.getPosition()[1] < SNAP_TO_POS[1]:
 			yFacing = -1
-		zFacing = 1
-		if grabbedItem.getPosition()[2] < SNAP_TO_POS[2]:
-			zFacing = -1
 			
 		# Check if vertical truss
 		xOffset = mathlite.math.fabs(grabbedItem.proxyNodes[1].getPosition()[0] - grabbedItem.proxyNodes[0].getPosition()[0]) / 2
 		xOffset *= xFacing
 		yOffset = mathlite.math.fabs(grabbedItem.proxyNodes[1].getPosition()[1] - grabbedItem.proxyNodes[0].getPosition()[1]) / 2
 		yOffset *= yFacing
-		zOffset = mathlite.math.fabs(grabbedItem.proxyNodes[1].getPosition()[2] - grabbedItem.proxyNodes[0].getPosition()[2]) / 2
-		zOffset *= zFacing
 
 		clampedX =  viz.clamp(grabbedItem.getPosition()[0],-10 + xOffset,10 - xOffset)
 		clampedY =  viz.clamp(grabbedItem.getPosition()[1],2,10)
-		grabbedItem.setPosition( [SNAP_TO_POS[0] + xOffset, SNAP_TO_POS[1] + yOffset, SNAP_TO_POS[2] + zOffset] )
+		grabbedItem.setPosition( [SNAP_TO_POS[0] + xOffset, SNAP_TO_POS[1] + yOffset, SNAP_TO_POS[2]] )
 		grabbedItem.setEuler( [0,0,grabbedItem.getEuler()[2]] )
 		
 		# Enable sensor nodes for other members to snap to
@@ -1545,6 +1579,8 @@ def cycleOrientation(val):
 			member.visible(viz.ON)	
 			proxyManager.addSensor(member.sensorNodes[0])
 			proxyManager.addSensor(member.sensorNodes[1])
+			
+		info_text.message(VIEW_MESSAGE)
 	elif val == Orientation.Bottom:
 		rot = BOT_VIEW_ROT
 		pos = BOT_VIEW_POS
@@ -1562,6 +1598,8 @@ def cycleOrientation(val):
 			member.visible(viz.ON)
 			proxyManager.addSensor(member.sensorNodes[0])
 			proxyManager.addSensor(member.sensorNodes[1])
+			
+		info_text.message(VIEW_MESSAGE)
 	else:
 		rot = SIDE_VIEW_ROT
 		pos = BRIDGE_ROOT_POS
@@ -1578,17 +1616,22 @@ def cycleOrientation(val):
 			member.visible(viz.OFF)
 			proxyManager.removeSensor(member.sensorNodes[0])
 			proxyManager.removeSensor(member.sensorNodes[1])
-		
+		info_text.message('')		
 	bridge_root.setEuler(rot)
 	bridge_root.setPosition(pos)
 	
 	# Show feedback
 	runFeedbackTask(str(ORIENTATION.name))
+	orientation_text.message(str(ORIENTATION.name))
+	clickSound.play()
 
 def cycleMode(mode=Mode.Add):
 	global SHOW_HIGHLIGHTER
 	global MODE
 	global highlightTool
+	
+	if MODE is Mode.Add and grabbedItem is not None:
+		return		
 	
 	MODE = mode
 	
@@ -1760,7 +1803,6 @@ def onMouseWheel(dir):
 		
 
 def slideRoot(val):
-	global ORIENTATION
 	global TOP_CACHED_Z
 	global BOT_CACHED_Z
 	global bridge_root
@@ -1768,11 +1810,13 @@ def slideRoot(val):
 	if ORIENTATION == Orientation.Top or ORIENTATION == Orientation.Bottom:
 		pos = bridge_root.getPosition()
 		pos[2] += val
-		clampedZ = viz.clamp(pos[2],-5,100)
-		pos[2] = clampedZ
 		if ORIENTATION == Orientation.Top:
+			clampedZ = viz.clamp(pos[2],TOP_Z_MIN,SLIDE_MAX)
+			pos[2] = clampedZ
 			TOP_CACHED_Z = pos[2]
 		elif ORIENTATION == Orientation.Bottom:
+			clampedZ = viz.clamp(pos[2],BOT_Z_MIN,SLIDE_MAX)
+			pos[2] = clampedZ
 			BOT_CACHED_Z = pos[2]
 		bridge_root.setPosition(pos)
 vizact.whilekeydown('1',slideRoot,-SLIDE_INTERVAL)		
@@ -1944,8 +1988,6 @@ vizact.onbuttonup ( resetButton, clearBridge )
 vizact.onbuttonup ( resetButton, clickSound.play )
 vizact.onbuttonup ( quitButton, quitGame )
 vizact.onbuttonup ( quitButton, clickSound.play )
-
-# Utility
 vizact.onbuttonup ( menuButton, onKeyUp, KEYS['showMenu'], )
 vizact.onbuttonup ( homeButton, onKeyUp, KEYS['home'] )
 vizact.onbuttonup ( buildModeButton, onKeyUp, KEYS['builder'] )
@@ -1956,6 +1998,7 @@ vizact.onbuttonup ( toggleEnvButton, onKeyUp, KEYS['env'] )
 vizact.onbuttonup ( toggleGridButton, onKeyUp, KEYS['grid'] )
 vizact.onbuttonup ( saveButton, SaveData )
 vizact.onbuttonup ( loadButton, loadBridge )
+vizact.onbuttonup ( soundButton, toggleAudio )
 
 
 FLASH_TIME = 3.0			# Time to flash screen
@@ -1970,6 +2013,7 @@ def CreateFlashQuad():
 	flash_quad.setBoxTransform(viz.BOX_ENABLED)
 	return flash_quad
 flash_quad = CreateFlashQuad()
+
 
 def FlashScreen():
 	"""Flash screen and fade out"""
@@ -2025,7 +2069,6 @@ def MainTask():
 		viz.link(gloveLink,highlightTool)	
 		
 		viewPos = viewport.getNode3d().getPosition()
-		
 		inventoryCanvas.setEuler( [0,30,0] )
 		inventoryCanvas.setPosition ( [0,viewPos[1]+1,viewPos[2]+1] )
 		rotationCanvas.setEuler( [0,30,0] )
@@ -2059,3 +2102,5 @@ viz.playSound('./resources/sounds/show_menu.wav',viz.SOUND_PRELOAD)
 viz.playSound('./resources/sounds/hide_menu.wav',viz.SOUND_PRELOAD)
 viz.playSound('./resources/sounds/page_advance.wav',viz.SOUND_PRELOAD)
 viz.playSound('./resources/sounds/out_of_bounds_warning.wav',viz.SOUND_PRELOAD)
+
+	

@@ -66,7 +66,7 @@ def initDisplays(initFlag=vizconnect.INIT_INDEPENDENT, initList=None):
 			_window = viz.MainWindow
 			
 			#VC: set some parameters
-			VFOV = 150
+			VFOV = 114
 			aspect = viz.AUTO_COMPUTE
 			stereo = viz.STEREO_HORZ
 			

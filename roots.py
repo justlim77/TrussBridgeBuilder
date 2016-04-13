@@ -41,8 +41,11 @@ def GridRoot(gridColor=viz.CYAN,origin=([0,0,0])):
 	grid_right.setParent(grid_root)
 	
 	# Create floating measurements
-	span_text = viz.addText3D('<< 20 meters >>',pos=[-3.25,10.25,-5],parent=grid_root)
-	height_text = viz.addText3D('<< 10 meters >>',pos=[-10.25,1,-5],euler=[0,0,90],parent=grid_root)
+	span_text = viz.addText3D('<< 20 meters >>',pos=[0,11,-5],scale=[1,1,.5],parent=grid_root,align=viz.ALIGN_CENTER)
+	height_text = viz.addText3D('<< 10 meters >>',pos=[-11,5,-5],scale=[1,1,.5],euler=[0,0,90],parent=grid_root,align=viz.ALIGN_CENTER)
+#	
+#	orientation_text = viz.addText3D('SIDE VIEW',pos=[-3.25,14,-5],parent=grid_root)
+#	info_text = viz.addText3D('<< Info >>',pos=[-3.25,12,-5],parent=grid_root)
 	
 	print 'Creating grid...'
 	return grid_root
