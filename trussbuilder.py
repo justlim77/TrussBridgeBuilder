@@ -127,6 +127,7 @@ BOT_VIEW_ROT = [0,90,0]			# Rotation of Bottom View
 TOP_CACHED_Z = 0				# Cache z-position of Top Bridge View
 BOT_CACHED_Z = 0				# Cache z-position of Bot Bridge View
 SLIDE_INTERVAL = 0.05			# Interval to slide bridge root in TOP/BOTTOM View
+SUPPORT_ALPHA = 0.25			# Alpha value for bridge red supports	
 
 class Orientation(Enum):
 	Side=1
@@ -568,9 +569,9 @@ rotationSlider = viz.addProgressBar('Angle')
 rotationLabel = viz.addText('0')
 row = rotationPanel.addRow([rotationSlider,rotationLabel])
 # Link rotation canvas with main View
-rotationLink = viz.link(viz.MainView,rotationCanvas)
-rotationLink.preEuler( [0,30,0] )
-rotationLink.preTrans( [0,0.1,1] )
+#rotationLink = viz.link(viz.MainView,rotationCanvas)
+#rotationLink.preEuler( [0,30,0] )
+#rotationLink.preTrans( [0,0.1,1] )
 
 # Add tabbed panels to main menu canvas
 menuCanvas = viz.addGUICanvas(align=viz.ALIGN_CENTER_TOP)
@@ -620,9 +621,9 @@ def initCanvas():
 	utilityCanvas.visible(viz.OFF)
 	updateMouseStyle(utilityCanvas)
 	
-#	rotationCanvas.setRenderWorldOverlay([300,100],[1,viz.AUTO_COMPUTE])
-	rotationCanvas.setRenderWorldOverlay(MENU_RES,fov=90.0,distance=3.0)
-	rotationCanvas.setPosition(0,0,2)
+	rotationCanvas.setRenderWorld([300,100],[1,viz.AUTO_COMPUTE])
+#	rotationCanvas.setRenderWorldOverlay(MENU_RES,fov=90.0,distance=3.0)
+	rotationCanvas.setPosition(0,0,0)
 	rotationCanvas.setEuler(0,0,0)
 #	rotationCanvas.visible(viz.OFF)
 initCanvas()
@@ -1370,6 +1371,7 @@ def onRelease(e=None):
 	global highlightTool
 	
 	if VALID_SNAP:
+		print 'Valid snap: ', VALID_SNAP
 		if grabbedItem.isNewMember == True:
 			grabbedItem.orientation = ORIENTATION
 			if ORIENTATION == Orientation.Side:		
@@ -1498,7 +1500,11 @@ def rotateTruss(obj,slider,label):
 		rotation = int(objToRotate.getEuler()[2])
 		string = str(rotation)
 		rotationLabel.message(string)
-	
+
+def resetSensors():
+	proxyManager.clearSensors()
+	proxyManager.addSensor(pinAnchorSensor)
+	proxyManager.addSensor(rollerAnchorSensor)
 	
 def cycleOrientation(val):
 	global ORIENTATION
@@ -1512,58 +1518,71 @@ def cycleOrientation(val):
 		
 	pos = []
 	rot = []
-	
-	ORIENTATION = val
 
+	resetSensors()
+	
+	for member in SIDE_CLONES:
+		member.visible(viz.OFF)
+	for model in supports:
+		model.alpha(SUPPORT_ALPHA)	
+		
+	ORIENTATION = val
 	if val == Orientation.Top:
 		rot = TOP_VIEW_ROT
 		pos = TOP_VIEW_POS
 		pos[2] = TOP_CACHED_Z
 		
-		for member in SIDE_CLONES:
+		for member in SIDE_MEMBERS:
 			member.visible(viz.OFF)
-		SIDE_MEMBERS.visible(viz.OFF)
-		BOT_MEMBERS.visible(viz.OFF)
-		TOP_MEMBERS.visible(viz.ON)
-		
-		for model in supports:
-			model.alpha(0.2)
+			proxyManager.addSensor(member.sensorNodes[0])
+			proxyManager.addSensor(member.sensorNodes[1])
+		for member in BOT_MEMBERS:
+			member.visible(viz.OFF)
+			proxyManager.removeSensor(member.sensorNodes[0])
+			proxyManager.removeSensor(member.sensorNodes[1])
+		for member in TOP_MEMBERS:
+			member.visible(viz.ON)	
+			proxyManager.addSensor(member.sensorNodes[0])
+			proxyManager.addSensor(member.sensorNodes[1])
 	elif val == Orientation.Bottom:
 		rot = BOT_VIEW_ROT
 		pos = BOT_VIEW_POS
 		pos[2] = BOT_CACHED_Z
 		
-		for member in SIDE_CLONES:
-			member.visible(viz.OFF)
 		for member in SIDE_MEMBERS:
 			member.visible(viz.OFF)
+			proxyManager.addSensor(member.sensorNodes[0])
+			proxyManager.addSensor(member.sensorNodes[1])
 		for member in TOP_MEMBERS:
 			member.visible(viz.OFF)
+			proxyManager.removeSensor(member.sensorNodes[0])
+			proxyManager.removeSensor(member.sensorNodes[1])
 		for member in BOT_MEMBERS:
 			member.visible(viz.ON)
-		for model in supports:
-			model.alpha(0.2)
+			proxyManager.addSensor(member.sensorNodes[0])
+			proxyManager.addSensor(member.sensorNodes[1])
 	else:
 		rot = SIDE_VIEW_ROT
 		pos = BRIDGE_ROOT_POS
 		
-		for member in SIDE_CLONES:
-			member.visible(viz.OFF)
 		for member in SIDE_MEMBERS:
 			member.visible(viz.ON)
+			proxyManager.addSensor(member.sensorNodes[0])
+			proxyManager.addSensor(member.sensorNodes[1])
 		for member in TOP_MEMBERS:
 			member.visible(viz.OFF)
+			proxyManager.removeSensor(member.sensorNodes[0])
+			proxyManager.removeSensor(member.sensorNodes[1])
 		for member in BOT_MEMBERS:
 			member.visible(viz.OFF)
-		for model in supports:
-			model.alpha(0.2)
+			proxyManager.removeSensor(member.sensorNodes[0])
+			proxyManager.removeSensor(member.sensorNodes[1])
 		
 	bridge_root.setEuler(rot)
 	bridge_root.setPosition(pos)
 	
 	# Show feedback
 	runFeedbackTask(str(ORIENTATION.name))
-
 
 def cycleMode(mode=Mode.Add):
 	global SHOW_HIGHLIGHTER
@@ -1575,16 +1594,14 @@ def cycleMode(mode=Mode.Add):
 	toggleEnvironment(False)
 	toggleGrid(True)
 	proxyManager.setDebug(True)
-	for model in supports:
-			model.alpha(0.25)
 			
 	if MODE == Mode.Build:
-		SHOW_HIGHLIGHTER = True
 		inventoryCanvas.visible(viz.ON)
 		inventoryCanvas.setMouseStyle(viz.CANVAS_MOUSE_VIRTUAL)
 		viewport.getNode3d().setPosition(START_POS)
 		
 		# Clear highlighter
+		SHOW_HIGHLIGHTER = False
 		highlightTool.clear()
 		highlightTool.setItems([])
 		
@@ -1600,11 +1617,12 @@ def cycleMode(mode=Mode.Add):
 		
 		cycleOrientation(ORIENTATION)
 	if MODE == Mode.Add:
-		SHOW_HIGHLIGHTER = True
 		inventoryCanvas.visible(viz.OFF)
 		viewport.getNode3d().setPosition(START_POS)
+		
+		# Show highlighter
+		SHOW_HIGHLIGHTER = True
 	if MODE == Mode.View:
-		SHOW_HIGHLIGHTER = False
 		inventoryCanvas.visible(viz.OFF)
 		toggleGrid(False)
 		toggleEnvironment(True)
@@ -1612,7 +1630,7 @@ def cycleMode(mode=Mode.Add):
 		bridge_root.setPosition(BRIDGE_ROOT_POS)
 		bridge_root.setEuler(SIDE_VIEW_ROT)
 		
-		# Show all members
+		# Show all truss members
 		for member in SIDE_CLONES:
 			member.visible(viz.ON)
 		for member in SIDE_MEMBERS:
@@ -1623,13 +1641,14 @@ def cycleMode(mode=Mode.Add):
 			member.visible(viz.ON)
 		
 		# Clear highlighter
+		SHOW_HIGHLIGHTER = False
 		highlightTool.clear()
 		highlightTool.setItems([])
 		
+		# Hide supports
 		for model in supports:
 			model.alpha(0)
 	if MODE == Mode.Walk:
-		SHOW_HIGHLIGHTER = False
 		inventoryCanvas.visible(viz.OFF)
 		toggleEnvironment(True)
 		toggleGrid(False)
@@ -1640,7 +1659,7 @@ def cycleMode(mode=Mode.Add):
 		viewport.getNode3d().setPosition(WALK_POS)
 		viewport.getNode3d().setEuler(WALK_ROT)
 		
-		# Show all members
+		# Show all truss members
 		for member in SIDE_CLONES:
 			member.visible(viz.ON)
 		for member in SIDE_MEMBERS:
@@ -1651,11 +1670,15 @@ def cycleMode(mode=Mode.Add):
 			member.visible(viz.ON)
 	
 		# Clear highlighter
+		SHOW_HIGHLIGHTER = False
 		highlightTool.clear()
 		highlightTool.setItems([])
 		
+		# Hide supports
 		for model in supports:
 			model.alpha(0)
+	
+	# UI/Sound feedback
 	runFeedbackTask(str(MODE.name))
 	clickSound.play()
 	
@@ -1860,7 +1883,7 @@ def LoadData():
 	# Play MUTE
 	clickSound.play()
 	
-	filePath = vizinput.fileOpen(filter=[('CSV Files','*.csv')],directory='/data/saves')		
+	filePath = vizinput.fileOpen(filter=[('CSV Files','*.csv')],directory='./data/saves')		
 	if filePath == '':
 		return	
 
@@ -1903,9 +1926,6 @@ def LoadData():
 	runFeedbackTask('Load success!')
 
 # Events
-viz.callback ( viz.MOUSEUP_EVENT, onMouseUp )
-viz.callback ( viz.MOUSEDOWN_EVENT, onMouseDown )
-viz.callback ( viz.MOUSEWHEEL_EVENT, onMouseWheel )
 viz.callback ( viz.SLIDER_EVENT, onSlider )
 viz.callback ( viz.LIST_EVENT, onList )
 
@@ -1938,13 +1958,16 @@ vizact.onbuttonup ( loadButton, loadBridge )
 
 FLASH_TIME = 3.0			# Time to flash screen
 
-# Create flash screen quad
-flash_quad = viz.addTexQuad(parent=viz.ORTHO)
-flash_quad.color(viz.WHITE)
-flash_quad.drawOrder(-10)
-flash_quad.blendFunc(viz.GL_ONE,viz.GL_ONE)
-flash_quad.visible(False)
-flash_quad.setBoxTransform(viz.BOX_ENABLED)
+def CreateFlashQuad():
+	""" Create flash screen quad """
+	flash_quad = viz.addTexQuad(parent=viz.ORTHO)
+	flash_quad.color(viz.WHITE)
+	flash_quad.drawOrder(-10)
+	flash_quad.blendFunc(viz.GL_ONE,viz.GL_ONE)
+	flash_quad.visible(False)
+	flash_quad.setBoxTransform(viz.BOX_ENABLED)
+	return flash_quad
+flash_quad = CreateFlashQuad()
 
 def FlashScreen():
 	"""Flash screen and fade out"""
@@ -1953,10 +1976,15 @@ def FlashScreen():
 	fade_out = vizact.fadeTo(viz.BLACK,time=FLASH_TIME,interpolate=vizact.easeOutStrong)
 	flash_quad.runAction(vizact.sequence(fade_out,vizact.method.visible(False)))
 
-# Create post process effect for blending to gray scale
-gray_effect = BlendEffect(None,GrayscaleEffect(),blend=0.0)
-gray_effect.setEnabled(False)
-vizfx.postprocess.addEffect(gray_effect)
+
+def GrayEffect():
+	# Create post process effect for blending to gray scale
+	gray_effect = BlendEffect(None,GrayscaleEffect(),blend=0.0)
+	gray_effect.setEnabled(False)
+	vizfx.postprocess.addEffect(gray_effect)
+	return gray_effect
+gray_effect = GrayEffect()
+
 
 # Schedule tasks
 def MainTask():
@@ -1998,13 +2026,20 @@ def MainTask():
 		
 		inventoryCanvas.setEuler( [0,30,0] )
 		inventoryCanvas.setPosition ( [0,viewPos[1]+1,viewPos[2]+1] )
-#		rotationCanvas.setEuler( [0,30,0] )
-#		rotationCanvas.setPosition ( [0,viewPos[1]+1.1,viewPos[2]+1] )
+		rotationCanvas.setEuler( [0,30,0] )
+		rotationCanvas.setPosition ( [0,viewPos[1]+1.1,viewPos[2]+1] )
+#		link = viz.link(viz.MainView,rotationCanvas)
+#		link.postMultLinkable(viz.MainView)
 #		rotationCanvas.visible(viz.OFF)
+		
+		cycleMode(Mode.Build)
 		
 		# Setup callbacks
 		viz.callback ( viz.KEYUP_EVENT, onKeyUp )
 		viz.callback ( viz.KEYDOWN_EVENT, onKeyDown )
+		viz.callback ( viz.MOUSEUP_EVENT, onMouseUp )
+		viz.callback ( viz.MOUSEDOWN_EVENT, onMouseDown )
+		viz.callback ( viz.MOUSEWHEEL_EVENT, onMouseWheel )
 		vizact.onkeyup(KEYS['mode'],cycleMode,vizact.choice([Mode.Edit,Mode.Build]))
 		vizact.onkeyup(KEYS['cycle'],cycleOrientation,vizact.choice([Orientation.Top,Orientation.Bottom,Orientation.Side]))
 		vizact.whilemousedown ( KEYS['rotate'], rotateTruss, objToRotate, rotationSlider, rotationLabel )
