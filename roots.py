@@ -55,11 +55,11 @@ def EnvironmentRoot(visibility=True):
 	walkway = vizfx.addChild('resources/walkway.osgb',parent=environment_root)	
 	river = vizfx.addChild('resources/river.osgb', pos=(0,0.75,20),scale=([10,1,10]),parent=environment_root)
 	river.setAnimationSpeed(0.005)
-	road = viz.addChild('resources/road3.osgb',pos=(0,5,0),euler=(90,0,0),scale=(.5,.25,.5))
+	road = viz.addChild('resources/road3.osgb',pos=(0,5,0))
 	road.setParent(environment_root)
-	clamp_L = viz.addChild('resources/clamp3.osgb',pos=(-21,-1.5,0),euler=(-90,0,0),scale=(0.5,0.5,0.5))
+	clamp_L = viz.addChild('resources/clamp3.osgb',pos=(-21,-2.5,0),euler=(-90,0,0),scale=(0.25,0.5,0.5))
 	clamp_L.setParent(environment_root)
-	clamp_R = viz.addChild('resources/clamp3.osgb',pos=(21,-1.5,0),euler=(90,0,0),scale=(0.5,0.5,0.5))
+	clamp_R = viz.addChild('resources/clamp3.osgb',pos=(21,-2.5,0),euler=(90,0,0),scale=(0.25,0.5,0.5))
 	clamp_R.setParent(environment_root)
 	
 	environment_root.visible(visibility)
@@ -68,7 +68,7 @@ def EnvironmentRoot(visibility=True):
 	walkway.disable(viz.DYNAMICS)
 	walkway.enable(viz.COLLIDE_NOTIFY)
 	
-	print 'Creating environment...'
+#	print 'Creating environment...'
 	return environment_root
 	
 	
@@ -81,5 +81,5 @@ def BridgeRoot(pos=([0,0,0]),euler=([0,0,0])):
 	bridge_root.setPosition(pos)
 	bridge_root.setEuler(euler)
 	
-	print 'Creating bridge root...'
+#	print 'Creating bridge root...'
 	return bridge_root

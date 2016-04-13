@@ -195,7 +195,7 @@ def getCyanOnBlack():
 	
 	theme.buttonCornerRadius = 0.01
 	
-	theme.cursorIcon = 'resources/icons/dot.png'
+#	theme.cursorIcon = 'resources/icons/dot.png'
 	
 	theme.tooltipTheme = copy.deepcopy(theme)
 	theme.tooltipTheme.font = theme.font
@@ -239,7 +239,7 @@ def getWhiteOnBlack():
 	
 	theme.buttonCornerRadius = 0.01
 	
-	theme.cursorIcon = 'resources/icons/dot.png'
+#	theme.cursorIcon = 'resources/icons/dot.png'
 	
 	theme.tooltipTheme = copy.deepcopy(theme)
 	theme.tooltipTheme.font = theme.font

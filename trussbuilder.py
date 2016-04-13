@@ -349,6 +349,8 @@ vizfx.getComposer().addEffect(lightEffect)
 
 
 # Bridge pin and roller supports
+#pinSupport = vizfx.addChild('resources/pinSupport.osgb',pos=(-9.5,4,0),scale=[1,1,11])
+#rollerSupport = vizfx.addChild('resources/rollerSupport.osgb',pos=(9.5,4,0),scale=[1,1,11])
 pinSupport = vizfx.addChild('resources/pinSupport.osgb',pos=(-9.5,4,0),scale=[1,1,11])
 rollerSupport = vizfx.addChild('resources/rollerSupport.osgb',pos=(9.5,4,0),scale=[1,1,11])
 supports = [pinSupport,rollerSupport]
@@ -1241,7 +1243,10 @@ def updateHighlightTool(highlightTool):
 	state = viz.mouse.getState()
 	if state & viz.MOUSEBUTTON_LEFT:
 		if isgrabbing == False:
-			grabbedItem = highlightTool.getSelection()
+			if highlightTool.getSelection().orientation != ORIENTATION:
+				return
+			else:
+				grabbedItem = highlightTool.getSelection()
 			
 			# Break grab links to free truss
 #			for link in GRAB_LINKS:
@@ -1929,8 +1934,6 @@ def MainTask():
 		viz.callback ( viz.KEYDOWN_EVENT, onKeyDown )
 viztask.schedule( MainTask() )
 
-def printPos(val):
-	print val
 
 # Pre-load sounds
 viz.playSound('./resources/sounds/return_to_holodeck.wav',viz.SOUND_PRELOAD)
