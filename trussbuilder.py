@@ -1,20 +1,25 @@
 ﻿"""
-[Objective]
-Specify truss member dimensions and order materials required to build a 20m-long bridge across the Singapore River
+[ Objective ]
+Order truss members required to build a 20m-long bridge across the Singapore River, then proceed to build in VR
 
-[Controls]
-1. Look around and orient the highlighter with the VR HEADSET
-2. Navigate using WASD-keys
-3. Manually turn View using Q and E
-4. Control elevation with Z and X
-3. Interact with floating menus using the VIRTUAL MOUSE
-4. Extend or retract virtual hand with MOUSE SCROLL WHEEL
-5. Cycle through Build modes with TAB KEY
-6. Slide bridge towards you with "1" KEY and away from you with "2" key in Top / Bottom View
-6. Grab and hold onto truss members by LEFT MOUSE CLICK when highlighted green
-7. Adjust truss angle by RIGHT MOUSE CLICK while highlighting truss member
-8. Toggle utilities with MIDDLE MOUSE CLICK
-9. Toggle main menu with SPACE BAR
+[ Controls ]
+
+[ Movement ]
+[ VR HEADSET ] Look around
+[ W | A | S | D ] Navigate
+[ Q | E ] Manually rotate view
+[ Z | X ] Lower/Raise elevation
+[ 1 | 2 ] Slide bridge towards or away from you in TOP/BOTTOM ORIENTATION
+
+[ Build ]
+[ TAB ] Cycle through Bridge Orientation
+[ SHIFT ] Cycle through Build Mode
+[ SPACE BAR ] Toggle Main Menu
+[ VIRTUAL MOUSE ] Interact with menu elements
+[ SCROLL WHEEL ] Extend and retract virtual hand
+[ LEFT MOUSE ] Grab and hold onto highlighted truss members
+[ RIGHT MOUSE ] Adjust highlighted truss' angle by holding and dragging
+[ MIDDLE MOUSE ] Toggle utilities menu
 """
 
 FEEDBACK_MESSAGE = """<FEEDBACK>"""
@@ -60,7 +65,7 @@ from enum import Enum
 RESOLUTION = ([1280,720])
 UTILITY_CANVAS_RES = ([80,80])
 MULTISAMPLING = 8
-FOV = 60
+FOV = 45
 STENCIL = 8
 STEREOMODE = viz.STEREO_HORZ
 FULLSCREEN = 0
@@ -118,7 +123,9 @@ BOT_VIEW_POS = [0,5,0]
 SIDE_VIEW_ROT = [0,0,0]			# Rotation of Side View
 TOP_VIEW_ROT = [0,-90,0]		# Rotation of Top View
 BOT_VIEW_ROT = [0,90,0]			# Rotation of Bottom View
-
+TOP_CACHED_Z = 0				# Cache z-position of Top Bridge View
+BOT_CACHED_Z = 0				# Cache z-position of Bot Bridge View
+SLIDE_INTERVAL = 0.05			# Interval to slide bridge root in TOP/BOTTOM View
 
 class Orientation(Enum):
 	Side=1
@@ -178,14 +185,17 @@ KEYS = { 'forward'	: 'w'
 		,'proxi'	: 'p'
 		,'collide'	: 'c'
 		,'walk'		: '/'
+		,'esc'		: viz.KEY_ESCAPE
 }
 
 # Initialize scene
-def initScene(res=RESOLUTION,quality=4,stencil=8,stereoMode=viz.STEREO_HORZ,fullscreen=viz.FULLSCREEN,clearColor=viz.BLACK):
+def initScene(res=RESOLUTION,quality=4,fov=FOV,stencil=8,stereoMode=viz.STEREO_HORZ,fullscreen=viz.FULLSCREEN,clearColor=viz.BLACK):
 	viz.window.setSize(res)
 	viz.setMultiSample(quality)
-	#viz.fov(FOV)
+	viz.fov(fov)
 	viz.setOption('viz.display.stencil', stencil)
+#	viz.setOption('viz.default_key.quit', 0)
+	viz.setOption('viz.model.optimize', 1)
 	viz.clearcolor(clearColor)
 	viz.go(stereoMode | fullscreen)
 	darkTheme = themes.getDarkTheme()
@@ -300,7 +310,7 @@ def initLink(modelPath,tracker):
 
 
 # Initialize
-initScene(RESOLUTION,MULTISAMPLING,STENCIL,viz.PROMPT,FULLSCREEN,(0.1, 0.1, 0.1, 1.0))
+initScene(RESOLUTION,MULTISAMPLING,FOV,STENCIL,viz.PROMPT,FULLSCREEN,(0.1, 0.1, 0.1, 1.0))
 initMouse()
 initLighting()
 highlightTool = initHighlightTool()
@@ -1464,7 +1474,6 @@ def rotateTruss(obj,slider,label):
 		rotationCanvas.visible(viz.ON)
 		mouseTracker.visible(viz.OFF)
 		mouseTracker.distance = 0.1
-		slider.visible(True)
 		pos = viz.Mouse.getPosition(viz.WINDOW_NORMALIZED)[0]
 		slider.set(pos)
 		rotateTo = mathlite.getNewRange(pos,0,1,90,-90)
@@ -1492,21 +1501,29 @@ def cycleOrientation(val):
 	if val == Orientation.Top:
 		rot = TOP_VIEW_ROT
 		pos = TOP_VIEW_POS
+		pos[2] = TOP_CACHED_Z
 		
 		for member in SIDE_CLONES:
 			member.visible(viz.OFF)
 		SIDE_MEMBERS.visible(viz.OFF)
 		BOT_MEMBERS.visible(viz.OFF)
 		TOP_MEMBERS.visible(viz.ON)
+		
+		for model in supports:
+			model.alpha(0.2)
 	elif val == Orientation.Bottom:
 		rot = BOT_VIEW_ROT
 		pos = BOT_VIEW_POS
+		pos[2] = BOT_CACHED_Z
 		
 		for member in SIDE_CLONES:
 			member.visible(viz.OFF)
 		SIDE_MEMBERS.visible(viz.OFF)
 		TOP_MEMBERS.visible(viz.OFF)
 		BOT_MEMBERS.visible(viz.ON)
+		
+		for model in supports:
+			model.alpha(0.2)
 	else:
 		rot = SIDE_VIEW_ROT
 		pos = BRIDGE_ROOT_POS
@@ -1517,12 +1534,14 @@ def cycleOrientation(val):
 		TOP_MEMBERS.visible(viz.OFF)
 		BOT_MEMBERS.visible(viz.OFF)
 		
+		for model in supports:
+			model.alpha(0.2)
+		
 	bridge_root.setEuler(rot)
 	bridge_root.setPosition(pos)
 	
 	# Show feedback
 	runFeedbackTask(str(ORIENTATION.name))
-vizact.onkeyup(KEYS['cycle'],cycleOrientation,vizact.choice([Orientation.Top,Orientation.Bottom,Orientation.Side]))
 
 
 def cycleMode(mode=Mode.Add):
@@ -1534,23 +1553,20 @@ def cycleMode(mode=Mode.Add):
 	toggleEnvironment(False)
 	toggleGrid(True)
 	proxyManager.setDebug(True)
-	
+	for model in supports:
+			model.alpha(0.25)
+			
 	if MODE == Mode.Build:
 		SHOW_HIGHLIGHTER = True
 		inventoryCanvas.visible(viz.ON)
 		inventoryCanvas.setMouseStyle(viz.CANVAS_MOUSE_VIRTUAL)
 		viewport.getNode3d().setPosition(START_POS)
+		cycleOrientation(ORIENTATION)
 	if MODE == Mode.Edit:
 		SHOW_HIGHLIGHTER = True
 		inventoryCanvas.visible(viz.OFF)
 		viewport.getNode3d().setPosition(START_POS)
-		
-		# Hide all but side
-		for member in SIDE_CLONES:
-			member.visible(viz.OFF)
-		SIDE_MEMBERS.visible(viz.ON)
-		TOP_MEMBERS.visible(viz.OFF)
-		BOT_MEMBERS.visible(viz.OFF)
+		cycleOrientation(ORIENTATION)
 	if MODE == Mode.Add:
 		SHOW_HIGHLIGHTER = True
 		inventoryCanvas.visible(viz.OFF)
@@ -1570,6 +1586,9 @@ def cycleMode(mode=Mode.Add):
 		SIDE_MEMBERS.visible(viz.ON)
 		TOP_MEMBERS.visible(viz.ON)
 		BOT_MEMBERS.visible(viz.ON)
+		
+		for model in supports:
+			model.alpha(0)
 	if MODE == Mode.Walk:
 		SHOW_HIGHLIGHTER = False
 		inventoryCanvas.visible(viz.OFF)
@@ -1589,15 +1608,16 @@ def cycleMode(mode=Mode.Add):
 		TOP_MEMBERS.visible(viz.ON)
 		BOT_MEMBERS.visible(viz.ON)
 	
+		for model in supports:
+			model.alpha(0)
 	runFeedbackTask(str(MODE.name))
 	clickSound.play()
-#	print 'Mode cycle: ', MODE
-vizact.onkeyup(KEYS['mode'],cycleMode,vizact.choice([Mode.Edit,Mode.Build]))		
 	
 
 # Setup Callbacks and Events
 def onKeyUp(key):
-	if key == '=':
+	if key == KEYS['esc']:
+		print 'ESC pressed'
 		pass
 	elif key == KEYS['home']:
 		viewport.reset()
@@ -1670,14 +1690,22 @@ def onMouseWheel(dir):
 
 def slideRoot(val):
 	global ORIENTATION
+	global TOP_CACHED_Z
+	global BOT_CACHED_Z
 	global bridge_root
 	
 	if ORIENTATION == Orientation.Top or ORIENTATION == Orientation.Bottom:
 		pos = bridge_root.getPosition()
 		pos[2] += val
+		clampedZ = viz.clamp(pos[2],-5,100)
+		pos[2] = clampedZ
+		if ORIENTATION == Orientation.Top:
+			TOP_CACHED_Z = pos[2]
+		elif ORIENTATION == Orientation.Bottom:
+			BOT_CACHED_Z = pos[2]
 		bridge_root.setPosition(pos)
-vizact.whilekeydown('1',slideRoot,-0.1)		
-vizact.whilekeydown('2',slideRoot,0.1)		
+vizact.whilekeydown('1',slideRoot,-SLIDE_INTERVAL)		
+vizact.whilekeydown('2',slideRoot,SLIDE_INTERVAL)		
 
 
 def onMouseDown(button):
@@ -1932,6 +1960,8 @@ def MainTask():
 		# Setup callbacks
 		viz.callback ( viz.KEYUP_EVENT, onKeyUp )
 		viz.callback ( viz.KEYDOWN_EVENT, onKeyDown )
+		vizact.onkeyup(KEYS['mode'],cycleMode,vizact.choice([Mode.Edit,Mode.Build]))
+		vizact.onkeyup(KEYS['cycle'],cycleOrientation,vizact.choice([Orientation.Top,Orientation.Bottom,Orientation.Side]))
 viztask.schedule( MainTask() )
 
 
