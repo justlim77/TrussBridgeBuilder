@@ -1681,6 +1681,7 @@ def cycleMode(mode=Mode.Add):
 	global SHOW_HIGHLIGHTER
 	global MODE
 	global highlightTool
+	global highlightedItem
 	
 	if MODE is Mode.Add and grabbedItem is not None:
 		return		
@@ -1698,7 +1699,9 @@ def cycleMode(mode=Mode.Add):
 		
 		# Clear highlighter
 		SHOW_HIGHLIGHTER = False
+		highlightedItem = None
 		highlightTool.clear()
+		highlightTool.removeItems(BUILD_MEMBERS)
 		highlightTool.setItems([])
 		
 		cycleOrientation(ORIENTATION)
@@ -1708,7 +1711,11 @@ def cycleMode(mode=Mode.Add):
 		
 		# Clear highlighter
 		SHOW_HIGHLIGHTER = True
+
 		highlightTool.clear()
+		highlightTool.removeItems(BUILD_MEMBERS)
+		highlightTool.setItems([])
+		
 		highlightTool.setItems(BUILD_MEMBERS)
 		
 		cycleOrientation(ORIENTATION)
@@ -1738,7 +1745,9 @@ def cycleMode(mode=Mode.Add):
 		
 		# Clear highlighter
 		SHOW_HIGHLIGHTER = False
+		highlightedItem = None
 		highlightTool.clear()
+		highlightTool.removeItems(BUILD_MEMBERS)
 		highlightTool.setItems([])
 		
 		# Hide supports
@@ -1767,7 +1776,9 @@ def cycleMode(mode=Mode.Add):
 	
 		# Clear highlighter
 		SHOW_HIGHLIGHTER = False
+		highlightedItem = None
 		highlightTool.clear()
+		highlightTool.removeItems(BUILD_MEMBERS)
 		highlightTool.setItems([])
 		
 		# Hide supports
