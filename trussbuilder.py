@@ -196,6 +196,7 @@ KEYS = { 'forward'	: 'w'
 		,'collide'	: 'c'
 		,'walk'		: '/'
 		,'esc'		: viz.KEY_ESCAPE
+		,'viewMode' : 'm'
 }
 
 # Initialize scene
@@ -252,7 +253,8 @@ def initViewport(position):
 #	viz.phys.enable()
 	#Make gravity weaker.
 #	viz.MainView.gravity(2)
-
+	#Set the current position and orientation as point to reset to. 
+	viz.cam.setReset() 
 	viz.stepsize(0.5)
 	return vp
 	
@@ -330,7 +332,7 @@ proxyManager = initProxy()
 environment_root = roots.EnvironmentRoot(visibility=False)
 bridge_root = roots.BridgeRoot(BRIDGE_ROOT_POS,SIDE_VIEW_ROT)
 grid_root = roots.GridRoot(gridColor=GRID_COLOR,origin=START_POS)
-orientation_text = viz.addText3D('SIDE VIEW',pos=[0,13.5,-5],scale=(2,2,.5),parent=grid_root,align=viz.ALIGN_CENTER)
+orientation_text = viz.addText3D('<< View >>',pos=[0,13.5,-5],scale=(2,2,.5),parent=grid_root,align=viz.ALIGN_CENTER)
 info_text = viz.addText3D('<< Info >>',pos=[0,12,-5],scale=(.5,.5,.5),parent=grid_root,align=viz.ALIGN_CENTER)
 
 # Setup audio
@@ -820,7 +822,7 @@ def createInventory():
 #	Create inventory panel
 	global inventoryCanvas
 	inventoryCanvas = viz.addGUICanvas(align=viz.ALIGN_CENTER_TOP)
-	inventoryGrid = vizdlg.GridPanel(align=viz.ALIGN_CENTER_TOP,cellAlign=vizdlg.LAYOUT_VERT_LEFT,parent=inventoryCanvas)
+	inventoryGrid = vizdlg.GridPanel(align=viz.ALIGN_CENTER_TOP,cellAlign=vizdlg.LAYOUT_HORZ_TOP,parent=inventoryCanvas)
 	
 	global tabbedPanel
 	tabbedPanel = vizdlg.TabPanel(align=viz.ALIGN_CENTER_TOP,layout=vizdlg.LAYOUT_VERT_LEFT,parent=inventoryCanvas)
@@ -858,9 +860,10 @@ def createInventory():
 	global bottomRows
 	bottomRows = []
 
-	inventoryGrid.addRow([statPanel,tabbedPanel])
+	inventoryGrid.addRow([statPanel])
+	inventoryGrid.addRow([tabbedPanel])
 
-	inventoryCanvas.setRenderWorld([400,200],[1,viz.AUTO_COMPUTE])
+	inventoryCanvas.setRenderWorld(RESOLUTION,[1,viz.AUTO_COMPUTE])
 	updateMouseStyle(inventoryCanvas)
 	# Link rotation canvas with main View
 #	inventoryLink = viz.link(viz.MainView,inventoryCanvas)
@@ -1635,9 +1638,9 @@ def cycleMode(mode=Mode.Add):
 	toggleEnvironment(False)
 	toggleGrid(True)
 	proxyManager.setDebug(True)
-			
+	inventoryCanvas.visible(viz.ON)
+	
 	if MODE == Mode.Build:
-		inventoryCanvas.visible(viz.ON)
 		inventoryCanvas.setMouseStyle(viz.CANVAS_MOUSE_VIRTUAL)
 		viewport.getNode3d().setPosition(START_POS)
 		
@@ -1648,7 +1651,7 @@ def cycleMode(mode=Mode.Add):
 		
 		cycleOrientation(ORIENTATION)
 	if MODE == Mode.Edit:
-		inventoryCanvas.visible(viz.OFF)
+		inventoryCanvas.setMouseStyle(viz.CANVAS_MOUSE_VISIBLE)
 		viewport.getNode3d().setPosition(START_POS)
 		
 		# Clear highlighter
@@ -1658,7 +1661,7 @@ def cycleMode(mode=Mode.Add):
 		
 		cycleOrientation(ORIENTATION)
 	if MODE == Mode.Add:
-		inventoryCanvas.visible(viz.OFF)
+		inventoryCanvas.setMouseStyle(viz.CANVAS_MOUSE_VISIBLE)
 		viewport.getNode3d().setPosition(START_POS)
 		
 		# Show highlighter
@@ -1731,9 +1734,8 @@ def onKeyUp(key):
 		pass
 	elif key == KEYS['home']:
 		viewport.reset()
-		viewport.getNode3d().setPosition(START_POS)
-		viewport.getNode3d().setEuler(0,0,0)
 		mouseTracker.distance = HAND_DISTANCE
+		runFeedbackTask('View reset!')
 		viewChangeSound.play()
 	elif key == ',':
 		print viz.MainView.getPosition()
@@ -1743,10 +1745,12 @@ def onKeyUp(key):
 	elif key == KEYS['reset']:
 		try:
 			hmd.getSensor().reset(0)
+			runFeedbackTask('Orientation reset!')
+			clickSound.play()
 		except:
+			runFeedbackTask('No headset!')
 			warningSound.play()
 			print 'Reset orientation failed: Unable to get Oculus Rift sensor!'
-		clickSound.play()
 	elif key == KEYS['hand']:
 		mouseTracker.distance = HAND_DISTANCE
 		clickSound.play()
@@ -2084,13 +2088,18 @@ def MainTask():
 		viz.callback ( viz.MOUSEWHEEL_EVENT, onMouseWheel )
 		vizact.onkeyup(KEYS['mode'],cycleMode,vizact.choice([Mode.Edit,Mode.Build]))
 		vizact.onkeyup(KEYS['cycle'],cycleOrientation,vizact.choice([Orientation.Top,Orientation.Bottom,Orientation.Side]))
+		vizact.onkeyup(KEYS['viewMode'],toggleStereo,vizact.choice([False,True]))
 		vizact.whilemousedown ( KEYS['rotate'], rotateTruss, objToRotate, rotationSlider, rotationLabel )
 		vizact.ontimer(0,clampTrackerScroll,mouseTracker,SCROLL_MIN,SCROLL_MAX)
 
 		INITIALIZED = True
 viztask.schedule( MainTask() )
 
-
+def toggleStereo(val=viz.TOGGLE):
+	if val is True:
+		viz.MainWindow.stereo(STEREOMODE)
+	else:
+		viz.MainWindow.stereo(viz.STEREO_RIGHT)
 # Pre-load sounds
 viz.playSound('./resources/sounds/return_to_holodeck.wav',viz.SOUND_PRELOAD)
 viz.playSound('./resources/sounds/button_highlight.wav',viz.SOUND_PRELOAD) 
