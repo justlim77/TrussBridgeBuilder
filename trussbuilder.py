@@ -3,6 +3,7 @@
 Order truss members required to build a 20m-long bridge across the Singapore River, then proceed to build in VR
 
 [ Controls ]
+[ ESC KEY ] Close Menu / Quit Game
 
 [ Movement ]
 [ VR HEADSET ] Look around
@@ -205,7 +206,7 @@ def initScene(res=RESOLUTION,quality=4,fov=FOV,stencil=8,stereoMode=viz.STEREO_H
 	viz.setMultiSample(quality)
 	viz.fov(fov)
 	viz.setOption('viz.display.stencil', stencil)
-#	viz.setOption('viz.default_key.quit', 0)
+	viz.setOption('viz.default_key.quit', 0)
 	viz.setOption('viz.model.optimize', 1)
 	viz.window.setName( 'Virtual Truss Builder & Visualizer' ) 
 	viz.window.setBorder( viz.BORDER_FIXED )
@@ -296,12 +297,16 @@ def initProxy():
 	def enterProximity(e):
 		global SNAP_TO_POS
 		global VALID_SNAP
+		global SENSOR_NODE
+		SENSOR_NODE = e.sensor.getSource()
 		SNAP_TO_POS = e.sensor.getSource().getPosition()
 		VALID_SNAP = True
 	
 	def exitProximity(e):
 		global VALID_SNAP
+		global SENSOR_NODE
 		VALID_SNAP = False
+		SENSOR_NODE = None
 
 	proxyManager.onEnter(None, enterProximity)
 	proxyManager.onExit(None, exitProximity)
@@ -373,6 +378,11 @@ vizfx.getComposer().addEffect(effect)
 lightEffect = vizfx.addLightingModel(diffuse=vizfx.DIFFUSE_LAMBERT,specular=None)
 vizfx.getComposer().addEffect(lightEffect)
 
+def applyEnvironmentEffect(obj):
+	obj.texture(env)
+	obj.appearance(viz.ENVIRONMENT_MAP)
+	obj.apply(effect)
+	obj.apply(lightEffect)	
 
 # Bridge pin and roller supports
 #pinSupport = vizfx.addChild('resources/pinSupport.osgb',pos=(-9.5,4,0),scale=[1,1,11])
@@ -380,7 +390,6 @@ vizfx.getComposer().addEffect(lightEffect)
 pinSupport = vizfx.addChild('resources/pinSupport.osgb',pos=(-9.5,4,0),scale=[1,1,11])
 rollerSupport = vizfx.addChild('resources/rollerSupport.osgb',pos=(9.5,4,0),scale=[1,1,11])
 supports = [pinSupport,rollerSupport]
-
 
 #Setup anchor points for truss members
 pinAnchorSphere = vizshape.addSphere(0.2,pos=([-BRIDGE_SPAN,BRIDGE_ROOT_POS[1],-(BRIDGE_SPAN*0.5)]))
@@ -398,12 +407,7 @@ proxyManager.addSensor(rollerAnchorSensor)
 viz.grab(rollerSupport,rollerAnchorSphere)
 
 for model in supports:
-#	model.texture(env)
-#	model.appearance(viz.ENVIRONMENT_MAP)
-	model.apply(effect)
-	model.apply(lightEffect)
-	model.collideMesh()
-	model.disable(viz.DYNAMICS)
+	applyEnvironmentEffect(model)
 	viz.grab(bridge_root,model)
 
 # Create canvas for displaying GUI objects
@@ -751,11 +755,6 @@ def addOrder(orderTab,orderList=inventory.OrderList(),orderRow=[],flag=''):
 	
 	_diameter = diameterDropList.getItem(diameterDropList.getSelection())
 	_thickness = thicknessDropList.getItem(thicknessDropList.getSelection())
-#	_length = float(lengthTextbox().get())
-#	if _length < 0:
-#		runFeedbackTask('Invalid length!')
-#		lengthTextbox.message('')
-#		return	
 	try:
 		_length = viz.clamp(float(lengthTextbox.get()),LEN_MIN,LEN_MAX)
 	except:
@@ -769,6 +768,20 @@ def addOrder(orderTab,orderList=inventory.OrderList(),orderRow=[],flag=''):
 	setattr(newOrder, 'thickness', float(_thickness))
 	setattr(newOrder, 'length', float(_length))
 	setattr(newOrder, 'quantity', int(_quantity))
+
+	global ORDERS_SIDE
+	global ORDERS_TOP
+	global ORDERS_BOT
+
+	if flag == ORDERS_SIDE_FLAG:
+		orderList = inventory.OrderList(ORDERS_SIDE)
+	elif flag == ORDERS_TOP_FLAG:
+		orderList = inventory.OrderList(ORDERS_TOP)
+	elif flag == ORDERS_BOT_FLAG:
+		orderList = inventory.OrderList(ORDERS_BOT)
+		
+	print 'addOrder: orderList:', orderList
+	
 	
 	#Check for existing order
 	append = True
@@ -796,8 +809,15 @@ def addOrder(orderTab,orderList=inventory.OrderList(),orderRow=[],flag=''):
 		orderTab.removeRow(row)
 	
 	#Sort lowest to highest (d x Th x l)
-	sortedOrderList = orderList.sortByAttr()
-	orderList = sortedOrderList
+	orderList = orderList.sortByAttr()
+
+	# Change global list based on order flag
+	if flag == ORDERS_SIDE_FLAG:
+		ORDERS_SIDE = orderList
+	elif flag == ORDERS_TOP_FLAG:
+		ORDERS_TOP = orderList
+	elif flag == ORDERS_BOT_FLAG:
+		ORDERS_BOT = orderList
 	
 	#Populate grid with ORDERS in order list
 	for _order in orderList:
@@ -812,6 +832,7 @@ def addOrder(orderTab,orderList=inventory.OrderList(),orderRow=[],flag=''):
 		orderRow.append(_row)
 
 
+#TODO Fix
 def deleteOrder(order, orderList, index, row, orderRow, orderTab, flag ):	
 	orderList.pop(index)		
 	orderTab.removeRow(row)
@@ -890,35 +911,36 @@ def clearInventory():
 	bottomRows = []
 	
 
-def populateInventory(sideList,topList,botList):
+def populateInventory():
 	clearInventory()
 	
-	print 'populateInventory: sideList:', sideList
-	
 	# Generate truss buttons based on respective lists
-	for sideOrder in sideList:
+	global ORDERS_SIDE
+	for sideOrder in ORDERS_SIDE:
 		msg = '{}mm(d) x {}mm(th) x {}m(l) [{}]'.format ( sideOrder.diameter, sideOrder.thickness, sideOrder.length, sideOrder.quantity )
 		sideButton = viz.addButtonLabel ( msg )
 		vizact.onbuttonup ( sideButton, createTrussNew, sideOrder, 'resources/chs.osgb' )
 		row = sideInventory.addRow ( [sideButton] )
 		sideRows.append ( row )
-		vizact.onbuttonup ( sideButton, updateQuantity, sideOrder, sideButton, sideList, sideInventory, row )
+		vizact.onbuttonup ( sideButton, updateQuantity, sideOrder, sideButton, ORDERS_SIDE, sideInventory, row )
 		vizact.onbuttonup ( sideButton, clickSound.play )
-	for topOrder in topList:
+	global ORDERS_TOP
+	for topOrder in ORDERS_TOP:
 		msg = '{}mm(d) x {}mm(th) x {}m(l) [{}]'.format ( topOrder.diameter, topOrder.thickness, topOrder.length, topOrder.quantity )
 		topButton = viz.addButtonLabel ( msg )
 		vizact.onbuttonup ( topButton, createTrussNew, topOrder, 'resources/chs.osgb' )
 		row = topInventory.addRow( [topButton] )
 		topRows.append ( row )
-		vizact.onbuttonup ( topButton, updateQuantity, topOrder, topButton, topList, topInventory, row )
+		vizact.onbuttonup ( topButton, updateQuantity, topOrder, topButton, ORDERS_TOP, topInventory, row )
 		vizact.onbuttonup ( topButton, clickSound.play )
-	for botOrder in botList:
+	global ORDERS_BOT
+	for botOrder in ORDERS_BOT:
 		msg = '{}mm(d) x {}mm(th) x {}m(l) [{}]'.format ( botOrder.diameter, botOrder.thickness, botOrder.length, botOrder.quantity )
 		botButton = viz.addButtonLabel ( msg )
 		vizact.onbuttonup ( botButton, createTrussNew, botOrder, 'resources/chs.osgb' )
 		row = bottomInventory.addRow ( [botButton] )
 		bottomRows.append ( row )
-		vizact.onbuttonup ( botButton, updateQuantity, botOrder, botButton, botList, bottomInventory, row )
+		vizact.onbuttonup ( botButton, updateQuantity, botOrder, botButton, ORDERS_BOT, bottomInventory, row )
 		vizact.onbuttonup ( botButton, clickSound.play )
 		
 	# Clear order panel rows
@@ -930,18 +952,18 @@ def populateInventory(sideList,topList,botList):
 		ORDERS_BOT_GRID.removeRow(botRow)
 	
 	# Clear orders from order list
-	for order in sideList:
-		sideList.pop()
-	sideList = []
-	for order in topList:
-		topList.pop()
-	topList = []
-	for order in botList:
-		botList.pop()
-	botList = []
+	for order in ORDERS_SIDE:
+		ORDERS_SIDE.pop()
+	ORDERS_SIDE = []
+	for order in ORDERS_TOP:
+		ORDERS_TOP.pop()
+	ORDERS_TOP = []
+	for order in ORDERS_BOT:
+		ORDERS_BOT.pop()
+	ORDERS_BOT = []
 	
 	# Show menu
-	inventoryCanvas.visible(viz.ON)
+	inventoryCanvas.visible(False)
 
 
 def createTruss(order=Order(),path=''):
@@ -1046,13 +1068,15 @@ def createTrussNew(order=Order(),path='',loading=False):
 
 	BUILD_MEMBERS.append(truss)
 		
-	# Merge lists
-	mergedList = BUILD_MEMBERS + INVENTORY
-	for listItem in mergedList:
-		listItem.texture(env)
-		listItem.appearance(viz.ENVIRONMENT_MAP)
-		listItem.apply(effect)
-		listItem.apply(lightEffect)		
+#	# Merge lists
+#	mergedList = BUILD_MEMBERS + INVENTORY
+#	for listItem in mergedList:
+#		listItem.texture(env)
+#		listItem.appearance(viz.ENVIRONMENT_MAP)
+#		listItem.apply(effect)
+#		listItem.apply(lightEffect)		
+	applyEnvironmentEffect(truss)
+	
 	try:
 		# Clear highlighter
 		highlightTool.clear()
@@ -1202,6 +1226,7 @@ def clearMembers():
 	
 	# Show feedback
 	runFeedbackTask('Bridge cleared!')
+	hideMenuSound.play()
 
 def toggleAudio(value=viz.TOGGLE):
 	global ISMUTED
@@ -1221,25 +1246,52 @@ def toggleAudio(value=viz.TOGGLE):
 	
 def toggleEnvironment(value=viz.TOGGLE):
 	environment_root.visible(value)
-	runFeedbackTask('Environment')
+	
+	# Show feedback
+	if environment_root.getVisible() is True:
+		runFeedbackTask('Environment ON')
+		clickSound.play()
+	else:
+		runFeedbackTask('Environment OFF')
+		hideMenuSound.play()
 
 def toggleGrid(value=viz.TOGGLE):
 	grid_root.visible(value)
-	runFeedbackTask('Grid')
-			
-def toggleUtility(MUTE=True):
-	utilityCanvas.visible(viz.TOGGLE)
-	menuCanvas.visible(viz.OFF)
 	
-	if MUTE:
-		if utilityCanvas.getVisible == False:
-			hideMenuSound.play()
-		else:
-			showMenuSound.play()
+	# Show feedback
+
+	if grid_root.getVisible() is True:
+		runFeedbackTask('Grid On')
+		clickSound.play()
+	else:
+		runFeedbackTask('Grid Off')
+		hideMenuSound.play()
+			
+def toggleUtility(val=viz.TOGGLE):
+	utilityCanvas.visible(val)
+	menuCanvas.visible(False)
+
+	if utilityCanvas.getVisible() is False:
+		hideMenuSound.play()
+	else:
+		showMenuSound.play()
 
 
 def clampTrackerScroll(tracker,min=0.2,max=20):
 	tracker.distance = viz.clamp(tracker.distance,min,max)
+
+
+def toggleMenu(val=viz.TOGGLE):
+	menuCanvas.visible(val)
+	utilityCanvas.visible(False)
+	if menuCanvas.getVisible() is True or MODE is Mode.Edit or MODE is Mode.View:
+		inventoryCanvas.visible(False)
+		runFeedbackTask('Menu')
+		showMenuSound.play()
+	else:
+		hideMenuSound.play()
+		if MODE == Mode.Build:
+			inventoryCanvas.visible(True)
 
 
 def toggleMenuLink():
@@ -1437,7 +1489,7 @@ def onRelease(e=None):
 
 		clampedX =  viz.clamp(grabbedItem.getPosition()[0],-10 + xOffset,10 - xOffset)
 		clampedY =  viz.clamp(grabbedItem.getPosition()[1],2,10)
-		grabbedItem.setPosition( [SNAP_TO_POS[0] + xOffset, SNAP_TO_POS[1] + yOffset, SNAP_TO_POS[2]] )
+		grabbedItem.setPosition( [SNAP_TO_POS[0] + xOffset, SNAP_TO_POS[1] + yOffset, SENSOR_NODE.getPosition()[2]] )
 		grabbedItem.setEuler( [0,0,grabbedItem.getEuler()[2]] )
 		
 		# Enable sensor nodes for other members to snap to
@@ -1453,7 +1505,7 @@ def onRelease(e=None):
 			BUILD_MEMBERS.remove(grabbedItem)
 			proxyManager.removeTarget(grabbedItem.targetNodes[0])
 			proxyManager.removeTarget(grabbedItem.targetNodes[1])
-			grabbedItem.setPosition(0,10,-5)
+#			grabbedItem.setPosition(0,10,-5)
 			grabbedItem.remove()
 			highlightedItem = None
 			grabbedItem = None
@@ -1623,7 +1675,7 @@ def cycleOrientation(val):
 	# Show feedback
 	runFeedbackTask(str(ORIENTATION.name))
 	orientation_text.message(str(ORIENTATION.name))
-	clickSound.play()
+	hideMenuSound.play()
 
 def cycleMode(mode=Mode.Add):
 	global SHOW_HIGHLIGHTER
@@ -1724,14 +1776,18 @@ def cycleMode(mode=Mode.Add):
 	
 	# UI/Sound feedback
 	runFeedbackTask(str(MODE.name))
-	clickSound.play()
+	hideMenuSound.play()
 	
 
 # Setup Callbacks and Events
 def onKeyUp(key):
 	if key == KEYS['esc']:
-		print 'ESC pressed'
-		pass
+		if utilityCanvas.getVisible() is True:
+			toggleUtility(False)
+		elif menuCanvas.getVisible() is True:
+			toggleMenu(False)
+		else:
+			quitGame()
 	elif key == KEYS['home']:
 		viewport.reset()
 		mouseTracker.distance = HAND_DISTANCE
@@ -1740,8 +1796,7 @@ def onKeyUp(key):
 	elif key == ',':
 		print viz.MainView.getPosition()
 	elif key == KEYS['env']:
-		toggleEnvironment()
-		clickSound.play()		
+		toggleEnvironment()	
 	elif key == KEYS['reset']:
 		try:
 			hmd.getSensor().reset(0)
@@ -1767,17 +1822,8 @@ def onKeyUp(key):
 		clickSound.play()
 	elif key == KEYS['grid']:
 		toggleGrid(viz.TOGGLE)
-		clickSound.play()
 	elif key == KEYS['showMenu']:
-		menuCanvas.visible(viz.TOGGLE)
-		utilityCanvas.visible(viz.OFF)
-		if menuCanvas.getVisible() == viz.ON or MODE == Mode.Edit or MODE == Mode.View:
-			inventoryCanvas.visible(viz.OFF)
-			runFeedbackTask('Menu')
-		else:
-			if MODE == Mode.Build:
-				inventoryCanvas.visible(viz.ON)
-		showMenuSound.play()
+		toggleMenu()
 	elif key == KEYS['proxi']:
 		proxyManager.setDebug(viz.TOGGLE)
 		clickSound.play()
@@ -1983,7 +2029,7 @@ vizact.onbuttonup ( orderTopButton, addOrder, ORDERS_TOP_GRID, ORDERS_TOP, ORDER
 vizact.onbuttonup ( orderTopButton, clickSound.play )
 vizact.onbuttonup ( orderBottomButton, addOrder, ORDERS_BOT_GRID, ORDERS_BOT, ORDERS_BOT_ROWS, ORDERS_BOT_FLAG )
 vizact.onbuttonup ( orderBottomButton, clickSound.play )
-vizact.onbuttonup ( doneButton, populateInventory, ORDERS_SIDE, ORDERS_TOP, ORDERS_BOT )
+vizact.onbuttonup ( doneButton, populateInventory )
 vizact.onbuttonup ( doneButton, clickSound.play )
 vizact.onbuttonup ( resetButton, clearBridge )
 vizact.onbuttonup ( resetButton, clickSound.play )
@@ -2043,6 +2089,14 @@ def MainTask():
 		
 		yield viztask.waitButtonUp(doneButton)
 		
+		bottomRow.removeItem(doneButton)
+		confirmButton = bottomRow.addItem(viz.addButtonLabel('Confirm order'),align=viz.ALIGN_CENTER_TOP)
+		confirmButton.length(2)
+		vizact.onbuttonup ( confirmButton, populateInventory )
+		vizact.onbuttonup ( confirmButton, clickSound.play )
+		vizact.onbuttonup ( confirmButton, cycleMode, Mode.Build )
+		vizact.onbuttonup ( confirmButton, menuCanvas.visible, viz.OFF )
+
 		cameraRift = initCamera('vizconnect_config_riftDefault')
 		#cameraFly = initCamera('vizconnect_config_riftFly')
 
