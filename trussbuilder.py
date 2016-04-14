@@ -277,8 +277,8 @@ def initLighting():
 #	light2 = vizfx.addDirectionalLight(euler=(-65,15,0), color=[0.5,0.25,0.0])
 #	sky_light.color(viz.WHITE)
 	# Adjust ambient color
-	sky_light.ambient([0.8]*3)
 	viz.setOption('viz.lightModel.ambient',[0]*3)
+	sky_light.ambient([0.8]*3)
 	vizfx.setAmbientColor([0.3,0.3,0.4])
 
 
@@ -341,6 +341,7 @@ orientation_text = viz.addText3D('<< View >>',pos=[0,13.5,-5],scale=(2,2,.5),par
 info_text = viz.addText3D('<< Info >>',pos=[0,12,-5],scale=(.5,.5,.5),parent=grid_root,align=viz.ALIGN_CENTER)
 
 # Setup audio
+
 startSound = viz.addAudio('./resources/sounds/return_to_holodeck.wav')
 buttonHighlightSound = viz.addAudio('./resources/sounds/button_highlight.wav')
 clickSound = viz.addAudio('./resources/sounds/click.wav')
@@ -2175,3 +2176,11 @@ viz.playSound('./resources/sounds/page_advance.wav',viz.SOUND_PRELOAD)
 viz.playSound('./resources/sounds/out_of_bounds_warning.wav',viz.SOUND_PRELOAD)
 
 	
+def updatePosition(self):
+	"""Internal update function"""
+	# Update the transformation of the node
+	mat = self._target.getMatrix(viz.ABS_GLOBAL)
+	posOff = [0, self.getSize()[1]/2.0+self._target.getSize()[1]/2.0, -0.01]
+	pos = mat.preMultVec(posOff)
+	mat.setPosition(pos)
+	self.setMatrix(mat, viz.ABS_GLOBAL)
