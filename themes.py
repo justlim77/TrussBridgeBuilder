@@ -47,7 +47,7 @@ def getDarkTheme():
 	
 	
 	# text/font
-	theme.font = 'resources/fonts/Roboto-Regular.ttf'
+	theme.font = '.resources/fonts/Roboto-Regular.ttf'
 #	theme.font = 'Segoe UI'
 	theme.backdrop = viz.BACKDROP_OUTLINE
 	theme.backdropColor = viz.BLACK

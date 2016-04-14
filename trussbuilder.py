@@ -206,6 +206,8 @@ def initScene(res=RESOLUTION,quality=4,fov=FOV,stencil=8,stereoMode=viz.STEREO_H
 	viz.setOption('viz.display.stencil', stencil)
 #	viz.setOption('viz.default_key.quit', 0)
 	viz.setOption('viz.model.optimize', 1)
+	viz.window.setName( 'Virtual Truss Builder & Visualizer' ) 
+	viz.window.setBorder( viz.BORDER_FIXED )
 	viz.clearcolor(clearColor)
 	viz.go(stereoMode | fullscreen)
 	darkTheme = themes.getDarkTheme()
@@ -1108,9 +1110,6 @@ def generateMembers(loading=False):
 	for i, order in enumerate(ORDERS):
 		trussMember = createTruss(order,'resources/chs.osgb')
 		trussMember.order = order
-		trussMember.setEuler([0,0,0])
-		qty = int(trussMember.order.quantity)
-		trussMember.setPosition([0,4,-6-i])
 		
 		PROXY_NODES.append(trussMember.proxyNodes[0])
 		PROXY_NODES.append(trussMember.proxyNodes[1])
@@ -1122,24 +1121,12 @@ def generateMembers(loading=False):
 		proxyManager.addSensor(trussMember.sensorNodes[0])
 		proxyManager.addSensor(trussMember.sensorNodes[1])
 
-		if loading == True:
-			BUILD_MEMBERS.append(trussMember)
-		else:
-			INVENTORY.append(trussMember)
+		BUILD_MEMBERS.append(trussMember)
+		trussMember.texture(env)
+		trussMember.appearance(viz.ENVIRONMENT_MAP)
+		trussMember.apply(effect)
+		trussMember.apply(lightEffect)
 
-	# Merge lists
-	mergedList = BUILD_MEMBERS + INVENTORY
-	for listItem in mergedList:
-		listItem.texture(env)
-		listItem.appearance(viz.ENVIRONMENT_MAP)
-		listItem.apply(effect)
-		listItem.apply(lightEffect)		
-	
-#	try:
-#		highlightTool.setItems(mergedList)1
-#	except:
-#		print 'Highlighter not initialized!'
-	
 	# Clear ORDERS
 	ORDERS = []
 
@@ -1276,6 +1263,16 @@ def toggleCollision(val=viz.TOGGLE):
 		viz.phys.disable()
 		print 'Physics: OFF | Collision: ', val
 
+def updateScreenText():
+    object = viz.MainWindow.pick(info=True)
+    if object.valid:
+        name = object.name
+        if name.startswith('painting_'):
+            name = name.replace('painting_','')
+            textScreen.message(name)
+        else:
+            textScreen.message('')
+#vizact.ontimer(0.1,updateScreenText)
 
 # Update code for highlight tool
 isgrabbing = False
