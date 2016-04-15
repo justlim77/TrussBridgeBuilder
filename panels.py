@@ -29,7 +29,7 @@ class InspectorPanel(vizinfo.InfoPanel):
 #		self.rotation_stat = viz.addText('angle')
 #		self.statsPanel.addItem(self.rotation_stat)
 		
-		self.statsPanel = vizdlg.Panel(align=viz.ALIGN_CENTER_TOP)
+		self.statsPanel = vizdlg.Panel(align=viz.ALIGN_CENTER_TOP,border=False)
 		self.statsMsg = self.statsPanel.addItem(viz.addText('Highlight truss member to inspect'))
 	def GetPanel(self):
 		return self.statsPanel

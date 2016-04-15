@@ -22,6 +22,7 @@ Order truss members required to build a 20m-long bridge across the Singapore Riv
 [ RIGHT MOUSE ] Adjust highlighted truss' angle by holding and dragging
 [ MIDDLE MOUSE ] Toggle utilities menu
 """
+INVENTORY_TEXT = """Order truss members from the catalogue & manage your inventory"""
 
 FEEDBACK_MESSAGE = """<FEEDBACK>"""
 
@@ -175,9 +176,13 @@ DEBUG_CAMBOUNDS = False
 
 # Setup key commands
 KEYS = { 'forward'	: 'w'
+		,'FORWARD'	: 'W'
 		,'back'		: 's'
+		,'BACK'		: 'S'
 		,'left'		: 'a'
+		,'LEFT'		: 'A'
 		,'right'	: 'd'
+		,'RIGHT'	: 'D'	
 		,'reset'	: 'r'
 		,'restart'	: viz.KEY_END
 		,'home'		: viz.KEY_HOME
@@ -198,6 +203,7 @@ KEYS = { 'forward'	: 'w'
 		,'walk'		: '/'
 		,'esc'		: viz.KEY_ESCAPE
 		,'viewMode' : 'm'
+		,'capslock'	: viz.KEY_CAPS_LOCK
 }
 
 # Initialize scene
@@ -208,7 +214,7 @@ def initScene(res=RESOLUTION,quality=4,fov=FOV,stencil=8,stereoMode=viz.STEREO_H
 	viz.setOption('viz.display.stencil', stencil)
 	viz.setOption('viz.default_key.quit', 0)
 	viz.setOption('viz.model.optimize', 1)
-	viz.window.setName( 'Virtual Truss Builder & Visualizer' ) 
+	viz.window.setName( 'Virtual Truss Bridge Builder & Visualizer' ) 
 	viz.window.setBorder( viz.BORDER_FIXED )
 	viz.clearcolor(clearColor)
 	viz.go(stereoMode | fullscreen)
@@ -225,24 +231,32 @@ def initOculus():
 	# Reset View
 	from oculuslite import oculus
 	hmd = oculus.Rift()
+
 	if hmd.getSensor():
-		hmd.getSensor().reset(0)
-#		hmd.setZoom(0.5)
-		# Check if HMD supports position tracking
-		supportPositionTracking = hmd.getSensor().getSrcMask() & viz.LINK_POS
-		if supportPositionTracking:
-
-			# Add camera bounds model
-			camera_bounds = hmd.addCameraBounds()
-			camera_bounds.visible(DEBUG_CAMBOUNDS)
-
-			# Change color of bounds to reflect whether position was tracked
-			def CheckPositionTracked():
-				if hmd.getSensor().getStatus() & oculus.STATUS_POSITION_TRACKED:
-					camera_bounds.color(viz.GREEN)
-				else:
-					camera_bounds.color(viz.RED)
-			vizact.onupdate(0, CheckPositionTracked)
+		print 'Oculus profile name:', hmd.getProfile().name
+		print 'Oculus IPD:', hmd.getProfile().ipd
+		print 'Oculus player height:', hmd.getProfile().playerHeight
+		print 'Oculus eye height:', hmd.getProfile().eyeHeight
+		
+		viz.link(hmd.getSensor(), viz.MainView)
+		
+		hmd.getSensor().reset()
+		
+#		# Check if HMD supports position tracking
+#		supportPositionTracking = hmd.getSensor().getSrcMask() & viz.LINK_POS
+#		if supportPositionTracking:
+#
+#			# Add camera bounds model
+#			camera_bounds = hmd.addCameraBounds()
+#			camera_bounds.visible(DEBUG_CAMBOUNDS)
+#
+#			# Change color of bounds to reflect whether position was tracked
+#			def CheckPositionTracked():
+#				if hmd.getSensor().getStatus() & oculus.STATUS_POSITION_TRACKED:
+#					camera_bounds.color(viz.GREEN)
+#				else:
+#					camera_bounds.color(viz.RED)
+#			vizact.onupdate(0, CheckPositionTracked)
 	return hmd
 	
 			
@@ -265,7 +279,7 @@ def initViewport(position):
 	
 # Disable mouse navigation and hide the mouse cursor
 def initMouse():
-	viz.mouse(viz.OFF)
+#	viz.mouse(viz.OFF)
 	viz.mouse.setVisible(viz.OFF)
 	viz.mouse.setTrap(viz.ON)
 	
@@ -287,11 +301,13 @@ def initLighting():
 
 # Highlighter	
 def initHighlightTool():
+	"""Initiailze highlighter tool"""
 	from tools import highlighter
 	return highlighter.Highlighter()
 	
 	
 def initProxy():
+	"""Initialize proximity manager and register callbacks"""
 	# Create proximity manager
 	proxyManager = vizproximity.Manager()
 	proxyManager.setDebug(DEBUG_PROXIMITY)
@@ -318,6 +334,7 @@ def initProxy():
 	
 	
 def initTracker(distance=0.5):
+	"""Initialize scroll wheel tracker"""
 	from vizconnect.util import virtual_trackers
 	tracker = virtual_trackers.ScrollWheel(followMouse=True)
 	tracker.distance = distance
@@ -325,18 +342,25 @@ def initTracker(distance=0.5):
 
 
 def initLink(modelPath,tracker):
+	"""Initialize hand link with tracker and link group with main view"""
 	model = vizfx.addChild(modelPath)
 	link = viz.link(tracker,model)
 	link.postMultLinkable(viz.MainView)
 	return link
 
 
+def getCatalogue(path):
+	"""Parse catalogue from data subdirectory"""
+	return ET.parse(str(path)).getroot()
+
+getCatalogue
 # Initialize
 initScene(RESOLUTION,MULTISAMPLING,FOV,STENCIL,viz.PROMPT,FULLSCREEN,(0.1, 0.1, 0.1, 1.0))
 initMouse()
 initLighting()
 highlightTool = initHighlightTool()
 proxyManager = initProxy()
+catalogue_root = getCatalogue('data/catalogues/catalogue_CHS.xml')
 environment_root = roots.EnvironmentRoot(visibility=False)
 bridge_root = roots.BridgeRoot(BRIDGE_ROOT_POS,SIDE_VIEW_ROT)
 grid_root = roots.GridRoot(gridColor=GRID_COLOR,origin=START_POS)
@@ -362,18 +386,13 @@ for sound in SOUNDS:
 warningSound.volume(WARNING_VOLUME)
 
 
-# Parse catalogue from data subdirectory
-def getCatalogue(path):
-	return ET.parse(str(path)).getroot()
-catalogue_root = getCatalogue('data/catalogues/catalogue_CHS.xml')
-
+def updateResolution(panel,canvas):
+	bb = panel.getBoundingBox()
+	canvas.setRenderWorldOverlay([bb.width + 5, bb.height + 5], fov=bb.height * 0.15, distance=3.0)	
+	canvas.setCursorPosition([0,0])
 
 def updateMouseStyle(canvas):
-	"""Update mouse style based on current options"""
-	if canvas.getRenderMode() in [viz.CANVAS_WORLD,viz.CANVAS_WORLD_OVERLAY]:
-		canvas.setMouseStyle(viz.CANVAS_MOUSE_VIRTUAL)
-#		canvas.setMouseStyle(viz.CANVAS_MOUSE_VISIBLE)
-
+	canvas.setMouseStyle(viz.CANVAS_MOUSE_BUTTON)
 
 # Add environment effects
 env = viz.addEnvironmentMap('resources/textures/sky.jpg')
@@ -388,7 +407,7 @@ def applyEnvironmentEffect(obj):
 #	obj.apply(effect)
 #	obj.apply(lightEffect)	
 
-#applyEnvironmentEffect(environment_root)
+
 environment = viz.addChild('resources/environment.osgb',parent=environment_root)
 walkway = viz.addChild('resources/walkway.osgb',parent=environment_root)
 wave = viz.addChild('resources/wave2.osgb',pos=([0,0.5,0]),parent=environment_root)
@@ -402,11 +421,9 @@ clamp_R.setParent(environment_root)
 applyEnvironmentEffect(road)
 applyEnvironmentEffect(wave)
 day = viz.addChild('resources/sky_day.osgb', scale=([5,5,5]),parent=environment_root)
-walkway.disable(viz.LIGHTING)
+#walkway.disable(viz.LIGHTING)
 
 # Bridge pin and roller supports
-#pinSupport = vizfx.addChild('resources/pinSupport.osgb',pos=(-9.5,4,0),scale=[1,1,11])
-#rollerSupport = vizfx.addChild('resources/rollerSupport.osgb',pos=(9.5,4,0),scale=[1,1,11])
 pinSupport = viz.addChild('resources/pinSupport.osgb',pos=(-9.5,4,0),scale=[1,1,11])
 rollerSupport = viz.addChild('resources/rollerSupport.osgb',pos=(9.5,4,0),scale=[1,1,11])
 supports = [pinSupport,rollerSupport]
@@ -427,40 +444,24 @@ proxyManager.addSensor(rollerAnchorSensor)
 viz.grab(rollerSupport,rollerAnchorSphere)
 
 for model in supports:
-	applyEnvironmentEffect(model)
+#	applyEnvironmentEffect(model)
 	viz.grab(bridge_root,model)
 
 # Create canvas for displaying GUI objects
-instructionsPanel = vizinfo.InfoPanel(title=HEADER_TEXT,align=viz.ALIGN_CENTER_BASE,icon=False)
+instructionsPanel = vizinfo.InfoPanel(title=HEADER_TEXT,align=viz.ALIGN_CENTER_BASE,icon=False,key=None)
 instructionsPanel.getTitleBar().fontSize(36)
-
-# Options panel
-optionPanel = vizinfo.InfoPanel(title=HEADER_TEXT, text='Options',align=viz.ALIGN_CENTER_TOP,icon=False)
-optionPanel.getTitleBar().fontSize(36)
-optionPanel.addSection('File')
-saveHeader = optionPanel.addItem(viz.addText('Append ".csv" when saving'))
-saveButton = optionPanel.addItem(viz.addButtonLabel('Save Bridge'))
-saveButton.length(2)
-loadButton = optionPanel.addItem(viz.addButtonLabel('Load Bridge'))
-loadButton.length(2)
-optionPanel.addSection('Game')
-soundButton = optionPanel.addItem(viz.addButtonLabel('Toggle Audio'))
-soundButton.length(2)
-resetButton = optionPanel.addItem(viz.addButtonLabel('Clear Bridge'))
-resetButton.length(2)
-quitButton = optionPanel.addItem(viz.addButtonLabel('Quit Game'))
-quitButton.length(2)
 
 # Initialize order panel containing mainRow and midRow
 #inventoryPanel = vizdlg.Panel(layout=vizdlg.LAYOUT_VERT_CENTER,align=viz.ALIGN_CENTER,spacing=0,margin=(0,0))
-inventoryPanel = vizinfo.InfoPanel(title=HEADER_TEXT,text='Order truss members from the catalogue & manage your inventory', align=viz.ALIGN_CENTER_BASE, icon=False)
+inventoryPanel = vizinfo.InfoPanel(title=HEADER_TEXT,text=INVENTORY_TEXT,align=viz.ALIGN_CENTER_TOP,icon=False,key=None)
 inventoryPanel.getTitleBar().fontSize(36)
 
-# Initialize mainRow
 # Initialize midRow
-midRow = vizdlg.Panel(layout=vizdlg.LAYOUT_HORZ_CENTER,align=viz.ALIGN_CENTER_TOP,border=False,background=False,spacing=20)
-# Initialize orderPanel box
-orderPanel = midRow.addItem(vizinfo.InfoPanel('Fill in all required fields',align=viz.ALIGN_LEFT_TOP,margin=(0,0),icon=False))
+inventoryRow = vizdlg.Panel(layout=vizdlg.LAYOUT_HORZ_TOP,border=False,background=False,margin=0)
+#inventoryGrid = vizdlg.GridPanel(cellAlign=vizdlg.ALIGN_LEFT_TOP,border=False)
+
+# Initialize orderPanel
+orderPanel = vizinfo.InfoPanel('Fill in all required fields',icon=False,key=None)
 orderPanel.setTitle( 'Order' )	
 orderPanel.getTitleBar().fontSize(28)
 orderPanel.addSeparator()
@@ -491,47 +492,60 @@ length = orderPanel.addLabelItem('Length (m)', lengthTextbox)
 quantitySlider = viz.addProgressBar('1')
 qtyProgressPos = mathlite.getNewRange(1,QTY_MIN,QTY_MAX,0.0,1.0)
 quantitySlider.set(qtyProgressPos)
-#quantity = orderPanel.addLabelItem('Quantity', quantityTextbox)
 quantity = orderPanel.addLabelItem('Quantity', quantitySlider)
-
 # Initialize ordering buttons
 orderSideButton = orderPanel.addItem(viz.addButtonLabel('Add to Side'),align=viz.ALIGN_RIGHT_BOTTOM)
 orderTopButton = orderPanel.addItem(viz.addButtonLabel('Add to Top'),align=viz.ALIGN_RIGHT_BOTTOM)
 orderBottomButton = orderPanel.addItem(viz.addButtonLabel('Add to Bottom'),align=viz.ALIGN_RIGHT_BOTTOM)
 
-# Initialize stockPanel
-stockMainPanel = vizinfo.InfoPanel('Ordered truss members',align=viz.ALIGN_CENTER_TOP,margin=(0,0),icon=False)
+# Initialize Stock Main Panel
+stockMainPanel = vizinfo.InfoPanel('Ordered truss members',icon=False,key=None)
 stockMainPanel.setTitle( 'Stock' )
 stockMainPanel.getTitleBar().fontSize(28)
 stockMainPanel.addSeparator()
-
 # Initialize Side order tab
 stockPanel = vizdlg.TabPanel()
-
 # Side orders inventory
 ORDERS_SIDE_GRID = panels.CreateLabelledPanel()
 stockPanel.addPanel('Side',ORDERS_SIDE_GRID)
-
 # Top orders inventory
 ORDERS_TOP_GRID = panels.CreateLabelledPanel()
 stockPanel.addPanel('Top',ORDERS_TOP_GRID)
-
 # Bottom orders inventory
 ORDERS_BOT_GRID = panels.CreateLabelledPanel()
 stockPanel.addPanel('Bottom',ORDERS_BOT_GRID)
-
 stockMainPanel.addItem(stockPanel)
-midRow.addItem(stockMainPanel,align=viz.ALIGN_LEFT_TOP)
 
-# Add mid row to inventory main panel
-inventoryPanel.addItem(midRow)
+inventoryRow.addItem(orderPanel)
+inventoryRow.addItem(stockMainPanel)
+#inventoryGrid.addRow([orderPanel,stockPanel])
 
-bottomRow = vizdlg.Panel(layout=vizdlg.LAYOUT_HORZ_CENTER,align=viz.ALIGN_CENTER_TOP,border=False,background=False,spacing=20)
-doneButton = bottomRow.addItem(viz.addButtonLabel('Confirm order and start building in VR'),align=viz.ALIGN_CENTER_TOP)
+bottomRow = vizdlg.Panel(border=False)
+doneButton = bottomRow.addItem(viz.addButtonLabel('Confirm order and start building in VR'))
 doneButton.length(2)
+
+# Add rows to inventory main panel
+inventoryPanel.addItem(inventoryRow)
 inventoryPanel.addItem(bottomRow)
 
-# Create floating inspector panel
+# TAB 3: Options panel
+optionPanel = vizinfo.InfoPanel(title=HEADER_TEXT,text='Options',align=viz.ALIGN_CENTER_TOP,icon=False,key=None)
+optionPanel.getTitleBar().fontSize(36)
+optionPanel.addSection('File')
+saveHeader = optionPanel.addItem(viz.addText('Append ".csv" when saving'))
+saveButton = optionPanel.addItem(viz.addButtonLabel('Save Bridge'))
+saveButton.length(2)
+loadButton = optionPanel.addItem(viz.addButtonLabel('Load Bridge'))
+loadButton.length(2)
+optionPanel.addSection('Game')
+soundButton = optionPanel.addItem(viz.addButtonLabel('Toggle Audio'))
+soundButton.length(2)
+resetButton = optionPanel.addItem(viz.addButtonLabel('Clear Bridge'))
+resetButton.length(2)
+quitButton = optionPanel.addItem(viz.addButtonLabel('Quit Game'))
+quitButton.length(2)
+
+# Create inspector panel
 inspectorCanvas = viz.addGUICanvas(align=viz.ALIGN_CENTER)
 inspector = panels.InspectorPanel()
 statPanel = inspector.GetPanel()
@@ -546,49 +560,45 @@ utilityButtons = []
 # Create docked utility panel
 utilityCanvas = viz.addGUICanvas(align=viz.ALIGN_CENTER)
 points = mathlite.getPointsInCircum(30,8)
-# Circle backdrop
-#circleBackdrop = viz.addButton(parent=utilityCanvas)
-#circleBackdrop.texture(viz.addTexture('resources/GUI/dropdownarrow-128.png'))
-#circleBackdrop.setScale(1.5,1.5)
 # Menu button
 menuButton = viz.addButton(parent=utilityCanvas)
 menuButton.texture(viz.addTexture('resources/GUI/menu-128.png'))
-menuButton.setPosition(0,0)
+#menuButton.setPosition(0,0)
 menuButton.setScale(BUTTON_SCALE,BUTTON_SCALE)
 # Reset View button
 homeButton = viz.addButton(parent=utilityCanvas)
 homeButton.texture(viz.addTexture('resources/GUI/reset-128.png'))
-homeButton.setPosition(0,0)
+#homeButton.setPosition(0,0)
 homeButton.setScale(BUTTON_SCALE,BUTTON_SCALE)
 # Build mode button
 buildModeButton = viz.addButton(parent=utilityCanvas)
 buildModeButton.texture(viz.addTexture('resources/GUI/wrench-128.png'))
-buildModeButton.setPosition(0,0)
+#buildModeButton.setPosition(0,0)
 buildModeButton.setScale(BUTTON_SCALE,BUTTON_SCALE)
 # Viewer mode button
 viewerModeButton = viz.addButton(parent=utilityCanvas)
 viewerModeButton.texture(viz.addTexture('resources/GUI/viewer-128.png'))
-viewerModeButton.setPosition(0,0)
+#viewerModeButton.setPosition(0,0)
 viewerModeButton.setScale(BUTTON_SCALE,BUTTON_SCALE)
 # Walk mode button
 walkModeButton = viz.addButton(parent=utilityCanvas)
 walkModeButton.texture(viz.addTexture('resources/GUI/walking-128.png'))
-walkModeButton.setPosition(0,0)
+#walkModeButton.setPosition(0,0)
 walkModeButton.setScale(BUTTON_SCALE,BUTTON_SCALE)
 # Toggle environment button
 toggleEnvButton = viz.addButton(parent=utilityCanvas)
 toggleEnvButton.texture(viz.addTexture('resources/GUI/environment-128.png'))
-toggleEnvButton.setPosition(0,0)
+#toggleEnvButton.setPosition(0,0)
 toggleEnvButton.setScale(BUTTON_SCALE,BUTTON_SCALE)
 # Toggle grid button
 toggleGridButton = viz.addButton(parent=utilityCanvas)
 toggleGridButton.texture(viz.addTexture('resources/GUI/grid-64.png'))
-toggleGridButton.setPosition(0,0)
+#toggleGridButton.setPosition(0,0)
 toggleGridButton.setScale(BUTTON_SCALE,BUTTON_SCALE)
 # Reset orientation button
 resetOriButton = viz.addButton(parent=utilityCanvas)
 resetOriButton.texture(viz.addTexture('resources/GUI/compass-128.png'))
-resetOriButton.setPosition(0,0)
+#resetOriButton.setPosition(0,0)
 resetOriButton.setScale(BUTTON_SCALE,BUTTON_SCALE)
 
 utilityButtons = ( [menuButton,homeButton,buildModeButton,viewerModeButton,walkModeButton,toggleEnvButton,toggleGridButton,resetOriButton] )
@@ -597,11 +607,12 @@ for i, button in enumerate(utilityButtons):
 	
 # Link utility canvas with main View
 utilityLink = viz.link(viz.MainView,utilityCanvas)
+#utilityLink.postMultLinkable(viz.MainView)
 utilityLink.preTrans( [0, 0, 1.5] )
 
 # Rotation Panel
 rotationCanvas = viz.addGUICanvas(align=viz.ALIGN_CENTER)
-rotationPanel = vizdlg.GridPanel(parent=rotationCanvas,align=viz.ALIGN_CENTER)
+rotationPanel = vizdlg.GridPanel(parent=rotationCanvas,align=viz.ALIGN_CENTER,border=False)
 rotationSlider = viz.addProgressBar('Angle')
 rotationLabel = viz.addText('0')
 row = rotationPanel.addRow([rotationSlider,rotationLabel])
@@ -612,13 +623,16 @@ row = rotationPanel.addRow([rotationSlider,rotationLabel])
 
 # Add tabbed panels to main menu canvas
 menuCanvas = viz.addGUICanvas(align=viz.ALIGN_CENTER_TOP)
-tabbedMenu = vizdlg.TabPanel(align=viz.ALIGN_CENTER_TOP,parent=menuCanvas)
-tabbedMenu.addPanel('Instructions',instructionsPanel)
-tabbedMenu.addPanel('Inventory',inventoryPanel)
-tabbedMenu.addPanel('Options',optionPanel)
+menuTabPanel = vizdlg.TabPanel(align=viz.ALIGN_CENTER_TOP,parent=menuCanvas)
+menuTabPanel.addPanel('Instructions',instructionsPanel)
+menuTabPanel.addPanel('Inventory',inventoryPanel)
+menuTabPanel.addPanel('Options',optionPanel)
+#menuTabPanel.selectPanel(1)
 
 # Add dialog canvas
 dialogCanvas = viz.addGUICanvas(align=viz.ALIGN_CENTER)
+dialog = vizdlg.MessageDialog(message='<Message>', title='Warning', accept='Yes (Enter)', cancel='No (Esc)',parent=dialogCanvas)
+dialog.setScreenAlignment(viz.ALIGN_CENTER)
 dialogCanvas.visible(viz.OFF)
 
 # Add feedback canvas
@@ -635,16 +649,16 @@ feedbackText.fontSize(50)
 feedbackCanvas.visible(viz.OFF)
 
 def initCanvas():	
-#	menuCanvas.setRenderWorld(MENU_RES,[20,viz.AUTO_COMPUTE])
-	menuCanvas.setRenderWorldOverlay(MENU_RES,fov=90.0,distance=3.0)
-	menuCanvas.setPosition(0,0,6)
-	updateMouseStyle(menuCanvas)
+	# Set canvas resolution to fit bounds of info panel
+	updateResolution(menuTabPanel,menuCanvas)
+	menuCanvas.setPosition(0,0,15)
+	menuCanvas.setMouseStyle(viz.CANVAS_MOUSE_VIRTUAL)
 	
-	dialogCanvas.setRenderWorldOverlay(MENU_RES,fov=90.0,distance=3.0)
+	updateResolution(dialog,dialogCanvas)
 	dialogCanvas.setPosition(0,0,6)
-	updateMouseStyle(dialogCanvas)
+	dialogCanvas.setMouseStyle(viz.CANVAS_MOUSE_VIRTUAL)
 	
-	feedbackCanvas.setRenderWorldOverlay(MENU_RES,fov=90.0,distance=3.0)
+	updateResolution(feedbackQuad,feedbackCanvas)
 	feedbackCanvas.setPosition(0,0,6)	
 	
 #	inspectorCanvas.setRenderWorld(RESOLUTION,[20,viz.AUTO_COMPUTE])
@@ -655,8 +669,9 @@ def initCanvas():
 	utilityCanvas.setRenderWorld(UTILITY_CANVAS_RES,[1,viz.AUTO_COMPUTE])
 	utilityCanvas.setPosition(0,0,0)
 	utilityCanvas.setEuler(0,0,0)
+	utilityCanvas.setCursorPosition([0,0])
 	utilityCanvas.visible(False)
-	updateMouseStyle(utilityCanvas)
+	utilityCanvas.setMouseStyle(viz.CANVAS_MOUSE_VIRTUAL)
 	
 	rotationCanvas.setRenderWorld(RESOLUTION,[1,viz.AUTO_COMPUTE])
 #	rotationCanvas.setRenderWorldOverlay(MENU_RES,fov=90.0,distance=3.0)
@@ -664,13 +679,7 @@ def initCanvas():
 	rotationCanvas.setEuler(0,0,0)
 	rotationCanvas.visible(False)
 initCanvas()
-		
-		
-#def inspectMember(obj):
-#	inspector.diameter_stat.message('d (mm): ' + str(obj.diameter))
-#	inspector.thickness_stat.message('t (mm): ' + str(obj.thickness))
-#	inspector.length_stat.message('l (m): ' + str(obj.length))
-#	inspector.rotation_stat.message('angle: ' + str(obj.getEuler()[2]))
+
 
 def inspectMember(obj):
 #	inspector.diameter_stat.message('d (mm): ' + str(obj.diameter))
@@ -710,25 +719,30 @@ def runFeedbackTask(message='Welcome'):
 
 def showdialog(message,func):
 	menuCanvas.setMouseStyle(viz.CANVAS_MOUSE_VISIBLE)
+	inventoryCanvas.setMouseStyle(viz.CANVAS_MOUSE_VISIBLE)
+	
+	# Re-adjust resolution	
 	dialog = vizdlg.MessageDialog(message=message, title='Warning', accept='Yes (Enter)', cancel='No (Esc)',parent=dialogCanvas)
 	dialog.setScreenAlignment(viz.ALIGN_CENTER)
+	
+	bb = dialog.getBoundingBox()
+	dialogCanvas.setRenderWorldOverlay([bb.width + 5, bb.height + 5], fov=bb.height * 0.15, distance=3.0)	
 	dialogCanvas.visible(viz.ON)
 	
 	warningSound.play()
 	
 	while True:
-
 		yield dialog.show()
-
 		if dialog.accepted:
 			func()
 		else:
 			pass
-			
 		dialog.remove()
 		dialogCanvas.visible(viz.OFF)
+		
 		menuCanvas.setMouseStyle(viz.CANVAS_MOUSE_VIRTUAL)
-		yield viztask.waitTime(1)
+		if MODE is Mode.Build:
+			inventoryCanvas.setMouseStyle(viz.CANVAS_MOUSE_VIRTUAL)
 		
 def clearBridge():
 	viztask.schedule(showdialog(CLEAR_MESSAGE,clearMembers))
@@ -862,10 +876,10 @@ def createInventory():
 #	Create inventory panel
 	global inventoryCanvas
 	inventoryCanvas = viz.addGUICanvas(align=viz.ALIGN_CENTER_TOP)
-	inventoryGrid = vizdlg.GridPanel(align=viz.ALIGN_CENTER_TOP,cellAlign=vizdlg.LAYOUT_HORZ_TOP,parent=inventoryCanvas)
+	inventoryGrid = vizdlg.GridPanel(align=viz.ALIGN_CENTER_TOP,cellAlign=vizdlg.LAYOUT_HORZ_TOP,parent=inventoryCanvas,border=False,background=False)
 	
 	global tabbedPanel
-	tabbedPanel = vizdlg.TabPanel(align=viz.ALIGN_CENTER_TOP,layout=vizdlg.LAYOUT_VERT_LEFT,parent=inventoryCanvas)
+	tabbedPanel = vizdlg.TabPanel(align=viz.ALIGN_CENTER_TOP,layout=vizdlg.LAYOUT_VERT_LEFT,parent=inventoryCanvas,border=False)
 
 	# Side truss inventory
 	global sideInventory
@@ -904,7 +918,7 @@ def createInventory():
 	inventoryGrid.addRow([tabbedPanel])
 
 	inventoryCanvas.setRenderWorld(RESOLUTION,[1,viz.AUTO_COMPUTE])
-	updateMouseStyle(inventoryCanvas)
+	inventoryCanvas.setMouseStyle(viz.CANVAS_MOUSE_VIRTUAL)
 	# Link rotation canvas with main View
 #	inventoryLink = viz.link(viz.MainView,inventoryCanvas)
 
@@ -1285,7 +1299,6 @@ def toggleUtility(val=viz.TOGGLE):
 	else:
 		updateMouseStyle(inventoryCanvas)
 		hideMenuSound.play()
-
 
 
 def clampTrackerScroll(tracker,min=0.2,max=20):
@@ -1820,38 +1833,41 @@ def onKeyUp(key):
 		viewChangeSound.play()
 	elif key == ',':
 		print viz.MainView.getPosition()
-	elif key == KEYS['env']:
+	elif key == KEYS['env'] or key == KEYS['env'].upper():
 		toggleEnvironment()	
-	elif key == KEYS['reset']:
+	elif key == KEYS['reset'] or key == KEYS['reset'].upper():
 		try:
-			hmd.getSensor().reset(0)
+#			hmd.getSensor().reset(0)
 			runFeedbackTask('Orientation reset!')
 			clickSound.play()
 		except:
 			runFeedbackTask('No headset!')
 			warningSound.play()
 			print 'Reset orientation failed: Unable to get Oculus Rift sensor!'
-	elif key == KEYS['hand']:
+	elif key == KEYS['hand'] or key == KEYS['hand'].upper():
 		mouseTracker.distance = HAND_DISTANCE
 		clickSound.play()
-	elif key == KEYS['builder']:
+	elif key == KEYS['builder'] or key == KEYS['builder'].upper():
 		cycleMode(Mode.Edit)
 		mouseTracker.distance = HAND_DISTANCE
 		clickSound.play()
-	elif key == KEYS['viewer']:
+	elif key == KEYS['viewer'] or key == KEYS['viewer'].upper():
 		cycleMode(Mode.View)
 		mouseTracker.distance = HAND_DISTANCE
 		clickSound.play()
-	elif key == KEYS['walk']:
+	elif key == KEYS['walk'] or key == KEYS['walk'].upper():
 		cycleMode(Mode.Walk)
 		clickSound.play()
-	elif key == KEYS['grid']:
+	elif key == KEYS['grid'] or key == KEYS['grid'].upper():
 		toggleGrid(viz.TOGGLE)
 	elif key == KEYS['showMenu']:
 		toggleMenu()
-	elif key == KEYS['proxi']:
+	elif key == KEYS['proxi'] or key == KEYS['proxi'].upper():
 		proxyManager.setDebug(viz.TOGGLE)
 		clickSound.play()
+	elif key == KEYS['capslock']:
+		runFeedbackTask('Caps Lock')
+		warningSound.play()
 
 
 def onKeyDown(key):
@@ -2156,9 +2172,10 @@ def MainTask():
 #		vizact.onupdate(0,updatePosition(inventoryCanvas,playerNode))
 		
 		viewPos = viewport.getNode3d().getPosition()
-		viz.MainView.setPosition(viewPos)
 		keyTracker = vizconnect.getTracker('rift_with_mouse_and_keyboard').getNode3d()
-		playerLink = viz.link(keyTracker,axes)
+		viz.MainView.setPosition(keyTracker.getPosition())
+#		playerLink = viz.link(viz.MainView,keyTracker)
+#		trackerLink = viz.link(keyTracker,axes)
 		inventoryCanvas.setEuler( [0,30,0] )
 		inventoryCanvas.setPosition ( [0,viewPos[1]-.2,viewPos[2]+.2] )
 		rotationCanvas.setEuler( [0,30,0] )

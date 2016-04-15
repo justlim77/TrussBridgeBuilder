@@ -4,10 +4,7 @@ import vizact
 import oculus
 
 class Oculus:
-	def __init__(self):
-		# --Init variables
-		CUSTOM_HEIGHT = True
-		
+	def __init__(self):		
 		# --Key commands
 		KEYS = { 'forward'	: 'w'
 				,'back' 	: 's'
@@ -15,7 +12,6 @@ class Oculus:
 				,'right'	: 'd'
 				,'reset'	: 'r'
 				,'camera'	: 'c'
-				,'help'		: ' '
 		}
 	
 		# --add oculus as HMD
@@ -25,9 +21,11 @@ class Oculus:
 			print('Oculus Rift not detected')
 			return None
 		else:
+			# Reset HMD orientation
+			self.hmd.getSensor().reset()
+			
 			# Setup heading reset key
-			vizact.onkeydown(KEYS['reset'], self.hmd.getSensor().reset)
-			self.hmd.getSensor().reset(0)
+			vizact.onkeyup(KEYS['reset'], self.hmd.getSensor().reset)
 
 			# Check if HMD supports position tracking
 			self.supportPositionTracking = self.hmd.getSensor().getSrcMask() & viz.LINK_POS
@@ -45,22 +43,27 @@ class Oculus:
 						camera_bounds.color(viz.RED)
 				vizact.onupdate(0, CheckPositionTracked)
 
+				# Setup camera bounds toggle key
+				def toggleBounds():
+					camera_bounds.visible(viz.TOGGLE)
+					camera_toggle.set(camera_bounds.getVisible())
+				vizact.onkeydown(KEYS['camera'], toggleBounds)
+				
 			# Setup navigation node and link to main view
 			self.navigationNode = viz.addGroup()
-			viewLink = viz.link(self.navigationNode, viz.MainView)
-			viewLink.preMultLinkable(self.hmd.getSensor())
+			self.viewLink = viz.link(self.navigationNode, viz.MainView)
+			self.viewLink.preMultLinkable(self.hmd.getSensor())
 
 			# --Apply user profile eye height to view
 			profile = self.hmd.getProfile()
-			if profile and CUSTOM_HEIGHT is False:
-				viewLink.setOffset([0,profile.eyeHeight,-1.2])
+			if profile:
+				self.viewLink.setOffset([0,profile.eyeHeight,0])
 			else:
-				viewLink.setOffset([0,0.9,-1.2])
-				
+				self.viewLink.setOffset([0,1.8,0])
 			# --Setup arrow key navigation
 			MOVE_SPEED = 2.0
 			def UpdateView():
-				yaw,pitch,roll = viewLink.getEuler()
+				yaw,pitch,roll = self.viewLink.getEuler()
 				m = viz.Matrix.euler(yaw,0,0)
 				dm = viz.getFrameElapsed() * MOVE_SPEED
 				if viz.key.isDown(KEYS['forward']):
