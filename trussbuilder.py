@@ -468,8 +468,7 @@ thickness = orderPanel.addLabelItem('Thickness (mm)', thicknessDropList)
 lengthTextbox = viz.addTextbox()
 lengthTextbox.message('1')
 length = orderPanel.addLabelItem('Length (m)', lengthTextbox)
-# Initialize quantityTextbox with default value of 1qty
-quantityTextbox = viz.addTextbox()
+# Initialize quantitySlider with default value of 1
 quantitySlider = viz.addProgressBar('1')
 qtyProgressPos = mathlite.getNewRange(1,QTY_MIN,QTY_MAX,0.0,1.0)
 quantitySlider.set(qtyProgressPos)
@@ -637,14 +636,14 @@ def initCanvas():
 	utilityCanvas.setRenderWorld(UTILITY_CANVAS_RES,[1,viz.AUTO_COMPUTE])
 	utilityCanvas.setPosition(0,0,0)
 	utilityCanvas.setEuler(0,0,0)
-	utilityCanvas.visible(viz.OFF)
+	utilityCanvas.visible(False)
 	updateMouseStyle(utilityCanvas)
 	
-	rotationCanvas.setRenderWorld([300,100],[1,viz.AUTO_COMPUTE])
+	rotationCanvas.setRenderWorld(RESOLUTION,[1,viz.AUTO_COMPUTE])
 #	rotationCanvas.setRenderWorldOverlay(MENU_RES,fov=90.0,distance=3.0)
 	rotationCanvas.setPosition(0,0,0)
 	rotationCanvas.setEuler(0,0,0)
-#	rotationCanvas.visible(viz.OFF)
+	rotationCanvas.visible(False)
 initCanvas()
 		
 		
@@ -1272,10 +1271,13 @@ def toggleUtility(val=viz.TOGGLE):
 	utilityCanvas.visible(val)
 	menuCanvas.visible(False)
 
-	if utilityCanvas.getVisible() is False:
-		hideMenuSound.play()
-	else:
+	if utilityCanvas.getVisible() is True:
+		inventoryCanvas.setMouseStyle(viz.CANVAS_MOUSE_VISIBLE)
 		showMenuSound.play()
+	else:
+		updateMouseStyle(inventoryCanvas)
+		hideMenuSound.play()
+
 
 
 def clampTrackerScroll(tracker,min=0.2,max=20):
@@ -1687,6 +1689,9 @@ def cycleMode(mode=Mode.Add):
 	if MODE is Mode.Add and grabbedItem is not None:
 		return		
 	
+	if MODE is Mode.Edit and grabbedItem is not None:
+		return
+		
 	MODE = mode
 	
 	toggleEnvironment(False)
@@ -2136,10 +2141,11 @@ def MainTask():
 		viz.link(gloveLink,highlightTool)	
 		
 		viewPos = viewport.getNode3d().getPosition()
+		viz.MainView.setPosition(viewPos)
 		inventoryCanvas.setEuler( [0,30,0] )
-		inventoryCanvas.setPosition ( [0,viewPos[1]+1,viewPos[2]+1] )
+		inventoryCanvas.setPosition ( [0,viewPos[1]-.2,viewPos[2]+.2] )
 		rotationCanvas.setEuler( [0,30,0] )
-		rotationCanvas.setPosition ( [0,viewPos[1]+1.1,viewPos[2]+1] )
+		rotationCanvas.setPosition ( [0,viewPos[1]-.1,viewPos[2]+.2] )
 #		link = viz.link(viz.MainView,rotationCanvas)
 #		link.postMultLinkable(viz.MainView)
 #		rotationCanvas.visible(viz.OFF)
