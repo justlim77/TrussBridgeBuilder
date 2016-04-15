@@ -152,7 +152,7 @@ class Mode(Enum):
 	Add=2
 	View=3
 	Walk=4
-MODE = Mode.Build
+MODE = Mode.View
 
 
 PROXY_NODES = []
@@ -264,6 +264,8 @@ def initViewport(position):
 	# Add a viewpoint so the user starts at the specified position
 	vp = vizconnect.addViewpoint(pos=position,euler=(0,0,0))
 	vp.add(vizconnect.getDisplay())
+	print vp.getName()
+	print vp.getNode3d().getPosition()
 	#Start collision detection.
 #	viz.MainView.collision( viz.ON )
 #	viz.phys.enable()
@@ -650,8 +652,11 @@ feedbackCanvas.visible(viz.OFF)
 
 def initCanvas():	
 	# Set canvas resolution to fit bounds of info panel
-	updateResolution(menuTabPanel,menuCanvas)
-	menuCanvas.setPosition(0,0,15)
+#	updateResolution(menuTabPanel,menuCanvas)
+	bb = menuTabPanel.getBoundingBox()
+	menuCanvas.setRenderWorldOverlay([bb.width + 5, bb.height + 100], fov=bb.height * 0.15, distance=3.0)	
+	menuCanvas.setCursorPosition([0,0])
+	menuCanvas.setPosition(0,0,8)
 	menuCanvas.setMouseStyle(viz.CANVAS_MOUSE_VIRTUAL)
 	
 	updateResolution(dialog,dialogCanvas)
@@ -673,8 +678,9 @@ def initCanvas():
 	utilityCanvas.visible(False)
 	utilityCanvas.setMouseStyle(viz.CANVAS_MOUSE_VIRTUAL)
 	
-	rotationCanvas.setRenderWorld(RESOLUTION,[1,viz.AUTO_COMPUTE])
+#	rotationCanvas.setRenderWorld(RESOLUTION,[1,viz.AUTO_COMPUTE])
 #	rotationCanvas.setRenderWorldOverlay(MENU_RES,fov=90.0,distance=3.0)
+	updateResolution(rotationPanel,rotationCanvas)
 	rotationCanvas.setPosition(0,0,0)
 	rotationCanvas.setEuler(0,0,0)
 	rotationCanvas.visible(False)
@@ -2167,24 +2173,43 @@ def MainTask():
 		
 		global axes
 		axes = vizshape.addAxes()
+		axes.visible(False)
 #		playerLink = viz.link(viz.MainView,playerNode)
 #		playerLink.setMask(viz.LINK_POS)
 #		vizact.onupdate(0,updatePosition(inventoryCanvas,playerNode))
 		
 		viewPos = viewport.getNode3d().getPosition()
 		keyTracker = vizconnect.getTracker('rift_with_mouse_and_keyboard').getNode3d()
-		viz.MainView.setPosition(keyTracker.getPosition())
+		keyTransport = vizconnect.getTransport('main_transport').getNode3d()
+#		viz.link(viz.MainView,keyTracker)
+		viz.MainView.setPosition(START_POS)
 #		playerLink = viz.link(viz.MainView,keyTracker)
 #		trackerLink = viz.link(keyTracker,axes)
 		inventoryCanvas.setEuler( [0,30,0] )
 		inventoryCanvas.setPosition ( [0,viewPos[1]-.2,viewPos[2]+.2] )
 		rotationCanvas.setEuler( [0,30,0] )
-		rotationCanvas.setPosition ( [0,viewPos[1]-.1,viewPos[2]+.2] )
+#		rotationCanvas.setPosition ( [0,viewPos[1]-.1,viewPos[2]+.2] )
 #		link = viz.link(viz.MainView,rotationCanvas)
 #		link.postMultLinkable(viz.MainView)
 #		rotationCanvas.visible(viz.OFF)
+#		vizact.onupdate(0,getAvatarPos,keyTransport)
+#		vizact.onupdate(0,getAvatarPos,viz.MainView)
+#		vizact.onupdate(0,getAvatarPos,viewport.getNode3d())
+#		vizact.onupdate(0,updatePosition,axes,keyTransport)
+#		link = viz.link(keyTransport,axes,viz.LINK_POS)
+
+		axesLink = viz.link(viz.MainView,axes)
+		axesLink.setMask(viz.LINK_POS)
+		axesLink.postTrans([0,-1,2])
+
+		viz.grab(axes,inventoryCanvas)
 		
-		cycleMode(Mode.Build)
+#		pos = START_POS
+#		pos[1] += -1
+#		pos[2] += 1
+#		axes.setPosition(pos)
+#		viz.grab(keyTransport,axes)
+		cycleMode(Mode.View)
 		
 		# Setup callbacks
 		viz.callback ( viz.KEYUP_EVENT, onKeyUp )
@@ -2230,12 +2255,12 @@ def updatePosition(obj,target):
 	# Update the transformation of the node
 	mat = target.getMatrix(viz.ABS_GLOBAL)
 #	posOff = [0, obj.getSize()[1]/2.0+target.getSize()[1]/2.0, -0.01]
-	posOff = [0, obj.getPosition()[1]/2.0+target.getPosition()[1]/2.0, -0.01]
+	posOff = [0, -1, 1]
 	pos = mat.preMultVec(posOff)
 	mat.setPosition(pos)
+	obj.setEuler([0,0,0])
 	obj.setMatrix(mat, viz.ABS_GLOBAL)
 
 
-#def getAvatarPos():
-#	print playerNode.getPosition()
-#vizact.onupdate(0,getAvatarPos)
+def getAvatarPos(obj):
+	print obj.getPosition()

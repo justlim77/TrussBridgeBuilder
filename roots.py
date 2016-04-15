@@ -57,10 +57,10 @@ def EnvironmentRoot(visibility=True):
 	
 def BridgeRoot(pos=([0,0,0]),euler=([0,0,0])):
 	bridge_root = viz.addGroup()
-	axes = vizshape.addAxes(parent=bridge_root)
-	X = viz.addText3D('X',pos=[1.1,0,0],color=viz.RED,scale=[0.3,0.3,0.3],parent=axes)
-	Y = viz.addText3D('Y',pos=[0,1.1,0],color=viz.GREEN,scale=[0.3,0.3,0.3],align=viz.ALIGN_CENTER_BASE,parent=axes)
-	Z = viz.addText3D('Z',pos=[0,0,1.1],color=viz.BLUE,scale=[0.3,0.3,0.3],align=viz.ALIGN_CENTER_BASE,parent=axes)
+#	axes = vizshape.addAxes(parent=bridge_root)
+#	X = viz.addText3D('X',pos=[1.1,0,0],color=viz.RED,scale=[0.3,0.3,0.3],parent=axes)
+#	Y = viz.addText3D('Y',pos=[0,1.1,0],color=viz.GREEN,scale=[0.3,0.3,0.3],align=viz.ALIGN_CENTER_BASE,parent=axes)
+#	Z = viz.addText3D('Z',pos=[0,0,1.1],color=viz.BLUE,scale=[0.3,0.3,0.3],align=viz.ALIGN_CENTER_BASE,parent=axes)
 	bridge_root.setPosition(pos)
 	bridge_root.setEuler(euler)
 	return bridge_root
