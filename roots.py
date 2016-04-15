@@ -43,35 +43,15 @@ def GridRoot(gridColor=viz.CYAN,origin=([0,0,0])):
 	# Create floating measurements
 	span_text = viz.addText3D('<< 20 meters >>',pos=[0,11,-5],scale=[1,1,1],parent=grid_root,align=viz.ALIGN_CENTER)
 	height_text = viz.addText3D('<< 10 meters >>',pos=[-11,5,-5],scale=[1,1,1],euler=[0,0,90],parent=grid_root,align=viz.ALIGN_CENTER)
-#	
-#	orientation_text = viz.addText3D('SIDE VIEW',pos=[-3.25,14,-5],parent=grid_root)
-#	info_text = viz.addText3D('<< Info >>',pos=[-3.25,12,-5],parent=grid_root)
-	
-	print 'Creating grid...'
 	return grid_root
 	
 	
 def EnvironmentRoot(visibility=True):
 	environment_root = viz.addGroup()
-	day = vizfx.addChild('resources/sky_day.osgb', scale=([5,5,5]),parent=environment_root)
-	environment = vizfx.addChild('resources/environment.osgb',parent=environment_root)
-	walkway = vizfx.addChild('resources/walkway.osgb',parent=environment_root)	
-	river = vizfx.addChild('resources/river.osgb', pos=(0,0.75,20),scale=([10,1,10]),parent=environment_root)
-	river.setAnimationSpeed(0.005)
-	road = viz.addChild('resources/road3.osgb',pos=(0,5,0))
-	road.setParent(environment_root)
-	clamp_L = viz.addChild('resources/clamp3.osgb',pos=(-21,-2.5,0),euler=(-90,0,0),scale=(0.25,0.5,0.5))
-	clamp_L.setParent(environment_root)
-	clamp_R = viz.addChild('resources/clamp3.osgb',pos=(21,-2.5,0),euler=(90,0,0),scale=(0.25,0.5,0.5))
-	clamp_R.setParent(environment_root)
-	
+	day = viz.addChild('resources/sky_day.osgb', scale=([5,5,5]),parent=environment_root)
+	environment = viz.addChild('resources/environment.osgb',parent=environment_root)
+#	walkway = viz.addChild('resources/walkway.osgb',parent=environment_root)	
 	environment_root.visible(visibility)
-	
-	walkway.collidePlane()
-	walkway.disable(viz.DYNAMICS)
-	walkway.enable(viz.COLLIDE_NOTIFY)
-	
-#	print 'Creating environment...'
 	return environment_root
 	
 	
@@ -83,6 +63,4 @@ def BridgeRoot(pos=([0,0,0]),euler=([0,0,0])):
 	Z = viz.addText3D('Z',pos=[0,0,1.1],color=viz.BLUE,scale=[0.3,0.3,0.3],align=viz.ALIGN_CENTER_BASE,parent=axes)
 	bridge_root.setPosition(pos)
 	bridge_root.setEuler(euler)
-	
-#	print 'Creating bridge root...'
 	return bridge_root

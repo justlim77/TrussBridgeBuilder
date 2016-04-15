@@ -227,6 +227,7 @@ def initOculus():
 	hmd = oculus.Rift()
 	if hmd.getSensor():
 		hmd.getSensor().reset(0)
+#		hmd.setZoom(0.5)
 		# Check if HMD supports position tracking
 		supportPositionTracking = hmd.getSensor().getSrcMask() & viz.LINK_POS
 		if supportPositionTracking:
@@ -257,6 +258,8 @@ def initViewport(position):
 	#Set the current position and orientation as point to reset to. 
 	viz.cam.setReset() 
 	viz.stepsize(0.5)
+	
+
 	return vp
 	
 	
@@ -272,7 +275,7 @@ def initLighting():
 	for window in viz.getWindowList():
 		window.getView().getHeadLight().disable()
 	# Create directional light
-	sky_light = vizfx.addDirectionalLight(euler=(0,90,0),color=[0.7,0.7,0.7])
+	sky_light = viz.addDirectionalLight(euler=(-66,37,0),color=[0.8,0.8,0.8])
 #	light1 = vizfx.addDirectionalLight(euler=(40,20,0), color=[0.7,0.7,0.7])
 #	light2 = vizfx.addDirectionalLight(euler=(-65,15,0), color=[0.5,0.25,0.0])
 #	sky_light.color(viz.WHITE)
@@ -374,22 +377,38 @@ def updateMouseStyle(canvas):
 
 # Add environment effects
 env = viz.addEnvironmentMap('resources/textures/sky.jpg')
-effect = vizfx.addAmbientCubeEffect(env)
-vizfx.getComposer().addEffect(effect)
-lightEffect = vizfx.addLightingModel(diffuse=vizfx.DIFFUSE_LAMBERT,specular=None)
-vizfx.getComposer().addEffect(lightEffect)
+#effect = vizfx.addAmbientCubeEffect(env)
+#vizfx.getComposer().addEffect(effect)
+#lightEffect = vizfx.addLightingModel(diffuse=vizfx.DIFFUSE_LAMBERT,specular=None)
+#vizfx.getComposer().addEffect(lightEffect)
 
 def applyEnvironmentEffect(obj):
 	obj.texture(env)
 	obj.appearance(viz.ENVIRONMENT_MAP)
-	obj.apply(effect)
-	obj.apply(lightEffect)	
+#	obj.apply(effect)
+#	obj.apply(lightEffect)	
+
+#applyEnvironmentEffect(environment_root)
+environment = viz.addChild('resources/environment.osgb',parent=environment_root)
+walkway = viz.addChild('resources/walkway.osgb',parent=environment_root)
+wave = viz.addChild('resources/wave2.osgb',pos=([0,0.5,0]),parent=environment_root)
+wave.setAnimationSpeed(0.05)
+road = viz.addChild('resources/road3.osgb',pos=(0,5,0))
+road.setParent(environment_root)
+clamp_L = viz.addChild('resources/clamp3.osgb',cache=viz.CACHE_CLONE,pos=(-21,-2.5,0),euler=(-90,0,0),scale=(0.25,0.5,0.5))
+clamp_L.setParent(environment_root)
+clamp_R = viz.addChild('resources/clamp3.osgb',cache=viz.CACHE_CLONE,pos=(21,-2.5,0),euler=(90,0,0),scale=(0.25,0.5,0.5))
+clamp_R.setParent(environment_root)
+applyEnvironmentEffect(road)
+applyEnvironmentEffect(wave)
+day = viz.addChild('resources/sky_day.osgb', scale=([5,5,5]),parent=environment_root)
+walkway.disable(viz.LIGHTING)
 
 # Bridge pin and roller supports
 #pinSupport = vizfx.addChild('resources/pinSupport.osgb',pos=(-9.5,4,0),scale=[1,1,11])
 #rollerSupport = vizfx.addChild('resources/rollerSupport.osgb',pos=(9.5,4,0),scale=[1,1,11])
-pinSupport = vizfx.addChild('resources/pinSupport.osgb',pos=(-9.5,4,0),scale=[1,1,11])
-rollerSupport = vizfx.addChild('resources/rollerSupport.osgb',pos=(9.5,4,0),scale=[1,1,11])
+pinSupport = viz.addChild('resources/pinSupport.osgb',pos=(-9.5,4,0),scale=[1,1,11])
+rollerSupport = viz.addChild('resources/rollerSupport.osgb',pos=(9.5,4,0),scale=[1,1,11])
 supports = [pinSupport,rollerSupport]
 
 #Setup anchor points for truss members
@@ -1067,14 +1086,6 @@ def createTrussNew(order=Order(),path='',loading=False):
 	proxyManager.addTarget(truss.targetNodes[1])
 
 	BUILD_MEMBERS.append(truss)
-		
-#	# Merge lists
-#	mergedList = BUILD_MEMBERS + INVENTORY
-#	for listItem in mergedList:
-#		listItem.texture(env)
-#		listItem.appearance(viz.ENVIRONMENT_MAP)
-#		listItem.apply(effect)
-#		listItem.apply(lightEffect)		
 	applyEnvironmentEffect(truss)
 	
 	try:
@@ -1149,10 +1160,7 @@ def generateMembers(loading=False):
 		proxyManager.addSensor(trussMember.sensorNodes[1])
 
 		BUILD_MEMBERS.append(trussMember)
-		trussMember.texture(env)
-		trussMember.appearance(viz.ENVIRONMENT_MAP)
-		trussMember.apply(effect)
-		trussMember.apply(lightEffect)
+		applyEnvironmentEffect(trussMember)
 
 	# Clear ORDERS
 	ORDERS = []
@@ -2130,6 +2138,7 @@ def MainTask():
 		global mouseTracker
 		global gloveLink
 		global highlightTool
+		global playerNode
 		
 		# Initialize remaining
 		hmd = initOculus()
@@ -2140,8 +2149,16 @@ def MainTask():
 		gloveLink = initLink('glove.cfg',mouseTracker)
 		viz.link(gloveLink,highlightTool)	
 		
+		global axes
+		axes = vizshape.addAxes()
+#		playerLink = viz.link(viz.MainView,playerNode)
+#		playerLink.setMask(viz.LINK_POS)
+#		vizact.onupdate(0,updatePosition(inventoryCanvas,playerNode))
+		
 		viewPos = viewport.getNode3d().getPosition()
 		viz.MainView.setPosition(viewPos)
+		keyTracker = vizconnect.getTracker('rift_with_mouse_and_keyboard').getNode3d()
+		playerLink = viz.link(keyTracker,axes)
 		inventoryCanvas.setEuler( [0,30,0] )
 		inventoryCanvas.setPosition ( [0,viewPos[1]-.2,viewPos[2]+.2] )
 		rotationCanvas.setEuler( [0,30,0] )
@@ -2190,3 +2207,18 @@ def updatePosition(self):
 	pos = mat.preMultVec(posOff)
 	mat.setPosition(pos)
 	self.setMatrix(mat, viz.ABS_GLOBAL)
+	
+def updatePosition(obj,target):
+	"""Internal update function"""
+	# Update the transformation of the node
+	mat = target.getMatrix(viz.ABS_GLOBAL)
+#	posOff = [0, obj.getSize()[1]/2.0+target.getSize()[1]/2.0, -0.01]
+	posOff = [0, obj.getPosition()[1]/2.0+target.getPosition()[1]/2.0, -0.01]
+	pos = mat.preMultVec(posOff)
+	mat.setPosition(pos)
+	obj.setMatrix(mat, viz.ABS_GLOBAL)
+
+
+#def getAvatarPos():
+#	print playerNode.getPosition()
+#vizact.onupdate(0,getAvatarPos)

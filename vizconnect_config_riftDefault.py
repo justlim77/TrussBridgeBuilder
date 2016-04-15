@@ -127,6 +127,9 @@ def initTrackers(initFlag=vizconnect.INIT_INDEPENDENT, initList=None):
 		if initFlag&vizconnect.INIT_PARENTS:
 			vizconnect.getTracker(_name).setParent(vizconnect.getRoot())
 
+	#VC: set the name of the default
+	vizconnect.setDefault('tracker', 'rift_with_mouse_and_keyboard')
+
 	#VC: return values can be modified here
 	return None
 
