@@ -238,7 +238,8 @@ def initOculus():
 		print 'Oculus player height:', hmd.getProfile().playerHeight
 		print 'Oculus eye height:', hmd.getProfile().eyeHeight
 		
-		viz.link(hmd.getSensor(), viz.MainView)
+		#TODO FIX
+#		viz.link(hmd.getSensor(), viz.MainView)
 		
 		hmd.getSensor().reset()
 		
