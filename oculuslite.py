@@ -3,7 +3,7 @@ import viz
 import vizact
 import oculus
 
-class Oculus:
+class Oculus(object):
 	def __init__(self):		
 		# --Key commands
 		KEYS = { 'forward'	: 'w'
@@ -16,6 +16,7 @@ class Oculus:
 	
 		# --add oculus as HMD
 		self.hmd = oculus.Rift()
+		
 		if not self.hmd.getSensor():
 		#	sys.exit('Oculus Rift not detected')
 			print('Oculus Rift not detected')
@@ -79,4 +80,15 @@ class Oculus:
 			
 	# Setup functions		
 	def setPosition(self,position):
-		self.navigationNode.setPosition(position, viz.REL_PARENT)
+#		self.navigationNode.setPosition(position, viz.REL_PARENT)
+		self.navigationNode.setPosition(position)
+		
+	def getPosition(self):
+#		return self.navigationNode.getPosition(viz.REL_PARENT)
+		return self.navigationNode.getPosition()
+		
+	def setEuler(self,euler):
+#		self.navigationNode.setEuler(euler, viz.REL_PARENT)
+		self.navigationNode.setEuler(euler)		
+	def reset(self):
+		self.hmd.getSensor().reset()

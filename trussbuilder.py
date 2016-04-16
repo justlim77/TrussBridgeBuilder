@@ -229,36 +229,16 @@ def initCamera(configPath):
 
 def initOculus():
 	# Reset View
-	from oculuslite import oculus
-	hmd = oculus.Rift()
-
-	if hmd.getSensor():
-		print 'Oculus profile name:', hmd.getProfile().name
-		print 'Oculus IPD:', hmd.getProfile().ipd
-		print 'Oculus player height:', hmd.getProfile().playerHeight
-		print 'Oculus eye height:', hmd.getProfile().eyeHeight
-		
-		#TODO FIX
-#		viz.link(hmd.getSensor(), viz.MainView)
-		
-		hmd.getSensor().reset()
-		
-#		# Check if HMD supports position tracking
-#		supportPositionTracking = hmd.getSensor().getSrcMask() & viz.LINK_POS
-#		if supportPositionTracking:
-#
-#			# Add camera bounds model
-#			camera_bounds = hmd.addCameraBounds()
-#			camera_bounds.visible(DEBUG_CAMBOUNDS)
-#
-#			# Change color of bounds to reflect whether position was tracked
-#			def CheckPositionTracked():
-#				if hmd.getSensor().getStatus() & oculus.STATUS_POSITION_TRACKED:
-#					camera_bounds.color(viz.GREEN)
-#				else:
-#					camera_bounds.color(viz.RED)
-#			vizact.onupdate(0, CheckPositionTracked)
-	return hmd
+#	from oculuslite import oculus
+#	hmd = oculus.Rift()
+	oculusRift = oculuslite.Oculus()
+	
+	if oculusRift.hmd.getSensor():
+		print 'Oculus profile name:', oculusRift.hmd.getProfile().name
+		print 'Oculus IPD:', oculusRift.hmd.getProfile().ipd
+		print 'Oculus player height:', oculusRift.hmd.getProfile().playerHeight
+		print 'Oculus eye height:', oculusRift.hmd.getProfile().eyeHeight
+	return oculusRift
 	
 			
 def initViewport(position):
@@ -1729,7 +1709,8 @@ def cycleMode(mode=Mode.Add):
 	
 	if MODE == Mode.Build:
 		inventoryCanvas.setMouseStyle(viz.CANVAS_MOUSE_VIRTUAL)
-		viewport.getNode3d().setPosition(START_POS)
+#		viewport.getNode3d().setPosition(START_POS)
+		hmd.setPosition(START_POS)
 		
 		# Clear highlighter
 		SHOW_HIGHLIGHTER = False
@@ -1741,7 +1722,8 @@ def cycleMode(mode=Mode.Add):
 		cycleOrientation(ORIENTATION)
 	if MODE == Mode.Edit:
 		inventoryCanvas.setMouseStyle(viz.CANVAS_MOUSE_VISIBLE)
-		viewport.getNode3d().setPosition(START_POS)
+#		viewport.getNode3d().setPosition(START_POS)
+		hmd.setPosition(START_POS)
 		
 		# Clear highlighter
 		SHOW_HIGHLIGHTER = True
@@ -1755,7 +1737,8 @@ def cycleMode(mode=Mode.Add):
 		cycleOrientation(ORIENTATION)
 	if MODE == Mode.Add:
 		inventoryCanvas.setMouseStyle(viz.CANVAS_MOUSE_VISIBLE)
-		viewport.getNode3d().setPosition(START_POS)
+#		viewport.getNode3d().setPosition(START_POS)
+		hmd.setPosition(START_POS)	
 		
 		# Show highlighter
 		SHOW_HIGHLIGHTER = True
@@ -1795,8 +1778,10 @@ def cycleMode(mode=Mode.Add):
 		mouseTracker.distance = HAND_DISTANCE
 		bridge_root.setPosition(BRIDGE_ROOT_POS)
 		bridge_root.setEuler(SIDE_VIEW_ROT)
-		viewport.getNode3d().setPosition(WALK_POS)
-		viewport.getNode3d().setEuler(WALK_ROT)
+#		viewport.getNode3d().setPosition(WALK_POS)
+#		viewport.getNode3d().setEuler(WALK_ROT)
+		hmd.setPosition(WALK_POS)
+		hmd.setEuler(WALK_ROT)
 		
 		# Show all truss members
 		for member in SIDE_CLONES:
@@ -1834,7 +1819,8 @@ def onKeyUp(key):
 		else:
 			quitGame()
 	elif key == KEYS['home']:
-		viewport.reset()
+#		viewport.reset()
+		hmd.reset()
 		mouseTracker.distance = HAND_DISTANCE
 		runFeedbackTask('View reset!')
 		viewChangeSound.play()
@@ -2145,7 +2131,7 @@ def MainTask():
 		vizact.onbuttonup ( confirmButton, cycleMode, Mode.Build )
 		vizact.onbuttonup ( confirmButton, menuCanvas.visible, viz.OFF )
 
-		cameraRift = initCamera('vizconnect_config_riftDefault')
+#		cameraRift = initCamera('vizconnect_config_riftDefault')
 		#cameraFly = initCamera('vizconnect_config_riftFly')
 
 		menuCanvas.visible(viz.OFF)
@@ -2157,7 +2143,6 @@ def MainTask():
 		
 		# Define globals
 		global hmd
-		global viewport
 		global mouseTracker
 		global gloveLink
 		global highlightTool
@@ -2165,7 +2150,8 @@ def MainTask():
 		
 		# Initialize remaining
 		hmd = initOculus()
-		viewport = initViewport(START_POS)
+		hmd.setPosition(START_POS)
+#		viewport = initViewport(START_POS)
 		highlightTool.setUpdateFunction(updateHighlightTool)
 		mouseTracker = initTracker(HAND_DISTANCE)
 		initMouse()
@@ -2179,11 +2165,11 @@ def MainTask():
 #		playerLink.setMask(viz.LINK_POS)
 #		vizact.onupdate(0,updatePosition(inventoryCanvas,playerNode))
 		
-		viewPos = viewport.getNode3d().getPosition()
-		keyTracker = vizconnect.getTracker('rift_with_mouse_and_keyboard').getNode3d()
-		keyTransport = vizconnect.getTransport('main_transport').getNode3d()
+		viewPos = hmd.getPosition()
+#		keyTracker = vizconnect.getTracker('rift_with_mouse_and_keyboard').getNode3d()
+#		keyTransport = vizconnect.getTransport('main_transport').getNode3d()
 #		viz.link(viz.MainView,keyTracker)
-		viz.MainView.setPosition(START_POS)
+#		viz.MainView.setPosition(START_POS)
 #		playerLink = viz.link(viz.MainView,keyTracker)
 #		trackerLink = viz.link(keyTracker,axes)
 		inventoryCanvas.setEuler( [0,30,0] )
@@ -2199,7 +2185,7 @@ def MainTask():
 #		vizact.onupdate(0,updatePosition,axes,keyTransport)
 #		link = viz.link(keyTransport,axes,viz.LINK_POS)
 
-		axesLink = viz.link(viz.MainView,axes)
+		axesLink = viz.link(hmd.viewLink,axes)
 		axesLink.setMask(viz.LINK_POS)
 		axesLink.postTrans([0,-1,2])
 
