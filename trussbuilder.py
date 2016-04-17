@@ -53,6 +53,7 @@ import vizshape
 import viztask
 import inventory
 import mathlite
+import navigation
 import oculuslite
 import panels
 import roots
