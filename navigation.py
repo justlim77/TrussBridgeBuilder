@@ -8,12 +8,70 @@ import sys
 import viz
 import vizact
 import vizconfig
-
 import vizinfo
-vizinfo.InfoPanel()
 
-class Joystick(object):
+class Navigator(object):
 	def __init__(self):
+		# --Key commands
+		self.KEYS = { 'forward'	: 'w'
+					,'back' 	: 's'
+					,'left' 	: 'a'
+					,'right'	: 'd'
+					,'down'		: 'z'
+					,'up'		: 'x'
+					,'reset'	: 'r'
+					,'camera'	: 'c'
+		}
+		self.MOVE_SPEED = 1.0
+		self.TURN_SPEED = 45.0
+		self.ORIGIN_POS = [0,0,0]
+		self.ORIGIN_EULER = [0,0,0]
+		
+		self.node = viz.addGroup()
+		self.viewLink = viz.link(self.node,viz.MainView)
+		
+	# Setup functions		
+	def setPosition(self,position):
+#		self.navigationNode.setPosition(position, viz.REL_PARENT)
+		self.node.setPosition(position)
+		
+	def getPosition(self):
+#		return self.navigationNode.getPosition(viz.REL_PARENT)
+		return self.node.getPosition()
+		
+	def setEuler(self,euler):
+#		self.navigationNode.setEuler(euler, viz.REL_PARENT)
+		self.node.setEuler(euler)	
+			
+	def setMoveSpeed(self,speed):
+		self.MOVE_SPEED = speed
+
+	def setTurnSpeed(self,speed):
+		self.TURN_SPEED = speed
+	
+	def setOrigin(self,pos,euler):
+		self.ORIGIN_POS = pos
+		self.ORIGIN_EULER = euler	
+	
+	def updateView(self):
+		#TODO: Implement WASD movement and mouse look
+		pass
+		
+	def reset(self):
+		self.node.setPosition(self.ORIGIN_POS)
+		self.node.setEuler(self.ORIGIN_EULER)
+	
+	def valid(self):
+		return True
+	
+	def setMain(self):
+		vizact.ontimer(0,self.updateView)
+		vizact.onkeyup(KEYS['reset'],self.reset)
+
+class Joystick(Navigator):
+	def __init__(self):
+		super(self.__class__,self).__init__()
+		
 		# Get list of joystick device information
 		dinput = viz.add('DirectInput.dle')
 		self.devices = dinput.getJoystickDevices()
@@ -32,7 +90,7 @@ class Joystick(object):
 
 		# Connect to selected device
 		self.joy = dinput.addJoystick(self.devices[selected])
-		if not self.joy:
+		if not self.joy.valid():
 #			sys.exit('Failed to connect to joystick')
 			print('Failed to connect to joystick')
 			return None
@@ -46,50 +104,42 @@ class Joystick(object):
 
 		# Create node for applying joystick movement and link to main view
 #		self.node = viz.addGroup(pos=(0,1.8,0))
-		self.node = viz.addGroup()
-		self.viewLink = viz.link(self.node, viz.MainView)
+#		self.node = viz.addGroup()
+#		self.viewLink = viz.link(self.node, viz.MainView)
 		
-		# Use joystick axes to move joystick node
-		# Horizontal (X) axis controls yaw
-		# Vertical (Y) axis controls position
-		self.MOVE_SPEED = 1.0
-		self.TURN_SPEED = 45.0
-		def UpdateJoystickMovement():
-			e = viz.elapsed()
-			x,y,z = self.joy.getPosition()
-			self.node.setEuler([x * self.TURN_SPEED * e, 0, 0], viz.REL_LOCAL)
-			self.node.setPosition([0, 0, y * self.MOVE_SPEED * viz.getFrameElapsed()], viz.REL_LOCAL)
-		vizact.ontimer(0, UpdateJoystickMovement)
+	# Use joystick axes to move joystick node
+	# Horizontal (X) axis controls yaw
+	# Vertical (Y) axis controls position
+	def updateView(self):
+		e = viz.elapsed()
+		f = viz.getFrameElapsed()
+		x,y,z = self.joy.getPosition()
+		forward = y * self.MOVE_SPEED * e
+		rotation = x * self.TURN_SPEED * f
+		self.node.setEuler([rotation, 0, 0], viz.REL_LOCAL)
+		self.node.setPosition([0, 0, forward], viz.REL_LOCAL)
 
-		# Reset joystick when joystick button 0 is pressed
-		def ResetPosition():
-			self.node.setPosition([0,1.8,0])
-			self.node.setEuler([0,0,0])
-		vizact.onsensordown(self.joy, 0, ResetPosition)
-		
-		def SetMoveSpeed(self,val):
-			self.MOVE_SPEED = val
-			
-		def SetTurnSpeed(self,val):
-			self.TURN_SPEED = val
+	# Reset joystick when joystick button 0 is pressed
+	def reset(self):
+		self.node.setPosition(self.ORIGIN_POS)
+		self.node.setEuler(self.ORIGIN_EULER)
 
+	def valid(self):
+		if not self.joy.valid():
+			return False
+		return True
 
-class Oculus(object):
-
-	def __init__(self):		
-		import oculus
-		
-		# --Key commands
-		self.KEYS = { 'forward'	: 'w'
-					,'back' 	: 's'
-					,'left' 	: 'a'
-					,'right'	: 'd'
-					,'down'		: 'z'
-					,'up'		: 'x'
-					,'reset'	: 'r'
-					,'camera'	: 'c'
-		}
+	def setMain(self):
+		vizact.ontimer(0, self.updateView)
+		vizact.onsensordown(self.joy, 0, reset)
 	
+
+class Oculus(Navigator):
+	def __init__(self):
+		super(self.__class__,self).__init__()	
+		
+		import oculus
+
 		# --add oculus as HMD
 		self.hmd = oculus.Rift()
 		
@@ -102,7 +152,7 @@ class Oculus(object):
 			self.hmd.getSensor().reset()
 			
 			# Setup heading reset key
-			vizact.onkeyup(self.KEYS['reset'], self.hmd.getSensor().reset)
+#			vizact.onkeyup(self.KEYS['reset'], self.hmd.getSensor().reset)
 
 			# Check if HMD supports position tracking
 			self.supportPositionTracking = self.hmd.getSensor().getSrcMask() & viz.LINK_POS
@@ -139,23 +189,11 @@ class Oculus(object):
 				self.viewLink.setOffset([0,1.8,0])
 
 			
-	# Setup functions		
-	def setPosition(self,position):
-#		self.navigationNode.setPosition(position, viz.REL_PARENT)
-		self.navigationNode.setPosition(position)
-		
-	def getPosition(self):
-#		return self.navigationNode.getPosition(viz.REL_PARENT)
-		return self.navigationNode.getPosition()
-		
-	def setEuler(self,euler):
-#		self.navigationNode.setEuler(euler, viz.REL_PARENT)
-		self.navigationNode.setEuler(euler)	
-		
+	# Setup functions	
 	def reset(self):
 		self.hmd.getSensor().reset()
 		
-	def UpdateView(self):
+	def updateView(self):
 		yaw,pitch,roll = self.viewLink.getEuler()
 		m = viz.Matrix.euler(yaw,0,0)
 		dm = viz.getFrameElapsed() * self.MOVE_SPEED
@@ -173,42 +211,77 @@ class Oculus(object):
 			m.preTrans([0,-dm,0])
 		self.navigationNode.setPosition(m.getPosition(), viz.REL_PARENT)
 
-	def initOculusNavigation(self):
+	def valid(self):
+		if not self.hmd.getSensor():
+			return False
+		return True
+
+	def setMain(self):
 		# --Setup arrow key navigation
-		self.MOVE_SPEED = 2.0	
-		vizact.ontimer(0,self.UpdateView)
+		self.MOVE_SPEED = 2.0
+		vizact.ontimer(0,self.updateView)
+		vizact.onkeyup(KEYS['reset'],self.reset)
+
+class Joculus(Navigator):
+	def __init__(self):
+		super(self.__class__,self).__init__()
+		
+		self.joystick = Joystick()
+		self.hmd = Oculus()
+
+		if not self.valid():
+			print 'Failed to initialize Joculus'
+			return None
 			
-	def setMoveSpeed(self,speed):
-		self.MOVE_SPEED = speed
+		self.viewLink = viz.link(self.joystick.viewLink, self.hmd.navigationNode)
 		
+	def reset(self):
+		self.joystick.reset()
+		self.hmd.reset()
 		
-# Run scene
-viz.setMultiSample(4)
-viz.fov(60)
-viz.go()
+	def valid(self):
+		if not self.joystick.valid() or not self.hmd.valid():
+			return False
+		return True
+			
+	def setMain(self):
+		vizact.ontimer(0,self.joystick.updateView)
+		vizact.onsensorup(self.joystick.joy,0,self.reset)
+		
 
-joystick = Joystick()
-hmd = Oculus()
+if __name__ == "__main__":
+	
+	vizinfo.InfoPanel()
 
-if not hmd.hmd.getSensor():
-	print 'No hmd'
-	pass
-elif not joystick.devices:
-	hmd.initOculusNavigation()
-	viewLink = hmd.viewLink
-else:
-	viewLink = viz.link(joystick.viewLink, hmd.navigationNode )
+	# Run scene
+	viz.setMultiSample(4)
+	viz.fov(60)
+	viz.go()
 
-#viz.link(hmd.viewLink,joystick.joystick_node)
-#viz.link(hmd.viewLink,joystick.viewLink)
-#viz.link(joystick.viewLink,hmd.viewLink)
+#	joystick = Joystick()
+#	hmd = Oculus()
+	joculus = Joculus()
+	if not joculus.valid():
+		pass
+	else:
+		joculus.setMain()
+#	if not hmd.hmd.getSensor():
+#		print 'No hmd'
+#		pass
+#	elif not joystick.devices:
+#		hmd.setMain()
+#		viewLink = hmd.viewLink
+#	else:
+#		viewLink = viz.link(joystick.viewLink, hmd.navigationNode )
 
-#mouseTracker = initTracker(HAND_DISTANCE)
-#initMouse()
-#gloveLink = initLink('glove.cfg',mouseTracker)
-#viz.link(gloveLink,highlightTool)
+	#viz.link(hmd.viewLink,joystick.joystick_node)
+	#viz.link(hmd.viewLink,joystick.viewLink)
+	#viz.link(joystick.viewLink,hmd.viewLink)
 
-# Add environment
-viz.addChild('maze.osgb')
+	#mouseTracker = initTracker(HAND_DISTANCE)
+	#initMouse()
+	#gloveLink = initLink('glove.cfg',mouseTracker)
+	#viz.link(gloveLink,highlightTool)
 
-viewLink.setPosition([0,3,0])
+	# Add environment
+	viz.addChild('maze.osgb')

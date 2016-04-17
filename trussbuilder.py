@@ -222,7 +222,7 @@ def initScene(res=RESOLUTION,quality=4,fov=FOV,stencil=8,stereoMode=viz.STEREO_H
 	darkTheme = themes.getDarkTheme()
 	viz.setTheme(darkTheme)	
 
-
+5
 def initCamera(configPath):
 	nav = vizconnect.go(configPath)
 	return nav
@@ -232,7 +232,7 @@ def initOculus():
 	# Reset View
 #	from oculuslite import oculus
 #	hmd = oculus.Rift()
-	oculusRift = oculuslite.Oculus()
+	oculusRift = navigation.Oculus()
 	
 	if oculusRift.hmd.getSensor():
 		print 'Oculus profile name:', oculusRift.hmd.getProfile().name
