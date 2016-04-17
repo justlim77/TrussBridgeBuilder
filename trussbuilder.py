@@ -222,7 +222,7 @@ def initScene(res=RESOLUTION,quality=4,fov=FOV,stencil=8,stereoMode=viz.STEREO_H
 	darkTheme = themes.getDarkTheme()
 	viz.setTheme(darkTheme)	
 
-5
+
 def initCamera(configPath):
 	nav = vizconnect.go(configPath)
 	return nav
