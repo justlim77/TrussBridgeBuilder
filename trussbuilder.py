@@ -179,11 +179,8 @@ DEBUG_CAMBOUNDS = False
 KEYS = { 'forward'	: 'w'
 		,'FORWARD'	: 'W'
 		,'back'		: 's'
-		,'BACK'		: 'S'
 		,'left'		: 'a'
-		,'LEFT'		: 'A'
-		,'right'	: 'd'
-		,'RIGHT'	: 'D'	
+		,'right'	: 'd'	
 		,'reset'	: 'r'
 		,'restart'	: viz.KEY_END
 		,'home'		: viz.KEY_HOME
@@ -1711,7 +1708,8 @@ def cycleMode(mode=Mode.Add):
 	if MODE == Mode.Build:
 		inventoryCanvas.setMouseStyle(viz.CANVAS_MOUSE_VIRTUAL)
 #		viewport.getNode3d().setPosition(START_POS)
-		hmd.setPosition(START_POS)
+#		hmd.setPosition(START_POS)
+		joculus.setPosition(START_POS)
 		
 		# Clear highlighter
 		SHOW_HIGHLIGHTER = False
@@ -1724,7 +1722,8 @@ def cycleMode(mode=Mode.Add):
 	if MODE == Mode.Edit:
 		inventoryCanvas.setMouseStyle(viz.CANVAS_MOUSE_VISIBLE)
 #		viewport.getNode3d().setPosition(START_POS)
-		hmd.setPosition(START_POS)
+#		hmd.setPosition(START_POS)
+		joculus.setPosition(START_POS)
 		
 		# Clear highlighter
 		SHOW_HIGHLIGHTER = True
@@ -1781,8 +1780,10 @@ def cycleMode(mode=Mode.Add):
 		bridge_root.setEuler(SIDE_VIEW_ROT)
 #		viewport.getNode3d().setPosition(WALK_POS)
 #		viewport.getNode3d().setEuler(WALK_ROT)
-		hmd.setPosition(WALK_POS)
-		hmd.setEuler(WALK_ROT)
+#		hmd.setPosition(WALK_POS)
+#		hmd.setEuler(WALK_ROT)
+		joculus.setPosition(WALK_POS)
+		joculus.setPosition(WALK_ROT)
 		
 		# Show all truss members
 		for member in SIDE_CLONES:
@@ -1821,7 +1822,8 @@ def onKeyUp(key):
 			quitGame()
 	elif key == KEYS['home']:
 #		viewport.reset()
-		hmd.reset()
+#		hmd.reset()
+		joculus.reset()
 		mouseTracker.distance = HAND_DISTANCE
 		runFeedbackTask('View reset!')
 		viewChangeSound.play()
@@ -2148,10 +2150,13 @@ def MainTask():
 		global gloveLink
 		global highlightTool
 		global playerNode
+		global joculus
 		
 		# Initialize remaining
-		hmd = initOculus()
-		hmd.setPosition(START_POS)
+#		hmd = initOculus()
+#		hmd.setPosition(START_POS)
+		joculus = navigation.Joculus()
+		joculus.setAsMain()
 #		viewport = initViewport(START_POS)
 		highlightTool.setUpdateFunction(updateHighlightTool)
 		mouseTracker = initTracker(HAND_DISTANCE)
@@ -2166,7 +2171,8 @@ def MainTask():
 #		playerLink.setMask(viz.LINK_POS)
 #		vizact.onupdate(0,updatePosition(inventoryCanvas,playerNode))
 		
-		viewPos = hmd.getPosition()
+#		viewPos = hmd.getPosition()
+		viewPos = joculus.getPosition()
 #		keyTracker = vizconnect.getTracker('rift_with_mouse_and_keyboard').getNode3d()
 #		keyTransport = vizconnect.getTransport('main_transport').getNode3d()
 #		viz.link(viz.MainView,keyTracker)
@@ -2186,7 +2192,8 @@ def MainTask():
 #		vizact.onupdate(0,updatePosition,axes,keyTransport)
 #		link = viz.link(keyTransport,axes,viz.LINK_POS)
 
-		axesLink = viz.link(hmd.viewLink,axes)
+#		axesLink = viz.link(hmd.viewLink,axes)
+		axesLink = viz.link(joculus.VIEW_LINK,axes)
 		axesLink.setMask(viz.LINK_POS)
 		axesLink.postTrans([0,-1,2])
 
