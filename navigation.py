@@ -26,6 +26,26 @@ class Navigator(object):
 					,'up'		: 'x'
 					,'reset'	: 'r'
 					,'camera'	: 'c'
+					,'restart'	: viz.KEY_END
+					,'home'		: viz.KEY_HOME
+					,'builder'	: 'b'
+					,'viewer'	: 'v'
+					,'env'		: 't'
+					,'grid'		: 'g'
+					,'hand'		: 'h'
+					,'showMenu' : ' '
+					,'snapMenu'	: viz.KEY_CONTROL_L
+					,'interact' : viz.MOUSEBUTTON_LEFT
+					,'utility'	: viz.MOUSEBUTTON_MIDDLE
+					,'rotate'	: viz.MOUSEBUTTON_RIGHT
+					,'cycle'	: viz.KEY_TAB
+					,'mode'		: viz.KEY_SHIFT_L
+					,'proxi'	: 'p'
+					,'collide'	: 'c'
+					,'walk'		: '/'
+					,'esc'		: viz.KEY_ESCAPE
+					,'viewMode' : 'm'
+					,'capslock'	: viz.KEY_CAPS_LOCK
 		}
 		self.MOVE_SPEED = 2.0
 		self.TURN_SPEED = 45.0
@@ -35,6 +55,7 @@ class Navigator(object):
 		
 		self.NODE = viz.addGroup()
 		self.VIEW_LINK = viz.link(self.NODE, viz.MainView)
+		self.VIEW_LINK.setOffset([0,self.EYE_HEIGHT,0])	
 		
 	# Setup functions		
 	def getPosition(self):
@@ -111,8 +132,6 @@ class Navigator(object):
 	
 	def setAsMain(self):
 		viz.logStatus("""Setting Navigator as main""")
-
-		self.VIEW_LINK.setOffset([0,self.EYE_HEIGHT,0])
 		
 		vizact.ontimer(0,self.updateView)
 		vizact.onkeyup(self.KEYS['reset'],self.reset)
@@ -124,6 +143,8 @@ class Navigator(object):
 			euler[1] = viz.clamp(euler[1],-85.0,85.0)
 			self.VIEW_LINK.setEuler(euler,viz.HEAD_ORI)
 		viz.callback(viz.MOUSE_MOVE_EVENT,mouseMove)
+	
+		viz.fov(60)
 			
 # Joystick
 _extension = None
@@ -167,7 +188,8 @@ class Joystick(Navigator):
 		# Create node for applying joystick movement and link to main view
 		self.NODE = viz.addGroup()
 		self.VIEW_LINK = viz.link(self.NODE, viz.MainView)
-		
+		self.VIEW_LINK.setOffset([0,self.EYE_HEIGHT,0])
+			
 		# Use joystick axes to move joystick node
 		# Horizontal (X) axis controls yaw
 		# Vertical (Y) axis controls position
@@ -192,7 +214,7 @@ class Joystick(Navigator):
 	def setAsMain(self):
 		vizact.ontimer(0, self.updateView)
 		vizact.onsensordown(self.joy, 0, self.reset)
-		self.NODE.setPosition(0,self.EYE_HEIGHT,0)
+#		self.NODE.setPosition(0,self.EYE_HEIGHT,0)
 
 class Oculus(Navigator):
 	def __init__(self):		
@@ -217,6 +239,10 @@ class Oculus(Navigator):
 			profile = self.hmd.getProfile()
 			if profile:
 				self.VIEW_LINK.setOffset([0,profile.eyeHeight,0])
+				viz.logInfo('Oculus profile name:', profile.name)
+				viz.logInfo('Oculus IPD:', profile.ipd)
+				viz.logInfo('Oculus player height:', profile.playerHeight)
+				viz.logInfo('Oculus eye height:', profile.eyeHeight)
 			else:
 				self.VIEW_LINK.setOffset([0,self.EYE_HEIGHT,0])
 
@@ -273,7 +299,7 @@ class Oculus(Navigator):
 		self.MOVE_SPEED = 2.0	
 		vizact.ontimer(0,self.updateView)
 			
-class Joculus(Navigator):
+class Joyoculus(Navigator):
 	def __init__(self):		
 		super(self.__class__,self).__init__()
 	
@@ -306,35 +332,44 @@ class Joculus(Navigator):
 		vizact.onsensordown(self.joystick.getSensor(),self.KEYS['reset'], self.reset)
 		
 		# --Setup arrow key navigation	
-		vizact.ontimer(0,self.updateView)
+		vizact.ontimer(0,self.joystick.updateView)
+		
+# Check for devices
+def checkOculus():
+	hmd = oculus.Rift()
+	if not hmd.getSensor():
+		return False
+	return True
+
+def checkJoystick():
+	allDevices = getDevices()
+	if allDevices:
+		device = allDevices[0]	
+		return True
+	else:
+		return False
+
+def getNavigator():
+	if checkOculus() and checkJoystick():
+		nav = Joyoculus()
+	elif checkJoystick():
+		nav = Joystick()
+	elif checkOculus():
+		nav = Oculus()
+	else:
+		nav = Navigator()
+		
+	nav.setAsMain()
+	return nav
 
 if __name__ == '__main__':		
 	# Run scene
 	viz.setMultiSample(8)
 	viz.fov(60)
 	viz.go()
-
-	# Check for devices
-	def checkOculus():
-		import oculus
-		hmd = oculus.Rift()
-		if not hmd.getSensor():
-			return False
-		return True
-	
-	def checkJoystick():
-		allDevices = getDevices()
-		if allDevices:
-			device = allDevices[0]	
-			return True
-		else:
-			return False
 	
 	if checkOculus() and checkJoystick():
-#		joystick = Joystick()
-#		hmd = Oculus()
-#		viewLink = viz.link(joystick.viewLink, hmd.node )
-		joculus = Joculus()
+		joculus = Joyoculus()
 		viewLink = joculus.VIEW_LINK
 		joculus.setAsMain()
 	elif checkJoystick():

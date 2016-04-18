@@ -54,7 +54,6 @@ import viztask
 import inventory
 import mathlite
 import navigation
-import oculuslite
 import panels
 import roots
 import sys
@@ -219,23 +218,13 @@ def initScene(res=RESOLUTION,quality=4,fov=FOV,stencil=8,stereoMode=viz.STEREO_H
 	darkTheme = themes.getDarkTheme()
 	viz.setTheme(darkTheme)	
 
-
-def initCamera(configPath):
-	nav = vizconnect.go(configPath)
-	return nav
-
-
 def initOculus():
 	# Reset View
 #	from oculuslite import oculus
 #	hmd = oculus.Rift()
 	oculusRift = navigation.Oculus()
 	
-	if oculusRift.hmd.getSensor():
-		print 'Oculus profile name:', oculusRift.hmd.getProfile().name
-		print 'Oculus IPD:', oculusRift.hmd.getProfile().ipd
-		print 'Oculus player height:', oculusRift.hmd.getProfile().playerHeight
-		print 'Oculus eye height:', oculusRift.hmd.getProfile().eyeHeight
+	
 	return oculusRift
 	
 			
@@ -1709,7 +1698,7 @@ def cycleMode(mode=Mode.Add):
 		inventoryCanvas.setMouseStyle(viz.CANVAS_MOUSE_VIRTUAL)
 #		viewport.getNode3d().setPosition(START_POS)
 #		hmd.setPosition(START_POS)
-		joculus.setPosition(START_POS)
+		navigator.setPosition(START_POS)
 		
 		# Clear highlighter
 		SHOW_HIGHLIGHTER = False
@@ -1723,7 +1712,7 @@ def cycleMode(mode=Mode.Add):
 		inventoryCanvas.setMouseStyle(viz.CANVAS_MOUSE_VISIBLE)
 #		viewport.getNode3d().setPosition(START_POS)
 #		hmd.setPosition(START_POS)
-		joculus.setPosition(START_POS)
+		navigator.setPosition(START_POS)
 		
 		# Clear highlighter
 		SHOW_HIGHLIGHTER = True
@@ -1782,8 +1771,8 @@ def cycleMode(mode=Mode.Add):
 #		viewport.getNode3d().setEuler(WALK_ROT)
 #		hmd.setPosition(WALK_POS)
 #		hmd.setEuler(WALK_ROT)
-		joculus.setPosition(WALK_POS)
-		joculus.setPosition(WALK_ROT)
+		navigator.setPosition(WALK_POS)
+		navigator.setPosition(WALK_ROT)
 		
 		# Show all truss members
 		for member in SIDE_CLONES:
@@ -1823,7 +1812,7 @@ def onKeyUp(key):
 	elif key == KEYS['home']:
 #		viewport.reset()
 #		hmd.reset()
-		joculus.reset()
+		navigator.reset()
 		mouseTracker.distance = HAND_DISTANCE
 		runFeedbackTask('View reset!')
 		viewChangeSound.play()
@@ -2150,13 +2139,12 @@ def MainTask():
 		global gloveLink
 		global highlightTool
 		global playerNode
-		global joculus
+		global navigator
 		
 		# Initialize remaining
 #		hmd = initOculus()
 #		hmd.setPosition(START_POS)
-		joculus = navigation.Joculus()
-		joculus.setAsMain()
+		navigator = navigation.getNavigator()
 #		viewport = initViewport(START_POS)
 		highlightTool.setUpdateFunction(updateHighlightTool)
 		mouseTracker = initTracker(HAND_DISTANCE)
@@ -2172,7 +2160,7 @@ def MainTask():
 #		vizact.onupdate(0,updatePosition(inventoryCanvas,playerNode))
 		
 #		viewPos = hmd.getPosition()
-		viewPos = joculus.getPosition()
+		viewPos = navigator.getPosition()
 #		keyTracker = vizconnect.getTracker('rift_with_mouse_and_keyboard').getNode3d()
 #		keyTransport = vizconnect.getTransport('main_transport').getNode3d()
 #		viz.link(viz.MainView,keyTracker)
@@ -2193,7 +2181,7 @@ def MainTask():
 #		link = viz.link(keyTransport,axes,viz.LINK_POS)
 
 #		axesLink = viz.link(hmd.viewLink,axes)
-		axesLink = viz.link(joculus.VIEW_LINK,axes)
+		axesLink = viz.link(navigator.VIEW_LINK,axes)
 		axesLink.setMask(viz.LINK_POS)
 		axesLink.postTrans([0,-1,2])
 
