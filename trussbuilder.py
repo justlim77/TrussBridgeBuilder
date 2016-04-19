@@ -70,6 +70,7 @@ RESOLUTION = ([1280,720])
 UTILITY_CANVAS_RES = ([80,80])
 MULTISAMPLING = 8
 FOV = 45
+START_FOV = 114
 STENCIL = 8
 STEREOMODE = viz.STEREO_HORZ
 FULLSCREEN = 0
@@ -382,13 +383,13 @@ environment = viz.addChild('resources/environment.osgb',parent=environment_root)
 walkway = viz.addChild('resources/walkway.osgb',parent=environment_root)
 wave = viz.addChild('resources/wave2.osgb',pos=([0,0.5,0]),parent=environment_root)
 wave.setAnimationSpeed(0.05)
-road = viz.addChild('resources/road3.osgb',pos=(0,5,0))
-road.setParent(environment_root)
+road_L = viz.addChild('resources/road3.osgb',pos=(-5,5,0))
+road_L.setParent(environment_root)
 clamp_L = viz.addChild('resources/clamp3.osgb',cache=viz.CACHE_CLONE,pos=(-21,-2.5,0),euler=(-90,0,0),scale=(0.25,0.5,0.5))
 clamp_L.setParent(environment_root)
 clamp_R = viz.addChild('resources/clamp3.osgb',cache=viz.CACHE_CLONE,pos=(21,-2.5,0),euler=(90,0,0),scale=(0.25,0.5,0.5))
 clamp_R.setParent(environment_root)
-applyEnvironmentEffect(road)
+applyEnvironmentEffect(road_L)
 applyEnvironmentEffect(wave)
 day = viz.addChild('resources/sky_day.osgb', scale=([5,5,5]),parent=environment_root)
 #walkway.disable(viz.LIGHTING)
@@ -512,7 +513,7 @@ soundButton = optionPanel.addItem(viz.addButtonLabel('Toggle Audio'))
 soundButton.length(2)
 resetButton = optionPanel.addItem(viz.addButtonLabel('Clear Bridge'))
 resetButton.length(2)
-quitButton = optionPanel.addItem(viz.addButtonLabel('Quit Game'))
+quitButton = optionPanel.addItem(viz.addButtonLabel('Quit Application'))
 quitButton.length(2)
 
 # Create inspector panel
@@ -764,6 +765,7 @@ def addOrder(orderTab,orderList=inventory.OrderList(),orderRow=[],flag=''):
 	_thickness = thicknessDropList.getItem(thicknessDropList.getSelection())
 	try:
 		_length = viz.clamp(float(lengthTextbox.get()),LEN_MIN,LEN_MAX)
+		_length = round(_length,2)
 	except:
 		runFeedbackTask('Invalid length!')
 		warningSound.play()
@@ -2158,7 +2160,7 @@ def MainTask():
 #		playerLink = viz.link(viz.MainView,playerNode)
 #		playerLink.setMask(viz.LINK_POS)
 #		vizact.onupdate(0,updatePosition(inventoryCanvas,playerNode))
-		
+		viz.fov(START_FOV)
 #		viewPos = hmd.getPosition()
 		viewPos = navigator.getPosition()
 #		keyTracker = vizconnect.getTracker('rift_with_mouse_and_keyboard').getNode3d()

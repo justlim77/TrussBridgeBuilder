@@ -54,8 +54,11 @@ class Navigator(object):
 		self.EYE_HEIGHT = 1.8
 		
 		self.NODE = viz.addGroup()
-		self.VIEW_LINK = viz.link(self.NODE, viz.MainView)
-		self.VIEW_LINK.setOffset([0,self.EYE_HEIGHT,0])	
+		self.VIEW = viz.MainView
+
+		#Override view link on inheriting classes
+		self.VIEW_LINK = viz.link(self.VIEW, self.NODE)
+		self.VIEW_LINK.setOffset([0,-self.EYE_HEIGHT,0])	
 		
 	# Setup functions		
 	def getPosition(self):
@@ -105,8 +108,7 @@ class Navigator(object):
 		self.ORIGIN_ROT = euler	
 	
 	def updateView(self):
-		#TODO: Implement WASD movement and mouse look
-		yaw,pitch,roll = self.VIEW_LINK.getEuler()
+		yaw,pitch,roll = self.VIEW.getEuler()
 		m = viz.Matrix.euler(yaw,0,0)
 		dm = viz.getFrameElapsed() * self.MOVE_SPEED
 		if viz.key.isDown(self.KEYS['forward']):
@@ -121,7 +123,8 @@ class Navigator(object):
 			m.preTrans([0,dm,0])
 		if viz.key.isDown(self.KEYS['down']):
 			m.preTrans([0,-dm,0])
-		self.NODE.setPosition(m.getPosition(), viz.REL_PARENT)
+		self.VIEW.setPosition(m.getPosition(), viz.REL_PARENT)
+		viz.logNotice('Node position:', self.getPosition())
 		
 	def reset(self):
 		self.NODE.setPosition(self.ORIGIN_POS)
@@ -136,16 +139,14 @@ class Navigator(object):
 		vizact.ontimer(0,self.updateView)
 		vizact.onkeyup(self.KEYS['reset'],self.reset)
 		
-		def mouseMove(e):
-			euler = self.VIEW_LINK.getEuler(viz.HEAD_ORI)
+		def onMouseMove(e):
+			euler = self.VIEW.getEuler(viz.HEAD_ORI)
 			euler[0] += e.dx*0.05
 			euler[1] += -e.dy*0.05
 			euler[1] = viz.clamp(euler[1],-85.0,85.0)
-			self.VIEW_LINK.setEuler(euler,viz.HEAD_ORI)
-		viz.callback(viz.MOUSE_MOVE_EVENT,mouseMove)
-	
-		viz.fov(60)
-			
+			self.VIEW.setEuler(euler,viz.HEAD_ORI)
+		viz.callback(viz.MOUSE_MOVE_EVENT, onMouseMove)
+		
 # Joystick
 _extension = None
 def getExtension():
@@ -162,6 +163,40 @@ def getDevices():
 class Joystick(Navigator):
 	def __init__(self):
 		super(self.__class__,self).__init__()
+		# --Override Key commands
+		self.KEYS = { 'forward'	: 'w'
+					,'back' 	: 's'
+					,'left' 	: 'a'
+					,'right'	: 'd'
+					,'down'		: 'z'
+					,'up'		: 'x'
+					,'reset'	: 0
+					,'camera'	: 'c'
+					,'restart'	: viz.KEY_END
+					,'home'		: viz.KEY_HOME
+					,'builder'	: 2
+					,'viewer'	: 3
+					,'env'		: 't'
+					,'grid'		: 'g'
+					,'hand'		: 'h'
+					,'showMenu' : 1
+					,'snapMenu'	: viz.KEY_CONTROL_L
+					,'interact' : viz.MOUSEBUTTON_LEFT
+					,'utility'	: viz.MOUSEBUTTON_MIDDLE
+					,'rotate'	: viz.MOUSEBUTTON_RIGHT
+					,'cycle'	: viz.KEY_TAB
+					,'mode'		: viz.KEY_SHIFT_L
+					,'proxi'	: 'p'
+					,'collide'	: 'c'
+					,'walk'		: 4
+					,'esc'		: viz.KEY_ESCAPE
+					,'viewMode' : 'm'
+					,'capslock'	: viz.KEY_CAPS_LOCK
+		}
+		
+		# Link navigation node to main view
+		self.VIEW_LINK = viz.link(self.NODE, self.VIEW)
+		self.VIEW_LINK.setOffset([0,self.EYE_HEIGHT,0])	
 		
 		# Get device from extension if not specified
 		self.device = None
@@ -219,7 +254,11 @@ class Joystick(Navigator):
 class Oculus(Navigator):
 	def __init__(self):		
 		super(self.__class__,self).__init__()
-	
+		
+		# Link navigation node to main view
+		self.VIEW_LINK = viz.link(self.NODE, self.VIEW)
+		self.VIEW_LINK.setOffset([0,self.EYE_HEIGHT,0])	
+		
 		# --add oculus as HMD
 		self.hmd = oculus.Rift()
 		
@@ -312,8 +351,27 @@ class Joyoculus(Navigator):
 					,'up'		: 'x'
 					,'reset'	: 0
 					,'camera'	: 'c'
+					,'restart'	: viz.KEY_END
+					,'home'		: viz.KEY_HOME
+					,'builder'	: 'b'
+					,'viewer'	: 'v'
+					,'env'		: 't'
+					,'grid'		: 'g'
+					,'hand'		: 'h'
+					,'showMenu' : ' '
+					,'snapMenu'	: viz.KEY_CONTROL_L
+					,'interact' : viz.MOUSEBUTTON_LEFT
+					,'utility'	: viz.MOUSEBUTTON_MIDDLE
+					,'rotate'	: viz.MOUSEBUTTON_RIGHT
+					,'cycle'	: viz.KEY_TAB
+					,'mode'		: viz.KEY_SHIFT_L
+					,'proxi'	: 'p'
+					,'collide'	: 'c'
+					,'walk'		: '/'
+					,'esc'		: viz.KEY_ESCAPE
+					,'viewMode' : 'm'
+					,'capslock'	: viz.KEY_CAPS_LOCK
 		}
-		
 		self.joystick = Joystick()
 		self.oculus = Oculus()
 		
@@ -350,11 +408,14 @@ def checkJoystick():
 		return False
 
 def getNavigator():
-	if checkOculus() and checkJoystick():
+	joystickConnected = checkJoystick()
+	oculusConnected = checkOculus()
+	
+	if oculusConnected and joystickConnected:
 		nav = Joyoculus()
-	elif checkJoystick():
+	elif joystickConnected:
 		nav = Joystick()
-	elif checkOculus():
+	elif oculusConnected:
 		nav = Oculus()
 	else:
 		nav = Navigator()
@@ -368,40 +429,11 @@ if __name__ == '__main__':
 	viz.fov(60)
 	viz.go()
 	
-	if checkOculus() and checkJoystick():
-		joculus = Joyoculus()
-		viewLink = joculus.VIEW_LINK
-		joculus.setAsMain()
-	elif checkJoystick():
-		joystick = Joystick()
-		viewLink = joystick.viewLink
-		joystick.setAsMain()
-	elif checkOculus():
-		hmd = Oculus()
-		viewLink = hmd.viewLink
-		hmd.setAsMain()
-	else:
-		nav = Navigator()
-		viewLink = nav.VIEW_LINK
-		nav.setAsMain()
+	nav = getNavigator()
 	
-	viz.mouse.setTrap()
+	viz.mouse(viz.OFF)
 	viz.mouse.setVisible(False)
-#	if not hmd.hmd.getSensor():
-#		print 'No hmd'
-#		pass
-#	elif not joystick.device:
-#		hmd.setAsMain()
-#		viewLink = hmd.viewLink
-#	else:
-#		viewLink = viz.link(joystick.viewLink, hmd.node )
-
-	#mouseTracker = initTracker(HAND_DISTANCE)
-	#initMouse()
-	#gloveLink = initLink('glove.cfg',mouseTracker)
-	#viz.link(gloveLink,highlightTool)
+	viz.mouse.setTrap()
 
 	# Add environment
 	viz.addChild('maze.osgb')
-
-#	viewLink.setPosition([0,3,0])
