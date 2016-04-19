@@ -3,24 +3,23 @@
 Order truss members required to build a 20m-long bridge across the Singapore River, then proceed to build in VR
 
 [ Controls ]
-[ ESC KEY ] Close Menu / Quit Game
+[ JOYBUTTON12 or ESC KEY ] Close Menu / Quit Application
 
 [ Movement ]
-[ VR HEADSET ] Look around
-[ W | A | S | D ] Navigate
-[ Q | E ] Manually rotate view
-[ Z | X ] Lower/Raise elevation
-[ 1 | 2 ] Slide bridge towards or away from you in TOP/BOTTOM ORIENTATION
+[ VR HEADSET or Mouse] Look around
+[ JOYSTICK or WASD ] Navigate
+[ JOYBUTTON5 | JOYBUTTON3 or Z | X ] Lower/Raise elevation
+[ JOYHATDOWN | JOYHATUP or 1 | 2 ] Slide bridge towards or away from you in TOP/BOTTOM ORIENTATION
 
 [ Build ]
-[ TAB ] Cycle through Bridge Orientation
-[ SHIFT ] Cycle through Build Mode
-[ SPACE BAR ] Toggle Main Menu
+[ JOYBUTTON6 or TAB ] Cycle through Bridge Orientation
+[ JOYBUTTON4 or SHIFT ] Cycle through Build Mode
+[ JOYBUTTON2 or SPACE BAR ] Toggle Main Menu
+[ JOYBUTTON11 or MIDDLE MOUSE ] Toggle Utilities Menu
 [ VIRTUAL MOUSE ] Interact with menu elements
-[ SCROLL WHEEL ] Extend and retract virtual hand
 [ LEFT MOUSE ] Grab and hold onto highlighted truss members
 [ RIGHT MOUSE ] Adjust highlighted truss' angle by holding and dragging
-[ MIDDLE MOUSE ] Toggle utilities menu
+[ SCROLL WHEEL ] Extend and retract virtual hand
 """
 INVENTORY_TEXT = """Order truss members from the catalogue & manage your inventory"""
 
@@ -218,15 +217,6 @@ def initScene(res=RESOLUTION,quality=4,fov=FOV,stencil=8,stereoMode=viz.STEREO_H
 	viz.go(stereoMode | fullscreen)
 	darkTheme = themes.getDarkTheme()
 	viz.setTheme(darkTheme)	
-
-def initOculus():
-	# Reset View
-#	from oculuslite import oculus
-#	hmd = oculus.Rift()
-	oculusRift = navigation.Oculus()
-	
-	
-	return oculusRift
 	
 			
 def initViewport(position):
@@ -250,9 +240,10 @@ def initViewport(position):
 	
 # Disable mouse navigation and hide the mouse cursor
 def initMouse():
-#	viz.mouse(viz.OFF)
+	viz.mouse(viz.OFF)
 	viz.mouse.setVisible(viz.OFF)
 	viz.mouse.setTrap(viz.ON)
+	viz.mouse.setOverride(viz.ON) 
 	
 	
 def initLighting():
@@ -1864,58 +1855,47 @@ def onKeyDown(key):
 		pass
 
 def onJoyButton(e):
-	if key == KEYS['esc']:
+	KEYS = navigator.KEYS
+	
+	if e.button == KEYS['esc']:
 		if utilityCanvas.getVisible() is True:
 			toggleUtility(False)
 		elif menuCanvas.getVisible() is True:
 			toggleMenu(False)
 		else:
 			quitGame()
-	elif key == KEYS['home']:
-#		viewport.reset()
-#		hmd.reset()
+	elif e.button == ',':
+		print navigator.getPosition()
+	elif e.button == KEYS['env']:
+		toggleEnvironment()	
+	elif e.button == KEYS['reset']:
 		navigator.reset()
 		mouseTracker.distance = HAND_DISTANCE
 		runFeedbackTask('View reset!')
 		viewChangeSound.play()
-	elif key == ',':
-#		print viz.MainView.getPosition()
-		print navigator.getPosition()
-	elif key == KEYS['env'] or key == KEYS['env'].upper():
-		toggleEnvironment()	
-	elif key == KEYS['reset'] or key == KEYS['reset'].upper():
-		try:
-#			hmd.getSensor().reset(0)
-			runFeedbackTask('Orientation reset!')
-			clickSound.play()
-		except:
-			runFeedbackTask('No headset!')
-			warningSound.play()
-			print 'Reset orientation failed: Unable to get Oculus Rift sensor!'
-	elif key == KEYS['hand'] or key == KEYS['hand'].upper():
+	elif e.button == KEYS['hand']:
 		mouseTracker.distance = HAND_DISTANCE
 		clickSound.play()
-	elif key == KEYS['builder'] or key == KEYS['builder'].upper():
+	elif e.button == KEYS['builder']:
 		cycleMode(Mode.Edit)
 		mouseTracker.distance = HAND_DISTANCE
 		clickSound.play()
-	elif key == KEYS['viewer'] or key == KEYS['viewer'].upper():
+	elif e.button == KEYS['viewer']:
 		cycleMode(Mode.View)
 		mouseTracker.distance = HAND_DISTANCE
 		clickSound.play()
-	elif key == KEYS['walk'] or key == KEYS['walk'].upper():
+	elif e.button == KEYS['walk']:
 		cycleMode(Mode.Walk)
 		clickSound.play()
-	elif key == KEYS['grid'] or key == KEYS['grid'].upper():
+	elif e.button == KEYS['grid']:
 		toggleGrid(viz.TOGGLE)
-	elif key == KEYS['showMenu']:
+	elif e.button == KEYS['showMenu']:
 		toggleMenu()
-	elif key == KEYS['proxi'] or key == KEYS['proxi'].upper():
+	elif e.button == KEYS['utility']:
+		toggleUtility()
+	elif e.button == KEYS['proxi']:
 		proxyManager.setDebug(viz.TOGGLE)
 		clickSound.play()
-	elif key == KEYS['capslock']:
-		runFeedbackTask('Caps Lock')
-		warningSound.play()
 
 		
 def onMouseWheel(dir):
@@ -1931,7 +1911,6 @@ def onMouseWheel(dir):
 #		bridge_root.setPosition(pos)
 	pass
 		
-
 def slideRoot(val):
 	global TOP_CACHED_Z
 	global BOT_CACHED_Z
@@ -1950,8 +1929,36 @@ def slideRoot(val):
 			BOT_CACHED_Z = pos[2]
 		bridge_root.setPosition(pos)
 vizact.whilekeydown('1',slideRoot,-SLIDE_INTERVAL)		
-vizact.whilekeydown('2',slideRoot,SLIDE_INTERVAL)		
-
+vizact.whilekeydown('2',slideRoot,SLIDE_INTERVAL)	
+	
+global SLIDE_VAL
+SLIDE_VAL = 0
+def slideRootHat():
+	global SLIDE_VAL
+	global TOP_CACHED_Z
+	global BOT_CACHED_Z
+	global bridge_root
+	
+	if ORIENTATION == Orientation.Top or ORIENTATION == Orientation.Bottom:
+		pos = bridge_root.getPosition()
+		if SLIDE_VAL == 0:
+			pos[2] += SLIDE_INTERVAL
+		elif SLIDE_VAL == 180:
+			pos[2] -= SLIDE_INTERVAL
+			
+		if ORIENTATION == Orientation.Top:
+			clampedZ = viz.clamp(pos[2],TOP_Z_MIN,SLIDE_MAX)
+			pos[2] = clampedZ
+			TOP_CACHED_Z = pos[2]
+		elif ORIENTATION == Orientation.Bottom:
+			clampedZ = viz.clamp(pos[2],BOT_Z_MIN,SLIDE_MAX)
+			pos[2] = clampedZ
+			BOT_CACHED_Z = pos[2]
+		bridge_root.setPosition(pos)
+	
+def onHatChange(e):
+	global SLIDE_VAL
+	SLIDE_VAL = e.value
 
 def onMouseDown(button):
 	global objToRotate
@@ -2180,9 +2187,6 @@ def MainTask():
 		vizact.onbuttonup ( confirmButton, cycleMode, Mode.Build )
 		vizact.onbuttonup ( confirmButton, menuCanvas.visible, viz.OFF )
 
-#		cameraRift = initCamera('vizconnect_config_riftDefault')
-		#cameraFly = initCamera('vizconnect_config_riftFly')
-
 		menuCanvas.visible(viz.OFF)
 		menuCanvas.setPosition(0,-2,2)
 		dialogCanvas.setPosition(0,-2,2)
@@ -2197,19 +2201,54 @@ def MainTask():
 		global playerNode
 		global navigator
 		
-		# Initialize remaining
-#		hmd = initOculus()
-#		hmd.setPosition(START_POS)
-		navigator = navigation.getNavigator()
-		navigator.setOrigin(START_POS,[0,0,0])
-		print navigator.ORIGIN_POS
-		navigator.reset()
-#		viewport = initViewport(START_POS)
+		# Setup callbacks
+		viz.callback ( viz.KEYUP_EVENT, onKeyUp )
+		viz.callback ( viz.KEYDOWN_EVENT, onKeyDown )
+		viz.callback ( viz.MOUSEUP_EVENT, onMouseUp )
+		viz.callback ( viz.MOUSEDOWN_EVENT, onMouseDown )
+		viz.callback ( viz.MOUSEWHEEL_EVENT, onMouseWheel )
+		viz.callback ( viz.SENSOR_UP_EVENT, onJoyButton )
+		
+		import navigation
+		joystickConnected = navigation.checkJoystick()
+		oculusConnected = navigation.checkOculus()
+		navigator = None
+		
+		if oculusConnected and joystickConnected:
+			navigator = navigation.Joyoculus()
+			navigator.setAsMain()
+			vizact.onsensorup( navigator.getJoy(), navigator.KEYS['mode'],cycleMode,vizact.choice([Mode.Edit,Mode.Build]))
+			vizact.onsensorup( navigator.getJoy(), navigator.KEYS['cycle'],cycleOrientation,vizact.choice([Orientation.Top,Orientation.Bottom,Orientation.Side]))
+			vizact.onsensorup( navigator.getJoy(), navigator.KEYS['viewMode'],toggleStereo,vizact.choice([False,True]))		
+			viz.callback( navigation.getExtension().HAT_EVENT, onHatChange )
+			vizact.ontimer(0,slideRootHat)	
+		elif joystickConnected:
+			navigator = navigation.Joystick()
+			navigator.setAsMain()
+		elif oculusConnected:
+			navigator = navigation.Oculus()
+			vizact.onkeyup( navigator.KEYS['mode'],cycleMode,vizact.choice([Mode.Edit,Mode.Build]))
+			vizact.onkeyup( navigator.KEYS['cycle'],cycleOrientation,vizact.choice([Orientation.Top,Orientation.Bottom,Orientation.Side]))
+			vizact.onkeyup( navigator.KEYS['viewMode'],toggleStereo,vizact.choice([False,True]))
+			navigator.setAsMain()
+		else:
+			navigator = Navigator()
+			vizact.onkeyup( navigator.KEYS['mode'],cycleMode,vizact.choice([Mode.Edit,Mode.Build]))
+			vizact.onkeyup( navigator.KEYS['cycle'],cycleOrientation,vizact.choice([Orientation.Top,Orientation.Bottom,Orientation.Side]))
+			vizact.onkeyup( navigator.KEYS['viewMode'],toggleStereo,vizact.choice([False,True]))
+			navigator.setAsMain()
+		
+
+#		navigator.setOrigin(START_POS,[0,0,0])
+#		navigator.reset()
+		print navigator.getPosition()
 		highlightTool.setUpdateFunction(updateHighlightTool)
 		mouseTracker = initTracker(HAND_DISTANCE)
 		initMouse()
 		gloveLink = initLink('glove.cfg',mouseTracker)
 		viz.link(gloveLink,highlightTool)	
+		vizact.ontimer(0,clampTrackerScroll,mouseTracker,SCROLL_MIN,SCROLL_MAX)
+		vizact.whilemousedown ( navigator.KEYS['rotate'], rotateTruss, objToRotate, rotationSlider, rotationLabel )
 		
 		global axes
 		axes = vizshape.addAxes()
@@ -2253,19 +2292,7 @@ def MainTask():
 #		viz.grab(keyTransport,axes)
 		cycleMode(Mode.View)
 		
-		# Setup callbacks
-		viz.callback ( viz.KEYUP_EVENT, onKeyUp )
-		viz.callback ( viz.KEYDOWN_EVENT, onKeyDown )
-		viz.callback ( viz.MOUSEUP_EVENT, onMouseUp )
-		viz.callback ( viz.MOUSEDOWN_EVENT, onMouseDown )
-		viz.callback ( viz.MOUSEWHEEL_EVENT, onMouseWheel )
-		viz.callback ( viz.SENSOR_UP_EVENT, onJoyButton )
-		vizact.onkeyup( navigator.KEYS['mode'],cycleMode,vizact.choice([Mode.Edit,Mode.Build]))
-		vizact.onkeyup( navigator.KEYS['cycle'],cycleOrientation,vizact.choice([Orientation.Top,Orientation.Bottom,Orientation.Side]))
-		vizact.onkeyup( navigator.KEYS['viewMode'],toggleStereo,vizact.choice([False,True]))
-		vizact.whilemousedown ( navigator.KEYS['rotate'], rotateTruss, objToRotate, rotationSlider, rotationLabel )
-		vizact.ontimer(0,clampTrackerScroll,mouseTracker,SCROLL_MIN,SCROLL_MAX)
-
+		
 		INITIALIZED = True
 viztask.schedule( MainTask() )
 
