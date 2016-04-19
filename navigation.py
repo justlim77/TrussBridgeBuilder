@@ -65,18 +65,18 @@ class Navigator(object):
 	# Setup functions		
 	def getPosition(self):
 #		return self.navigationNode.getPosition(viz.REL_PARENT)
-		return self.NODE.getPosition()
+		return self.VIEW.getPosition()
 		
 	def setPosition(self,position):
 #		self.navigationNode.setPosition(position, viz.REL_PARENT)
-		self.NODE.setPosition(position)
+		self.VIEW.setPosition(position)
 					
 	def getEuler(self):
-		return self.NODE.getEuler()
+		return self.VIEW.getEuler()
 		
 	def setEuler(self,euler):
 #		self.navigationNode.setEuler(euler, viz.REL_PARENT)
-		self.NODE.setEuler(euler)	
+		self.VIEW.setEuler(euler)	
 	
 	def getView(self):
 		return self.VIEW
@@ -111,6 +111,7 @@ class Navigator(object):
 	def setOrigin(self,pos,euler):
 		self.ORIGIN_POS = pos
 		self.ORIGIN_ROT = euler	
+		print 'New origin pos:',self.ORIGIN_POS
 	
 	def updateView(self):
 		yaw,pitch,roll = self.VIEW.getEuler()
@@ -133,9 +134,10 @@ class Navigator(object):
 		
 	def reset(self):
 		print 'Navigator: Reset'
-		self.NODE.setPosition(self.ORIGIN_POS)
-		self.NODE.setEuler(self.ORIGIN_ROT)
-		print self.getPosition()
+		print 'To origin pos:',self.ORIGIN_POS
+		self.VIEW.setPosition(self.ORIGIN_POS)
+		self.VIEW.setEuler(self.ORIGIN_ROT)
+		self.getPosition()
 	
 	def valid(self):
 		return True
@@ -143,7 +145,11 @@ class Navigator(object):
 	def setAsMain(self):
 		viz.logStatus("""Setting Navigator as main""")
 		
-		self.VIEW_LINK.setOffset([0,-self.EYE_HEIGHT,0])
+		viz.mouse.setOverride(viz.ON) 
+		viz.fov(self.FOV)
+		
+		self.VIEW_LINK.setOffset([0,self.EYE_HEIGHT,0])
+		self.VIEW_LINK.preTrans([0,-self.EYE_HEIGHT,0])
 		self.MOVE_SPEED = 3
 		
 		vizact.ontimer(0,self.updateView)
@@ -155,7 +161,6 @@ class Navigator(object):
 			euler[1] += -e.dy*0.05
 			euler[1] = viz.clamp(euler[1],-85.0,85.0)
 			self.VIEW.setEuler(euler,viz.HEAD_ORI)
-			print self.getPosition()
 		viz.callback(viz.MOUSE_MOVE_EVENT, onMouseMove)
 		
 # Joystick

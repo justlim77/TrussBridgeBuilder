@@ -83,9 +83,9 @@ WARNING_VOLUME = 0.05
 ISMUTED = False
 
 BUILD_ROAM_LIMIT = ([12,-12,-10,10])	# Front,back,left,right limits in meters(m)
-START_POS = ([0,5,-17])				# Set at 5m + avatar height above ground and 17m back fron center
+START_POS = ([0,5,-17])					# Set at 5m + avatar height above ground and 17m back fron center
 BUILD_ROTATION = ([0,0,0])				# Zero-rotation to face dead center
-WALK_POS = ([35,8.7,-13])
+WALK_POS = ([35,7,-13])
 WALK_ROT = ([-30,0,0])
 
 MENU_RES = ([1000,750])
@@ -195,6 +195,7 @@ KEYS = { 'forward'	: 'w'
 		,'rotate'	: viz.MOUSEBUTTON_RIGHT
 		,'cycle'	: viz.KEY_TAB
 		,'mode'		: viz.KEY_SHIFT_L
+		,'road'		: 'n'
 		,'proxi'	: 'p'
 		,'collide'	: 'c'
 		,'walk'		: '/'
@@ -242,7 +243,7 @@ def initViewport(position):
 def initMouse():
 	viz.mouse(viz.OFF)
 	viz.mouse.setVisible(viz.OFF)
-	viz.mouse.setTrap(viz.ON)
+	viz.mouse.setTrap()
 	viz.mouse.setOverride(viz.ON) 
 	
 	
@@ -372,18 +373,34 @@ def applyEnvironmentEffect(obj):
 
 environment = viz.addChild('resources/environment.osgb',parent=environment_root)
 walkway = viz.addChild('resources/walkway.osgb',parent=environment_root)
-wave = viz.addChild('resources/wave2.osgb',pos=([0,0.5,0]),parent=environment_root)
-wave.setAnimationSpeed(0.05)
-road_L = viz.addChild('resources/road3.osgb',pos=(-5,5,0))
-road_L.setParent(environment_root)
-clamp_L = viz.addChild('resources/clamp3.osgb',cache=viz.CACHE_CLONE,pos=(-21,-2.5,0),euler=(-90,0,0),scale=(0.25,0.5,0.5))
-clamp_L.setParent(environment_root)
-clamp_R = viz.addChild('resources/clamp3.osgb',cache=viz.CACHE_CLONE,pos=(21,-2.5,0),euler=(90,0,0),scale=(0.25,0.5,0.5))
-clamp_R.setParent(environment_root)
-applyEnvironmentEffect(road_L)
-applyEnvironmentEffect(wave)
+wave_M = viz.addChild('resources/wave2.osgb',cache=viz.CACHE_CLONE,pos=([0,0.75,0]),parent=environment_root)
+wave_M.setAnimationSpeed(0.01)
+wave_B = viz.addChild('resources/wave2.osgb',cache=viz.CACHE_CLONE,pos=([0,0.75,-50]),parent=environment_root)
+wave_B.setAnimationSpeed(0.01)
+road_M = viz.addChild('resources/road3.osgb',cache=viz.CACHE_CLONE,pos=(0,5,0))
+road_M.setParent(environment_root)
+road_M.visible(False)
+road_L1 = viz.addChild('resources/road3.osgb',cache=viz.CACHE_CLONE,pos=(-20,5,0))
+road_L1.setParent(environment_root)
+road_L2 = viz.addChild('resources/road3.osgb',cache=viz.CACHE_CLONE,pos=(-40,5,0))
+road_L2.setParent(environment_root)
+road_R1 = viz.addChild('resources/road3.osgb',cache=viz.CACHE_CLONE,pos=(20,5,0))
+road_R1.setParent(environment_root)
+road_R2 = viz.addChild('resources/road3.osgb',cache=viz.CACHE_CLONE,pos=(40,5,0))
+road_R2.setParent(environment_root)
+#clamp_L = viz.addChild('resources/clamp3.osgb',cache=viz.CACHE_CLONE,pos=(-21,-2.5,0),euler=(-90,0,0),scale=(0.25,0.5,0.5))
+#clamp_L.setParent(environment_root)
+#clamp_R = viz.addChild('resources/clamp3.osgb',cache=viz.CACHE_CLONE,pos=(21,-2.5,0),euler=(90,0,0),scale=(0.25,0.5,0.5))
+#clamp_R.setParent(environment_root)
+applyEnvironmentEffect(road_M)
+applyEnvironmentEffect(road_L1)
+applyEnvironmentEffect(road_L2)
+applyEnvironmentEffect(road_R1)
+applyEnvironmentEffect(road_R2)
+applyEnvironmentEffect(wave_M)
+applyEnvironmentEffect(wave_B)
 day = viz.addChild('resources/sky_day.osgb', scale=([5,5,5]),parent=environment_root)
-#walkway.disable(viz.LIGHTING)
+walkway.disable(viz.LIGHTING)
 
 # Bridge pin and roller supports
 pinSupport = viz.addChild('resources/pinSupport.osgb',pos=(-9.5,4,0),scale=[1,1,11])
@@ -589,7 +606,6 @@ menuTabPanel = vizdlg.TabPanel(align=viz.ALIGN_CENTER_TOP,parent=menuCanvas)
 menuTabPanel.addPanel('Instructions',instructionsPanel)
 menuTabPanel.addPanel('Inventory',inventoryPanel)
 menuTabPanel.addPanel('Options',optionPanel)
-#menuTabPanel.selectPanel(1)
 
 # Add dialog canvas
 dialogCanvas = viz.addGUICanvas(align=viz.ALIGN_CENTER)
@@ -646,6 +662,7 @@ def initCanvas():
 	rotationCanvas.visible(False)
 initCanvas()
 
+menuTabPanel.selectPanel(1)
 
 def inspectMember(obj):
 #	inspector.diameter_stat.message('d (mm): ' + str(obj.diameter))
@@ -1546,6 +1563,18 @@ def cloneSide(truss):
 	clone.visible(False)
 	return clone
 
+def toggleRoad(road):
+	if len(BOT_MEMBERS) is not 0:
+		message = ''
+		if road_M.getVisible() is True:
+			message = 'Road exists'
+		else:
+			message = 'Added road!'
+			road.visible(True)
+		runFeedbackTask(message)
+	else:
+		runFeedbackTask('No bottom support!')
+		road.visible(False)
 	
 def updateQuantity(order,button,orderList,inventory,row):
 	if order.quantity > 0:
@@ -1841,6 +1870,9 @@ def onKeyUp(key):
 		toggleGrid(viz.TOGGLE)
 	elif key == KEYS['showMenu']:
 		toggleMenu()
+	elif key == KEYS['road']:
+		toggleRoad(road_M)
+		clickSound.play()
 	elif key == KEYS['proxi'] or key == KEYS['proxi'].upper():
 		proxyManager.setDebug(viz.TOGGLE)
 		clickSound.play()
@@ -2103,6 +2135,8 @@ def LoadData():
 		truss.link = link
 		GRAB_LINKS.append(link)
 	
+	toggleRoad(road_M)
+		
 	cycleOrientation(currentOrientation)
 	
 	# Show load feedback
@@ -2232,15 +2266,16 @@ def MainTask():
 			vizact.onkeyup( navigator.KEYS['viewMode'],toggleStereo,vizact.choice([False,True]))
 			navigator.setAsMain()
 		else:
-			navigator = Navigator()
+			navigator = navigation.Navigator()
 			vizact.onkeyup( navigator.KEYS['mode'],cycleMode,vizact.choice([Mode.Edit,Mode.Build]))
 			vizact.onkeyup( navigator.KEYS['cycle'],cycleOrientation,vizact.choice([Orientation.Top,Orientation.Bottom,Orientation.Side]))
 			vizact.onkeyup( navigator.KEYS['viewMode'],toggleStereo,vizact.choice([False,True]))
+			viz.fov(START_FOV)
 			navigator.setAsMain()
 		
 
-#		navigator.setOrigin(START_POS,[0,0,0])
-#		navigator.reset()
+		navigator.setOrigin(START_POS,[0,0,0])
+		navigator.reset()
 		print navigator.getPosition()
 		highlightTool.setUpdateFunction(updateHighlightTool)
 		mouseTracker = initTracker(HAND_DISTANCE)
@@ -2256,7 +2291,6 @@ def MainTask():
 #		playerLink = viz.link(viz.MainView,playerNode)
 #		playerLink.setMask(viz.LINK_POS)
 #		vizact.onupdate(0,updatePosition(inventoryCanvas,playerNode))
-		viz.fov(START_FOV)
 #		viewPos = hmd.getPosition()
 		viewPos = navigator.getPosition()
 #		keyTracker = vizconnect.getTracker('rift_with_mouse_and_keyboard').getNode3d()
