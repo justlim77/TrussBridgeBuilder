@@ -132,6 +132,7 @@ class Navigator(object):
 #		viz.logNotice('Node position:', self.getPosition())
 		
 	def reset(self):
+		print 'Navigator: Reset'
 		self.NODE.setPosition(self.ORIGIN_POS)
 		self.NODE.setEuler(self.ORIGIN_ROT)
 		print self.getPosition()
@@ -320,6 +321,7 @@ class Oculus(Navigator):
 
 	# Setup functions				
 	def reset(self):
+		print 'Oculus: Reset'
 		super(self.__class__,self).reset()
 		self.hmd.getSensor().reset()
 		
@@ -398,6 +400,8 @@ class Joyoculus(Navigator):
 		self.joystick.setOrigin(pos,euler)
 	
 	def reset(self):
+		print 'Joyoculus: Reset'
+		super(self.__class__,self).reset()
 		self.joystick.reset()
 		self.oculus.reset()
 		
