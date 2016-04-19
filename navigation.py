@@ -47,8 +47,8 @@ class Navigator(object):
 					,'viewMode' : 'm'
 					,'capslock'	: viz.KEY_CAPS_LOCK
 		}
-		self.MOVE_SPEED = 2.0
-		self.TURN_SPEED = 45.0
+		self.MOVE_SPEED = 1.4
+		self.TURN_SPEED = 90
 		self.ORIGIN_POS = [0,0,0]
 		self.ORIGIN_ROT = [0,0,0]
 		self.EYE_HEIGHT = 1.8
@@ -57,8 +57,7 @@ class Navigator(object):
 		self.VIEW = viz.MainView
 
 		#Override view link on inheriting classes
-		self.VIEW_LINK = viz.link(self.VIEW, self.NODE)
-		self.VIEW_LINK.setOffset([0,-self.EYE_HEIGHT,0])	
+		self.VIEW_LINK = viz.link(self.VIEW, self.NODE)	
 		
 	# Setup functions		
 	def getPosition(self):
@@ -124,7 +123,7 @@ class Navigator(object):
 		if viz.key.isDown(self.KEYS['down']):
 			m.preTrans([0,-dm,0])
 		self.VIEW.setPosition(m.getPosition(), viz.REL_PARENT)
-		viz.logNotice('Node position:', self.getPosition())
+#		viz.logNotice('Node position:', self.getPosition())
 		
 	def reset(self):
 		self.NODE.setPosition(self.ORIGIN_POS)
@@ -135,6 +134,9 @@ class Navigator(object):
 	
 	def setAsMain(self):
 		viz.logStatus("""Setting Navigator as main""")
+		
+		self.VIEW_LINK.setOffset([0,-self.EYE_HEIGHT,0])
+		self.MOVE_SPEED = 3
 		
 		vizact.ontimer(0,self.updateView)
 		vizact.onkeyup(self.KEYS['reset'],self.reset)
@@ -170,33 +172,29 @@ class Joystick(Navigator):
 					,'right'	: 'd'
 					,'down'		: 'z'
 					,'up'		: 'x'
-					,'reset'	: 0
 					,'camera'	: 'c'
 					,'restart'	: viz.KEY_END
 					,'home'		: viz.KEY_HOME
-					,'builder'	: 2
-					,'viewer'	: 3
-					,'env'		: 't'
-					,'grid'		: 'g'
-					,'hand'		: 'h'
+					,'reset'	: 0
 					,'showMenu' : 1
+					,'mode'		: 2
+					,'cycle'	: 3
+					,'builder'	: 4
+					,'walk'		: 5
+					,'env'		: 6
+					,'grid'		: 7
+					,'utility'	: 10
+					,'esc'		: 11
 					,'snapMenu'	: viz.KEY_CONTROL_L
 					,'interact' : viz.MOUSEBUTTON_LEFT
-					,'utility'	: viz.MOUSEBUTTON_MIDDLE
 					,'rotate'	: viz.MOUSEBUTTON_RIGHT
-					,'cycle'	: viz.KEY_TAB
-					,'mode'		: viz.KEY_SHIFT_L
 					,'proxi'	: 'p'
+					,'viewer'	: 'o'
 					,'collide'	: 'c'
-					,'walk'		: 4
-					,'esc'		: viz.KEY_ESCAPE
 					,'viewMode' : 'm'
+					,'hand'		: 'h'
 					,'capslock'	: viz.KEY_CAPS_LOCK
 		}
-		
-		# Link navigation node to main view
-		self.VIEW_LINK = viz.link(self.NODE, self.VIEW)
-		self.VIEW_LINK.setOffset([0,self.EYE_HEIGHT,0])	
 		
 		# Get device from extension if not specified
 		self.device = None
@@ -222,34 +220,33 @@ class Joystick(Navigator):
 
 		# Create node for applying joystick movement and link to main view
 		self.NODE = viz.addGroup()
-		self.VIEW_LINK = viz.link(self.NODE, viz.MainView)
-		self.VIEW_LINK.setOffset([0,self.EYE_HEIGHT,0])
+		self.VIEW_LINK = viz.link(self.NODE, self.VIEW)
 			
 		# Use joystick axes to move joystick node
 		# Horizontal (X) axis controls yaw
 		# Vertical (Y) axis controls position
-		self.MOVE_SPEED = 1.0
-		self.TURN_SPEED = 45.0
 		
 	def updateView(self):
-		e = viz.elapsed()
+		elapsed = viz.elapsed()
 		x,y,z = self.joy.getPosition()
-		self.NODE.setEuler([x * self.TURN_SPEED * e, 0, 0], viz.REL_LOCAL)
-		self.NODE.setPosition([0, 0, y * self.MOVE_SPEED * viz.getFrameElapsed()], viz.REL_LOCAL)
+		twist = self.joy.getTwist()
+		move_amount = self.MOVE_SPEED * elapsed
+#		self.NODE.setPosition([0, 0, y * self.MOVE_SPEED * viz.getFrameElapsed()], viz.REL_LOCAL)
+		self.NODE.setPosition([x*move_amount,0,y*move_amount], viz.REL_LOCAL)
+		turn_amount = self.TURN_SPEED * elapsed
+		self.NODE.setEuler([twist*turn_amount,0,0], viz.REL_LOCAL)
+#		self.NODE.setEuler([x * self.TURN_SPEED * , 0, 0], viz.REL_LOCAL)
 
-
-	# Reset joystick when joystick button 0 is pressed
-	def reset(self):
-		self.NODE.setPosition([0,self.EYE_HEIGHT,0])
-		self.NODE.setEuler([0,0,0])
-	
 	def getSensor(self):
 		return self.joy
 		
 	def setAsMain(self):
+		self.VIEW_LINK.setOffset([0,self.EYE_HEIGHT,0])
+		
+		self.MOVE_SPEED = 3
+		
 		vizact.ontimer(0, self.updateView)
-		vizact.onsensordown(self.joy, 0, self.reset)
-#		self.NODE.setPosition(0,self.EYE_HEIGHT,0)
+		vizact.onsensorup(self.joy, 0, self.reset)
 
 class Oculus(Navigator):
 	def __init__(self):		
@@ -257,7 +254,6 @@ class Oculus(Navigator):
 		
 		# Link navigation node to main view
 		self.VIEW_LINK = viz.link(self.NODE, self.VIEW)
-		self.VIEW_LINK.setOffset([0,self.EYE_HEIGHT,0])	
 		
 		# --add oculus as HMD
 		self.hmd = oculus.Rift()
@@ -271,21 +267,41 @@ class Oculus(Navigator):
 
 			# Setup navigation node and link to main view
 			self.NODE = viz.addGroup()
-			self.VIEW_LINK = viz.link(self.NODE, viz.MainView)
+#			self.VIEW_LINK = viz.link(self.NODE, viz.VIEW)
 			self.VIEW_LINK.preMultLinkable(self.hmd.getSensor())
 
 			# --Apply user profile eye height to view
 			profile = self.hmd.getProfile()
 			if profile:
 				self.VIEW_LINK.setOffset([0,profile.eyeHeight,0])
-				viz.logInfo('Oculus profile name:', profile.name)
-				viz.logInfo('Oculus IPD:', profile.ipd)
-				viz.logInfo('Oculus player height:', profile.playerHeight)
-				viz.logInfo('Oculus eye height:', profile.eyeHeight)
-			else:
+				viz.logNotice('Oculus profile name:', profile.name)
+				viz.logNotice('Oculus IPD:', profile.ipd)
+				viz.logNotice('Oculus player height:', profile.playerHeight)
+				viz.logNotice('Oculus eye height:', profile.eyeHeight)
+			else: 
 				self.VIEW_LINK.setOffset([0,self.EYE_HEIGHT,0])
+				
+			# Check if HMD supports position tracking
+			supportPositionTracking = self.hmd.getSensor().getSrcMask() & viz.LINK_POS
+			if supportPositionTracking:
+				
+				# Add camera bounds model
+				self.camera_bounds = self.hmd.addCameraBounds()
+				self.camera_bounds.visible(False)
 
-			
+				# Change color of bounds to reflect whether position was tracked
+				def checkPositionTracked():
+					if self.hmd.getSensor().getStatus() & oculus.STATUS_POSITION_TRACKED:
+						self.camera_bounds.color(viz.GREEN)
+					else:
+						self.camera_bounds.color(viz.RED)
+				vizact.onupdate(0, checkPositionTracked)
+
+				# Setup camera bounds toggle key
+				def toggleBounds():
+					self.camera_bounds.visible(viz.TOGGLE)
+				vizact.onkeydown(self.KEYS['camera'], toggleBounds)
+
 	# Setup functions				
 	def reset(self):
 		self.hmd.getSensor().reset()
@@ -309,27 +325,7 @@ class Oculus(Navigator):
 		self.NODE.setPosition(m.getPosition(), viz.REL_PARENT)
 
 	def setAsMain(self):
-		# Check if HMD supports position tracking
-		supportPositionTracking = self.hmd.getSensor().getSrcMask() & viz.LINK_POS
-		if supportPositionTracking:
 
-			# Add camera bounds model
-			self.camera_bounds = self.hmd.addCameraBounds()
-			self.camera_bounds.visible(False)
-
-			# Change color of bounds to reflect whether position was tracked
-			def checkPositionTracked():
-				if self.hmd.getSensor().getStatus() & oculus.STATUS_POSITION_TRACKED:
-					self.camera_bounds.color(viz.GREEN)
-				else:
-					self.camera_bounds.color(viz.RED)
-			vizact.onupdate(0, checkPositionTracked)
-
-			# Setup camera bounds toggle key
-			def toggleBounds():
-				self.camera_bounds.visible(viz.TOGGLE)
-				camera_toggle.set(self.camera_bounds.getVisible())
-			vizact.onkeydown(self.KEYS['camera'], toggleBounds)
 		
 		# Setup heading reset key
 		vizact.onkeyup(self.KEYS['reset'], self.reset)
@@ -377,7 +373,11 @@ class Joyoculus(Navigator):
 		
 		self.VIEW_LINK = viz.link(self.joystick.VIEW_LINK,self.oculus.NODE)
 		
-	# Setup functions		
+	# Setup functions
+	def setOrigin(self,pos,euler):
+		super(self.__class__,self).setOrigin(pos,euler)
+		self.joystick.setOrigin(pos,euler)
+	
 	def reset(self):
 		self.joystick.reset()
 		self.oculus.reset()
@@ -386,11 +386,10 @@ class Joyoculus(Navigator):
 		self.joystick.updateView()
 
 	def setAsMain(self):
-		# Setup heading reset key
 		vizact.onsensordown(self.joystick.getSensor(),self.KEYS['reset'], self.reset)
-		
-		# --Setup arrow key navigation	
 		vizact.ontimer(0,self.joystick.updateView)
+		
+		self.joystick.setMoveSpeed(2)
 		
 # Check for devices
 def checkOculus():
@@ -426,7 +425,7 @@ def getNavigator():
 if __name__ == '__main__':		
 	# Run scene
 	viz.setMultiSample(8)
-	viz.fov(60)
+#	viz.fov(60)
 	viz.go()
 	
 	nav = getNavigator()

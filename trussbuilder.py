@@ -84,7 +84,7 @@ WARNING_VOLUME = 0.05
 ISMUTED = False
 
 BUILD_ROAM_LIMIT = ([12,-12,-10,10])	# Front,back,left,right limits in meters(m)
-START_POS = ([0,5.82,-17])				# Set at 5m + avatar height above ground and 17m back fron center
+START_POS = ([0,5,-17])				# Set at 5m + avatar height above ground and 17m back fron center
 BUILD_ROTATION = ([0,0,0])				# Zero-rotation to face dead center
 WALK_POS = ([35,8.7,-13])
 WALK_ROT = ([-30,0,0])
@@ -1819,7 +1819,8 @@ def onKeyUp(key):
 		runFeedbackTask('View reset!')
 		viewChangeSound.play()
 	elif key == ',':
-		print viz.MainView.getPosition()
+#		print viz.MainView.getPosition()
+		print navigator.getPosition()
 	elif key == KEYS['env'] or key == KEYS['env'].upper():
 		toggleEnvironment()	
 	elif key == KEYS['reset'] or key == KEYS['reset'].upper():
@@ -1861,7 +1862,61 @@ def onKeyDown(key):
 	if key == KEYS['snapMenu']:
 #		toggleMenuLink()
 		pass
-		
+
+def onJoyButton(e):
+	if key == KEYS['esc']:
+		if utilityCanvas.getVisible() is True:
+			toggleUtility(False)
+		elif menuCanvas.getVisible() is True:
+			toggleMenu(False)
+		else:
+			quitGame()
+	elif key == KEYS['home']:
+#		viewport.reset()
+#		hmd.reset()
+		navigator.reset()
+		mouseTracker.distance = HAND_DISTANCE
+		runFeedbackTask('View reset!')
+		viewChangeSound.play()
+	elif key == ',':
+#		print viz.MainView.getPosition()
+		print navigator.getPosition()
+	elif key == KEYS['env'] or key == KEYS['env'].upper():
+		toggleEnvironment()	
+	elif key == KEYS['reset'] or key == KEYS['reset'].upper():
+		try:
+#			hmd.getSensor().reset(0)
+			runFeedbackTask('Orientation reset!')
+			clickSound.play()
+		except:
+			runFeedbackTask('No headset!')
+			warningSound.play()
+			print 'Reset orientation failed: Unable to get Oculus Rift sensor!'
+	elif key == KEYS['hand'] or key == KEYS['hand'].upper():
+		mouseTracker.distance = HAND_DISTANCE
+		clickSound.play()
+	elif key == KEYS['builder'] or key == KEYS['builder'].upper():
+		cycleMode(Mode.Edit)
+		mouseTracker.distance = HAND_DISTANCE
+		clickSound.play()
+	elif key == KEYS['viewer'] or key == KEYS['viewer'].upper():
+		cycleMode(Mode.View)
+		mouseTracker.distance = HAND_DISTANCE
+		clickSound.play()
+	elif key == KEYS['walk'] or key == KEYS['walk'].upper():
+		cycleMode(Mode.Walk)
+		clickSound.play()
+	elif key == KEYS['grid'] or key == KEYS['grid'].upper():
+		toggleGrid(viz.TOGGLE)
+	elif key == KEYS['showMenu']:
+		toggleMenu()
+	elif key == KEYS['proxi'] or key == KEYS['proxi'].upper():
+		proxyManager.setDebug(viz.TOGGLE)
+		clickSound.play()
+	elif key == KEYS['capslock']:
+		runFeedbackTask('Caps Lock')
+		warningSound.play()
+
 		
 def onMouseWheel(dir):
 #	global ORIENTATION
@@ -2136,7 +2191,6 @@ def MainTask():
 		viz.clearcolor(CLEAR_COLOR)
 		
 		# Define globals
-		global hmd
 		global mouseTracker
 		global gloveLink
 		global highlightTool
@@ -2147,6 +2201,9 @@ def MainTask():
 #		hmd = initOculus()
 #		hmd.setPosition(START_POS)
 		navigator = navigation.getNavigator()
+		navigator.setOrigin(START_POS,[0,0,0])
+		print navigator.ORIGIN_POS
+		navigator.reset()
 #		viewport = initViewport(START_POS)
 		highlightTool.setUpdateFunction(updateHighlightTool)
 		mouseTracker = initTracker(HAND_DISTANCE)
@@ -2202,10 +2259,11 @@ def MainTask():
 		viz.callback ( viz.MOUSEUP_EVENT, onMouseUp )
 		viz.callback ( viz.MOUSEDOWN_EVENT, onMouseDown )
 		viz.callback ( viz.MOUSEWHEEL_EVENT, onMouseWheel )
-		vizact.onkeyup(KEYS['mode'],cycleMode,vizact.choice([Mode.Edit,Mode.Build]))
-		vizact.onkeyup(KEYS['cycle'],cycleOrientation,vizact.choice([Orientation.Top,Orientation.Bottom,Orientation.Side]))
-		vizact.onkeyup(KEYS['viewMode'],toggleStereo,vizact.choice([False,True]))
-		vizact.whilemousedown ( KEYS['rotate'], rotateTruss, objToRotate, rotationSlider, rotationLabel )
+		viz.callback ( viz.SENSOR_UP_EVENT, onJoyButton )
+		vizact.onkeyup( navigator.KEYS['mode'],cycleMode,vizact.choice([Mode.Edit,Mode.Build]))
+		vizact.onkeyup( navigator.KEYS['cycle'],cycleOrientation,vizact.choice([Orientation.Top,Orientation.Bottom,Orientation.Side]))
+		vizact.onkeyup( navigator.KEYS['viewMode'],toggleStereo,vizact.choice([False,True]))
+		vizact.whilemousedown ( navigator.KEYS['rotate'], rotateTruss, objToRotate, rotationSlider, rotationLabel )
 		vizact.ontimer(0,clampTrackerScroll,mouseTracker,SCROLL_MIN,SCROLL_MAX)
 
 		INITIALIZED = True
