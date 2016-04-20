@@ -421,6 +421,154 @@ class Joyoculus(Navigator):
 		vizact.onsensordown(self.joystick.getSensor(),self.KEYS['reset'], self.reset)
 		vizact.ontimer(0,self.joystick.updateView)
 		self.joystick.setMoveSpeed(2)
+
+class Joyoculus2(Navigator):
+	def __init__(self):		
+		super(self.__class__,self).__init__()
+	
+		# --Override Key commands
+		self.KEYS = { 'forward'	: 'w'
+					,'back' 	: 's'
+					,'left' 	: 'a'
+					,'right'	: 'd'
+					,'up'		: 4
+					,'down'		: 2
+					,'camera'	: 'c'
+					,'restart'	: viz.KEY_END
+					,'home'		: viz.KEY_HOME
+					,'reset'	: 0
+					,'showMenu' : 1
+					,'mode'		: 5
+					,'cycle'	: 3
+					,'builder'	: 6
+					,'walk'		: 7
+					,'env'		: 8
+					,'grid'		: 9
+					,'utility'	: 10
+					,'esc'		: 11
+					,'snapMenu'	: viz.KEY_CONTROL_L
+					,'interact' : viz.MOUSEBUTTON_LEFT
+					,'rotate'	: viz.MOUSEBUTTON_RIGHT
+					,'proxi'	: 'p'
+					,'viewer'	: 'o'
+					,'collide'	: 'c'
+					,'viewMode' : 'm'
+					,'hand'		: 'h'
+					,'capslock'	: viz.KEY_CAPS_LOCK
+		}
+		
+		# Get device from extension if not specified
+		self.device = None
+		if self.device is None:
+			allDevices = getDevices()
+			if allDevices:
+				self.device = allDevices[0]	
+			else:
+				viz.logError('** ERROR: Failed to detect Joystick')
+
+		# Connect to selected device
+		self.joy = getExtension().addJoystick(self.device)
+		if not self.joy:
+			viz.logError('** ERROR: Failed to connect to Joystick')
+			return None
+
+		# Set dead zone threshold so small movements of joystick are ignored
+		self.joy.setDeadZone(0.2)
+
+		# Display joystick information in config window
+		vizconfig.register(self.joy)
+		vizconfig.getConfigWindow().setWindowVisible(True)
+
+		# Create node for applying joystick movement and link to main view
+		self.NODE = viz.addGroup()
+		self.VIEW_LINK = viz.link(self.NODE, self.VIEW)
+		
+		# --add oculus as HMD
+		self.hmd = oculus.Rift()
+		
+		if not self.hmd.getSensor():
+			viz.logError('** ERROR: Failed to detect Oculus Rift')
+			return None
+		else:
+			# Reset HMD orientation
+			self.hmd.getSensor().reset()
+
+			# Setup navigation node and link to main view
+#			self.NODE = viz.addGroup()
+#			self.VIEW_LINK = viz.link(self.NODE, viz.VIEW)
+			self.VIEW_LINK.preMultLinkable(self.hmd.getSensor())
+
+			# --Apply user profile eye height to view
+			profile = self.hmd.getProfile()
+			if profile:
+				self.VIEW_LINK.setOffset([0,profile.eyeHeight,0])
+				viz.logNotice('Oculus profile name:', profile.name)
+				viz.logNotice('Oculus IPD:', profile.ipd)
+				viz.logNotice('Oculus player height:', profile.playerHeight)
+				viz.logNotice('Oculus eye height:', profile.eyeHeight)
+			else: 
+				self.VIEW_LINK.setOffset([0,self.EYE_HEIGHT,0])
+				
+			# Check if HMD supports position tracking
+			supportPositionTracking = self.hmd.getSensor().getSrcMask() & viz.LINK_POS
+			if supportPositionTracking:
+				
+				# Add camera bounds model
+				self.camera_bounds = self.hmd.addCameraBounds()
+				self.camera_bounds.visible(False)
+
+				# Change color of bounds to reflect whether position was tracked
+				def checkPositionTracked():
+					if self.hmd.getSensor().getStatus() & oculus.STATUS_POSITION_TRACKED:
+						self.camera_bounds.color(viz.GREEN)
+					else:
+						self.camera_bounds.color(viz.RED)
+				vizact.onupdate(0, checkPositionTracked)
+
+				# Setup camera bounds toggle key
+				def toggleBounds():
+					self.camera_bounds.visible(viz.TOGGLE)
+				vizact.onkeydown(self.KEYS['camera'], toggleBounds)
+	# Setup functions
+	def getJoy(self):
+		return self.joystick.joy
+		
+	def getHMD(self):
+		return self.oculus
+		
+	def setOrigin(self,pos,euler):
+		super(self.__class__,self).setOrigin(pos,euler)
+		self.joystick.setOrigin(pos,euler)
+	
+	def reset(self):
+		print 'Joyoculus: Reset'
+		super(self.__class__,self).reset()
+		self.joystick.reset()
+		self.oculus.reset()
+		
+	def updateView(self):
+		elapsed = viz.elapsed()
+		x,y,z = self.joy.getPosition()
+		twist = self.joy.getTwist()
+		elevation_amount = 0
+		if self.joy.isButtonDown(self.KEYS['up']):
+			elevation_amount = self.MOVE_SPEED * elapsed
+		if self.joy.isButtonDown(self.KEYS['down']):
+			elevation_amount = -self.MOVE_SPEED * elapsed
+		move_amount = self.MOVE_SPEED * elapsed
+#		self.NODE.setPosition([0, 0, y * self.MOVE_SPEED * viz.getFrameElapsed()], viz.REL_LOCAL)
+		self.NODE.setPosition([x*move_amount,elevation_amount,y*move_amount], viz.REL_LOCAL)
+		turn_amount = self.TURN_SPEED * elapsed
+		self.NODE.setEuler([twist*turn_amount,0,0], viz.REL_LOCAL)
+#		self.NODE.setEuler([x * self.TURN_SPEED * , 0, 0], viz.REL_LOCAL)
+
+	def setAsMain(self):
+		viz.logStatus('Setting Joyoculus2 as main')
+#		self.VIEW_LINK = viz.link(self.joystick.VIEW_LINK,self.oculus.NODE)
+		
+		vizact.onsensordown(self.joy,self.KEYS['reset'], self.reset)
+		vizact.ontimer(0,self.updateView)
+		self.setMoveSpeed(2)
 		
 # Check for devices
 def checkOculus():
@@ -458,7 +606,9 @@ if __name__ == '__main__':
 #	viz.fov(60)
 	viz.go()
 	
-	nav = getNavigator()
+#	nav = getNavigator()
+	nav = Joyoculus2()
+	nav.setAsMain()
 
 	def printPos():
 		print nav.getPosition()
