@@ -42,7 +42,17 @@ def GridRoot(gridColor=viz.CYAN,origin=([0,0,0])):
 	
 	# Create floating measurements
 	span_text = viz.addText3D('<< 20 meters >>',pos=[0,11,-5],scale=[1,1,1],parent=grid_root,align=viz.ALIGN_CENTER)
+	span_text_shadow = viz.addText3D('<< 20 meters >>',parent=span_text,align=viz.ALIGN_CENTER)
+	span_text_shadow.setPosition([0,0,0.2])
+	span_text_shadow.color(viz.BLACK)
+	span_text_shadow.alpha(0.75)	
+	
 	height_text = viz.addText3D('<< 10 meters >>',pos=[-11,5,-5],scale=[1,1,1],euler=[0,0,90],parent=grid_root,align=viz.ALIGN_CENTER)
+	height_text_shadow = viz.addText3D('<< 10 meters >>',parent=height_text,align=viz.ALIGN_CENTER)
+	height_text_shadow.setPosition([0,0,0.2])
+	height_text_shadow.color(viz.BLACK)
+	height_text_shadow.alpha(0.75)
+	
 	return grid_root
 	
 	

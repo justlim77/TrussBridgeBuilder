@@ -69,7 +69,7 @@ RESOLUTION = ([1280,720])
 UTILITY_CANVAS_RES = ([80,80])
 MULTISAMPLING = 8
 FOV = 45
-START_FOV = 114
+START_FOV = 100
 STENCIL = 8
 STEREOMODE = viz.STEREO_HORZ
 FULLSCREEN = 0
@@ -83,10 +83,15 @@ WARNING_VOLUME = 0.05
 ISMUTED = False
 
 BUILD_ROAM_LIMIT = ([12,-12,-10,10])	# Front,back,left,right limits in meters(m)
-START_POS = ([0,5,-17])					# Set at 5m + avatar height above ground and 17m back fron center
+START_POS = ([0,6,-17])					# Set at 5m + avatar height above ground and 17m back fron center
 BUILD_ROTATION = ([0,0,0])				# Zero-rotation to face dead center
 WALK_POS = ([35,7,-13])
 WALK_ROT = ([-30,0,0])
+VIEW_SPOTS = {
+	 0	: [[35,20,-13],[-60,0,0]]
+	,1	: [[-35,20,-13],[60,0,0]]
+	,2	: [[0,20,19],[180,0,0]]
+}
 
 MENU_RES = ([1000,750])
 MENU_POS = ([0,18,-8])
@@ -195,6 +200,7 @@ KEYS = { 'forward'	: 'w'
 		,'rotate'	: viz.MOUSEBUTTON_RIGHT
 		,'cycle'	: viz.KEY_TAB
 		,'mode'		: viz.KEY_SHIFT_L
+		,'angles'	: ';'
 		,'road'		: 'n'
 		,'proxi'	: 'p'
 		,'collide'	: 'c'
@@ -306,7 +312,7 @@ def initTracker(distance=0.5):
 
 def initLink(modelPath,tracker):
 	"""Initialize hand link with tracker and link group with main view"""
-	model = vizfx.addChild(modelPath)
+	model = viz.addChild(modelPath)
 	link = viz.link(tracker,model)
 	link.postMultLinkable(viz.MainView)
 	return link
@@ -328,8 +334,15 @@ environment_root = roots.EnvironmentRoot(visibility=False)
 bridge_root = roots.BridgeRoot(BRIDGE_ROOT_POS,SIDE_VIEW_ROT)
 grid_root = roots.GridRoot(gridColor=GRID_COLOR,origin=START_POS)
 orientation_text = viz.addText3D('<< View >>',pos=[0,13.5,-5],scale=(2,2,.5),parent=grid_root,align=viz.ALIGN_CENTER)
+orientation_text_shadow = viz.addText3D('<< View >>',parent=orientation_text,align=viz.ALIGN_CENTER)
+orientation_text_shadow.setPosition([0,0,0.2])
+orientation_text_shadow.color(viz.BLACK)
+orientation_text_shadow.alpha(0.75)
 info_text = viz.addText3D('<< Info >>',pos=[0,12,-5],scale=(.5,.5,.5),parent=grid_root,align=viz.ALIGN_CENTER)
-
+info_text_shadow = viz.addText3D('<< Info >>',parent=info_text,align=viz.ALIGN_CENTER)
+info_text_shadow.setPosition([0,0,0.2])
+info_text_shadow.color(viz.BLACK)
+info_text_shadow.alpha(0.75)
 # Setup audio
 
 startSound = viz.addAudio('./resources/sounds/return_to_holodeck.wav')
@@ -1294,6 +1307,7 @@ def toggleMenu(val=viz.TOGGLE):
 	utilityCanvas.visible(False)
 	if menuCanvas.getVisible() is True or MODE is Mode.Edit or MODE is Mode.View:
 		inventoryCanvas.visible(False)
+		createConfirmButton()
 		runFeedbackTask('Menu')
 		showMenuSound.play()
 	else:
@@ -1653,6 +1667,7 @@ def cycleOrientation(val):
 			proxyManager.addSensor(member.sensorNodes[1])
 			
 		info_text.message(VIEW_MESSAGE)
+		info_text_shadow.message(VIEW_MESSAGE)
 	elif val == Orientation.Bottom:
 		rot = BOT_VIEW_ROT
 		pos = BOT_VIEW_POS
@@ -1672,6 +1687,7 @@ def cycleOrientation(val):
 			proxyManager.addSensor(member.sensorNodes[1])
 			
 		info_text.message(VIEW_MESSAGE)
+		info_text_shadow.message(VIEW_MESSAGE)
 	else:
 		rot = SIDE_VIEW_ROT
 		pos = BRIDGE_ROOT_POS
@@ -1688,13 +1704,15 @@ def cycleOrientation(val):
 			member.visible(viz.OFF)
 			proxyManager.removeSensor(member.sensorNodes[0])
 			proxyManager.removeSensor(member.sensorNodes[1])
-		info_text.message('')		
+		info_text.message('')
+		info_text_shadow.message('')
 	bridge_root.setEuler(rot)
 	bridge_root.setPosition(pos)
 	
 	# Show feedback
 	runFeedbackTask(str(ORIENTATION.name))
 	orientation_text.message(str(ORIENTATION.name))
+	orientation_text_shadow.message(str(ORIENTATION.name))
 	hideMenuSound.play()
 
 def cycleMode(mode=Mode.Add):
@@ -1749,7 +1767,8 @@ def cycleMode(mode=Mode.Add):
 	if MODE == Mode.Add:
 		inventoryCanvas.setMouseStyle(viz.CANVAS_MOUSE_VISIBLE)
 #		viewport.getNode3d().setPosition(START_POS)
-		hmd.setPosition(START_POS)	
+#		hmd.setPosition(START_POS)
+		navigator.setPosition(START_POS)
 		
 		# Show highlighter
 		SHOW_HIGHLIGHTER = True
@@ -1821,6 +1840,27 @@ def cycleMode(mode=Mode.Add):
 	runFeedbackTask(str(MODE.name))
 	hideMenuSound.play()
 	
+def cycleView(index):
+	global MODE
+	if MODE is Mode.Build or MODE is Mode.Add or MODE is Mode.Edit:
+		runFeedbackTask('Switch to View Mode!')
+		return
+	
+	try:
+		targetPos = VIEW_SPOTS[index][0]
+		targetRot = VIEW_SPOTS[index][1]
+	except:
+		# Feedback
+		runFeedbackTask('Out of range!')
+		warningSound.play()
+		return
+		
+	navigator.setPosition(targetPos)
+	navigator.setEuler(targetRot)
+	
+	# Feedback
+	runFeedbackTask('View ' + str(index))
+	viewChangeSound.play()
 
 # Setup Callbacks and Events
 def onKeyUp(key):
@@ -1873,6 +1913,8 @@ def onKeyUp(key):
 	elif key == KEYS['road']:
 		toggleRoad(road_M)
 		clickSound.play()
+	elif key == KEYS['angles']:
+		pass
 	elif key == KEYS['proxi'] or key == KEYS['proxi'].upper():
 		proxyManager.setDebug(viz.TOGGLE)
 		clickSound.play()
@@ -2203,6 +2245,16 @@ def GrayEffect():
 gray_effect = GrayEffect()
 
 
+def createConfirmButton():
+	global doneButton
+	bottomRow.removeItem(doneButton)
+	doneButton = bottomRow.addItem(viz.addButtonLabel('Confirm order'),align=viz.ALIGN_CENTER_TOP)
+	doneButton.length(2)
+	vizact.onbuttonup ( doneButton, populateInventory )
+	vizact.onbuttonup ( doneButton, clickSound.play )
+	vizact.onbuttonup ( doneButton, cycleMode, Mode.Build )
+	vizact.onbuttonup ( doneButton, menuCanvas.visible, viz.OFF )
+
 # Schedule tasks
 def MainTask():
 	global INITIALIZED
@@ -2213,14 +2265,11 @@ def MainTask():
 		
 		yield viztask.waitButtonUp(doneButton)
 		
-		bottomRow.removeItem(doneButton)
-		confirmButton = bottomRow.addItem(viz.addButtonLabel('Confirm order'),align=viz.ALIGN_CENTER_TOP)
-		confirmButton.length(2)
-		vizact.onbuttonup ( confirmButton, populateInventory )
-		vizact.onbuttonup ( confirmButton, clickSound.play )
-		vizact.onbuttonup ( confirmButton, cycleMode, Mode.Build )
-		vizact.onbuttonup ( confirmButton, menuCanvas.visible, viz.OFF )
-
+		createConfirmButton()
+		vizact.onbuttonup(orderSideButton,createConfirmButton)
+		vizact.onbuttonup(orderTopButton,createConfirmButton)
+		vizact.onbuttonup(orderBottomButton,createConfirmButton)
+		
 		menuCanvas.visible(viz.OFF)
 		menuCanvas.setPosition(0,-2,2)
 		dialogCanvas.setPosition(0,-2,2)
@@ -2273,6 +2322,7 @@ def MainTask():
 			viz.fov(START_FOV)
 			navigator.setAsMain()
 		
+		vizact.onkeyup( KEYS['angles'],cycleView,vizact.choice([0,1,2]) )
 
 		navigator.setOrigin(START_POS,[0,0,0])
 		navigator.reset()
@@ -2332,9 +2382,12 @@ viztask.schedule( MainTask() )
 
 def toggleStereo(val=viz.TOGGLE):
 	if val is True:
+		runFeedbackTask('Stereo Horz')
 		viz.MainWindow.stereo(STEREOMODE)
 	else:
+		runFeedbackTask('Stereo Right')
 		viz.MainWindow.stereo(viz.STEREO_RIGHT)
+		
 # Pre-load sounds
 viz.playSound('./resources/sounds/return_to_holodeck.wav',viz.SOUND_PRELOAD)
 viz.playSound('./resources/sounds/button_highlight.wav',viz.SOUND_PRELOAD) 

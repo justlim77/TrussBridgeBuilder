@@ -42,6 +42,7 @@ class Navigator(object):
 					,'rotate'	: viz.MOUSEBUTTON_RIGHT
 					,'cycle'	: viz.KEY_TAB
 					,'mode'		: viz.KEY_SHIFT_L
+					,'angles'	: ';'
 					,'proxi'	: 'p'
 					,'collide'	: 'c'
 					,'walk'		: '/'
