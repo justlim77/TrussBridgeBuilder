@@ -10,15 +10,9 @@ import vizact
 import vizconfig
 import oculus
 
-import vizinfo
-#vizinfo.InfoPanel()
-
 # Navigator Base Class
 class Navigator(object):
-	def __init__(self):
-		object.__init__(self)
-		
-		#Save parameters
+	def __init__(self):		
 		# --Key commands
 		self.KEYS = { 'forward'	: 'w'
 					,'back' 	: 's'
@@ -47,10 +41,11 @@ class Navigator(object):
 					,'collide'	: 'c'
 					,'walk'		: '/'
 					,'esc'		: viz.KEY_ESCAPE
-					,'viewMode' : 'm'
+					,'stereo' : 'm'
 					,'capslock'	: viz.KEY_CAPS_LOCK
 		}
 		self.MOVE_SPEED = 1.4
+		self.STRAFE_SPEED = 2.0
 		self.TURN_SPEED = 90
 		self.ORIGIN_POS = [0,0,0]
 		self.ORIGIN_ROT = [0,0,0]
@@ -60,30 +55,29 @@ class Navigator(object):
 		self.NODE = viz.addGroup()
 		self.VIEW = viz.MainView
 
-		#Override view link on inheriting classes
-		self.VIEW_LINK = viz.link(self.VIEW, self.NODE)	
+		self.VIEW_LINK = viz.link(self.NODE,self.VIEW)	
 		
 	# Setup functions		
 	def getPosition(self):
 #		return self.navigationNode.getPosition(viz.REL_PARENT)
-		return self.VIEW.getPosition()
+		return self.NODE.getPosition()
 		
 	def setPosition(self,position):
 #		self.navigationNode.setPosition(position, viz.REL_PARENT)
-		self.VIEW.setPosition(position)
+		self.NODE.setPosition(position)
 					
 	def getEuler(self):
-		return self.VIEW.getEuler()
+		return self.NODE.getEuler()
 		
 	def setEuler(self,euler):
 #		self.navigationNode.setEuler(euler, viz.REL_PARENT)
-		self.VIEW.setEuler(euler)	
+		self.NODE.setEuler(euler)	
 	
-	def getView(self):
-		return self.VIEW
-		
 	def getNode(self):
 		return self.NODE
+		
+	def getView(self):
+		return self.VIEW
 	
 	def getLink(self):		
 		return self.VIEW_LINK
@@ -103,6 +97,12 @@ class Navigator(object):
 	def setMoveSpeed(self,speed):
 		self.MOVE_SPEED = speed
 		
+	def getStrafeSpeed(self):
+		return self.STRAFE_SPEED
+	
+	def setStrafeSpeed(self,speed):
+		self.STRAFE_SPEED = speed	
+		
 	def getTurnSpeed(self):
 		return self.TURN_SPEED
 	
@@ -112,8 +112,78 @@ class Navigator(object):
 	def setOrigin(self,pos,euler):
 		self.ORIGIN_POS = pos
 		self.ORIGIN_ROT = euler	
-		print 'New origin pos:',self.ORIGIN_POS
 	
+	def valid(self):
+		return True
+		
+	def reset(self):
+		self.NODE.setPosition(self.ORIGIN_POS)
+		self.NODE.setEuler(self.ORIGIN_ROT)
+
+	def updateView(self):
+		pass
+	
+	
+	def setAsMain(self):		
+		pass
+		
+
+class KeyboardMouse(Navigator):
+	def __init__(self):
+		super(self.__class__,self).__init__()
+		
+		#Override parameters
+		# --Key commands
+		self.KEYS = { 'forward'	: 'w'
+					,'back' 	: 's'
+					,'left' 	: 'a'
+					,'right'	: 'd'
+					,'down'		: 'z'
+					,'up'		: 'x'
+					,'reset'	: 'r'
+					,'camera'	: 'c'
+					,'restart'	: viz.KEY_END
+					,'home'		: viz.KEY_HOME
+					,'builder'	: 'b'
+					,'viewer'	: 'v'
+					,'env'		: 't'
+					,'grid'		: 'g'
+					,'hand'		: 'h'
+					,'showMenu' : ' '
+					,'snapMenu'	: viz.KEY_CONTROL_L
+					,'interact' : viz.MOUSEBUTTON_LEFT
+					,'utility'	: viz.MOUSEBUTTON_MIDDLE
+					,'rotate'	: viz.MOUSEBUTTON_RIGHT
+					,'cycle'	: viz.KEY_TAB
+					,'mode'		: viz.KEY_SHIFT_L
+					,'angles'	: ';'
+					,'proxi'	: 'p'
+					,'collide'	: 'c'
+					,'walk'		: '/'
+					,'esc'		: viz.KEY_ESCAPE
+					,'stereo' 	: 'm'
+					,'capslock'	: viz.KEY_CAPS_LOCK
+		}
+
+		#Override view link
+		self.VIEW_LINK = viz.link(self.VIEW, self.NODE)	
+		
+	# Setup functions		
+	def getPosition(self):
+#		return self.navigationNode.getPosition(viz.REL_PARENT)
+		return self.VIEW.getPosition(viz.REL_PARENT)
+		
+	def setPosition(self,position):
+#		self.navigationNode.setPosition(position, viz.REL_PARENT)
+		self.VIEW.setPosition(position, viz.REL_PARENT)
+					
+	def getEuler(self):
+		return self.VIEW.getEuler(viz.REL_PARENT)
+		
+	def setEuler(self,euler):
+#		self.navigationNode.setEuler(euler, viz.REL_PARENT)
+		self.VIEW.setEuler(euler, viz.REL_PARENT)	
+		
 	def updateView(self):
 		yaw,pitch,roll = self.VIEW.getEuler()
 		m = viz.Matrix.euler(yaw,0,0)
@@ -123,9 +193,9 @@ class Navigator(object):
 		if viz.key.isDown(self.KEYS['back']):
 			m.preTrans([0,0,-dm])
 		if viz.key.isDown(self.KEYS['left']):
-			m.preTrans([-dm,0,0])
+			m.preTrans([-dm*self.STRAFE_SPEED,0,0])
 		if viz.key.isDown(self.KEYS['right']):
-			m.preTrans([dm,0,0])
+			m.preTrans([dm*self.STRAFE_SPEED,0,0])
 		if viz.key.isDown(self.KEYS['up']):
 			m.preTrans([0,dm,0])
 		if viz.key.isDown(self.KEYS['down']):
@@ -134,14 +204,8 @@ class Navigator(object):
 #		viz.logNotice('Node position:', self.getPosition())
 		
 	def reset(self):
-		print 'Navigator: Reset'
-		print 'To origin pos:',self.ORIGIN_POS
 		self.VIEW.setPosition(self.ORIGIN_POS)
 		self.VIEW.setEuler(self.ORIGIN_ROT)
-		self.getPosition()
-	
-	def valid(self):
-		return True
 	
 	def setAsMain(self):
 		viz.logStatus("""Setting Navigator as main""")
@@ -162,7 +226,7 @@ class Navigator(object):
 			euler[1] += -e.dy*0.05
 			euler[1] = viz.clamp(euler[1],-85.0,85.0)
 			self.VIEW.setEuler(euler,viz.HEAD_ORI)
-		viz.callback(viz.MOUSE_MOVE_EVENT, onMouseMove)
+		viz.callback(viz.MOUSE_MOVE_EVENT, onMouseMove)	
 		
 # Joystick
 _extension = None
@@ -180,6 +244,7 @@ def getDevices():
 class Joystick(Navigator):
 	def __init__(self):
 		super(self.__class__,self).__init__()
+		
 		# --Override Key commands
 		self.KEYS = { 'forward'	: 'w'
 					,'back' 	: 's'
@@ -206,9 +271,8 @@ class Joystick(Navigator):
 					,'proxi'	: 'p'
 					,'viewer'	: 'o'
 					,'collide'	: 'c'
-					,'viewMode' : 'm'
+					,'stereo' 	: 'm'
 					,'hand'		: 'h'
-					,'capslock'	: viz.KEY_CAPS_LOCK
 		}
 		
 		# Get device from extension if not specified
@@ -234,14 +298,14 @@ class Joystick(Navigator):
 		vizconfig.getConfigWindow().setWindowVisible(True)
 
 		# Create node for applying joystick movement and link to main view
-		self.NODE = viz.addGroup()
-		self.VIEW_LINK = viz.link(self.NODE, self.VIEW)
+#		self.NODE = viz.addGroup()
+#		self.VIEW_LINK = viz.link(self.NODE, self.VIEW)
 			
-		# Use joystick axes to move joystick node
-		# Horizontal (X) axis controls yaw
-		# Vertical (Y) axis controls position
-		
+			
+	# Horizontal (X) axis controls yaw
+	# Vertical (Y) axis controls position
 	def updateView(self):
+		""" Use joystick axes to move joystick node"""
 		elapsed = viz.elapsed()
 		x,y,z = self.joy.getPosition()
 		twist = self.joy.getTwist()
@@ -264,26 +328,24 @@ class Joystick(Navigator):
 		self.VIEW_LINK.setOffset([0,self.EYE_HEIGHT,0])
 		
 		viz.fov(self.FOV)
-		
 		self.MOVE_SPEED = 3
 		
 		vizact.ontimer(0, self.updateView)
-		vizact.onsensorup(self.joy, 0, self.reset)
+		vizact.onsensorup(self.joy, self.KEYS['reset'], self.reset)
 
 class Oculus(Navigator):
 	def __init__(self):		
 		super(self.__class__,self).__init__()
 		
 		# Link navigation node to main view
-		self.NODE = viz.addGroup()
-		self.VIEW_LINK = viz.link(self.NODE, self.VIEW)
+#		self.NODE = viz.addGroup()
+#		self.VIEW_LINK = viz.link(self.NODE, self.VIEW)
 		
 		# --add oculus as HMD
 		self.hmd = oculus.Rift()
 		
 		if not self.hmd.getSensor():
 			viz.logError('** ERROR: Failed to detect Oculus Rift')
-			return None
 		else:
 			# Reset HMD orientation
 			self.hmd.getSensor().reset()
@@ -327,7 +389,6 @@ class Oculus(Navigator):
 
 	# Setup functions				
 	def reset(self):
-		print 'Oculus: Reset'
 		super(self.__class__,self).reset()
 		self.hmd.getSensor().reset()
 		
@@ -340,9 +401,9 @@ class Oculus(Navigator):
 		if viz.key.isDown(self.KEYS['back']):
 			m.preTrans([0,0,-dm])
 		if viz.key.isDown(self.KEYS['left']):
-			m.preTrans([-dm,0,0])
+			m.preTrans([-dm * self.STRAFE_SPEED,0,0])
 		if viz.key.isDown(self.KEYS['right']):
-			m.preTrans([dm,0,0])
+			m.preTrans([dm * self.STRAFE_SPEED,0,0])
 		if viz.key.isDown(self.KEYS['up']):
 			m.preTrans([0,dm,0])
 		if viz.key.isDown(self.KEYS['down']):
@@ -350,14 +411,12 @@ class Oculus(Navigator):
 		self.NODE.setPosition(m.getPosition(), viz.REL_PARENT)
 
 	def setAsMain(self):
-		# Setup heading reset key
-		vizact.onkeyup(self.KEYS['reset'], self.reset)
-		
-		# --Setup arrow key navigation
 		self.MOVE_SPEED = 2.0	
+		
 		vizact.ontimer(0,self.updateView)
+		vizact.onkeyup(self.KEYS['reset'], self.reset)
 			
-class Joyoculus(Navigator):
+class Joyculus(Navigator):
 	def __init__(self):		
 		super(self.__class__,self).__init__()
 	
@@ -387,7 +446,7 @@ class Joyoculus(Navigator):
 					,'proxi'	: 'p'
 					,'viewer'	: 'o'
 					,'collide'	: 'c'
-					,'viewMode' : 'm'
+					,'stereo' 	: 'm'
 					,'hand'		: 'h'
 					,'capslock'	: viz.KEY_CAPS_LOCK
 		}
@@ -406,7 +465,7 @@ class Joyoculus(Navigator):
 		self.joystick.setOrigin(pos,euler)
 	
 	def reset(self):
-		print 'Joyoculus: Reset'
+		print 'Joyculus: Reset'
 		super(self.__class__,self).reset()
 		self.joystick.reset()
 		self.oculus.reset()
@@ -415,14 +474,14 @@ class Joyoculus(Navigator):
 		self.joystick.updateView()
 
 	def setAsMain(self):
-		viz.logStatus('Setting Joyoculus as main')
+		viz.logStatus('Setting Joyculus as main')
 		self.VIEW_LINK = viz.link(self.joystick.VIEW_LINK,self.oculus.NODE)
 		
 		vizact.onsensordown(self.joystick.getSensor(),self.KEYS['reset'], self.reset)
 		vizact.ontimer(0,self.joystick.updateView)
 		self.joystick.setMoveSpeed(2)
 
-class Joyoculus2(Navigator):
+class Joyculus2(Navigator):
 	def __init__(self):		
 		super(self.__class__,self).__init__()
 	
@@ -452,7 +511,7 @@ class Joyoculus2(Navigator):
 					,'proxi'	: 'p'
 					,'viewer'	: 'o'
 					,'collide'	: 'c'
-					,'viewMode' : 'm'
+					,'stereo' 	: 'm'
 					,'hand'		: 'h'
 					,'capslock'	: viz.KEY_CAPS_LOCK
 		}
@@ -475,8 +534,8 @@ class Joyoculus2(Navigator):
 		self.joy.setDeadZone(0.2)
 
 		# Display joystick information in config window
-		vizconfig.register(self.joy)
-		vizconfig.getConfigWindow().setWindowVisible(True)
+#		vizconfig.register(self.joy)
+#		vizconfig.getConfigWindow().setWindowVisible(True)
 
 		# Create node for applying joystick movement and link to main view
 		self.NODE = viz.addGroup()
@@ -492,8 +551,6 @@ class Joyoculus2(Navigator):
 			self.hmd.getSensor().reset()
 
 			# Setup navigation node and link to main view
-#			self.NODE = viz.addGroup()
-#			self.VIEW_LINK = viz.link(self.NODE, viz.VIEW)
 			self.VIEW_LINK.preMultLinkable(self.hmd.getSensor())
 
 			# --Apply user profile eye height to view
@@ -535,16 +592,8 @@ class Joyoculus2(Navigator):
 	def getHMD(self):
 		return self.hmd
 	
-	def getPosition(self):
-		return self.NODE.getPosition()
-		
-	def setOrigin(self,pos,euler):
-		super(self.__class__,self).setOrigin(pos,euler)
-	
 	def reset(self):
 		super(self.__class__,self).reset()
-		self.NODE.setPosition(self.ORIGIN_POS)
-		self.NODE.setEuler(self.ORIGIN_ROT)
 		self.hmd.getSensor().reset()
 		
 	def updateView(self):
@@ -564,12 +613,10 @@ class Joyoculus2(Navigator):
 #		self.NODE.setEuler([x * self.TURN_SPEED * , 0, 0], viz.REL_LOCAL)
 
 	def setAsMain(self):
-		viz.logStatus('Setting Joyoculus2 as main')
+		viz.logStatus('Setting Joyculus2 as main')
 #		self.VIEW_LINK = viz.link(self.joystick.VIEW_LINK,self.oculus.NODE)
-		
-		vizact.onsensordown(self.joy,self.KEYS['reset'], self.reset)
+		vizact.onsensordown(self.joy,self.KEYS['reset'],self.reset)
 		vizact.ontimer(0,self.updateView)
-		self.setMoveSpeed(2)
 		
 # Check for devices
 def checkOculus():
@@ -591,26 +638,23 @@ def getNavigator():
 	oculusConnected = checkOculus()
 	
 	if oculusConnected and joystickConnected:
-		nav = Joyoculus()
+		nav = Joyculus2()
 	elif joystickConnected:
 		nav = Joystick()
 	elif oculusConnected:
 		nav = Oculus()
 	else:
-		nav = Navigator()
+		nav = KeyboardMouse()
 	nav.setAsMain()
 	return nav
 
 if __name__ == '__main__':		
 	# Run scene
 	viz.setMultiSample(8)
-#	viz.fov(60)
 	viz.go()
 	
-#	nav = getNavigator()
-	nav = Joyoculus2()
-	nav.setAsMain()
-
+	nav = getNavigator()
+ 
 	def printPos():
 		print nav.getPosition()
 	vizact.onkeyup(' ',printPos)

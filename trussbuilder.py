@@ -862,11 +862,12 @@ def addOrder(orderTab,orderList=inventory.OrderList(),orderRow=[],flag=''):
 		orderRow.append(_row)
 
 
-#TODO Fix
 def deleteOrder(order, orderList, index, row, orderRow, orderTab, flag ):	
-	orderList.pop(index)		
+#	orderList.pop(index)
+	viz.logNotice('Deleting', order)
+	orderList.remove(order)
 	orderTab.removeRow(row)
-	orderRow.remove(row)	
+	orderRow.remove(row)		
 	
 	
 def createInventory():
@@ -916,11 +917,6 @@ def createInventory():
 
 	inventoryCanvas.setRenderWorld(RESOLUTION,[1,viz.AUTO_COMPUTE])
 	inventoryCanvas.setMouseStyle(viz.CANVAS_MOUSE_VIRTUAL)
-	# Link rotation canvas with main View
-#	inventoryLink = viz.link(viz.MainView,inventoryCanvas)
-
-#	inventoryLink.preEuler( [0,30,0] )
-#	inventoryLink.preTrans( [0,0,1] )
 createInventory()
 
 
@@ -2302,25 +2298,29 @@ def MainTask():
 			navigator.setAsMain()
 			vizact.onsensorup( navigator.getJoy(), navigator.KEYS['mode'],cycleMode,vizact.choice([Mode.Edit,Mode.Build]))
 			vizact.onsensorup( navigator.getJoy(), navigator.KEYS['cycle'],cycleOrientation,vizact.choice([Orientation.Top,Orientation.Bottom,Orientation.Side]))
-			vizact.onsensorup( navigator.getJoy(), navigator.KEYS['viewMode'],toggleStereo,vizact.choice([False,True]))		
+			vizact.onsensorup( navigator.getJoy(), navigator.KEYS['stereo'],toggleStereo,vizact.choice([False,True]))		
 			viz.callback( navigation.getExtension().HAT_EVENT, onHatChange )
 			vizact.ontimer(0,slideRootHat)	
 		elif joystickConnected:
 			navigator = navigation.Joystick()
 			navigator.setAsMain()
+			vizact.onsensorup( navigator.getJoy(), navigator.KEYS['mode'],cycleMode,vizact.choice([Mode.Edit,Mode.Build]))
+			vizact.onsensorup( navigator.getJoy(), navigator.KEYS['cycle'],cycleOrientation,vizact.choice([Orientation.Top,Orientation.Bottom,Orientation.Side]))
+			vizact.onsensorup( navigator.getJoy(), navigator.KEYS['stereo'],toggleStereo,vizact.choice([False,True]))		
+			viz.callback( navigation.getExtension().HAT_EVENT, onHatChange )
+			vizact.ontimer(0,slideRootHat)				
 		elif oculusConnected:
 			navigator = navigation.Oculus()
+			navigator.setAsMain()
 			vizact.onkeyup( navigator.KEYS['mode'],cycleMode,vizact.choice([Mode.Edit,Mode.Build]))
 			vizact.onkeyup( navigator.KEYS['cycle'],cycleOrientation,vizact.choice([Orientation.Top,Orientation.Bottom,Orientation.Side]))
-			vizact.onkeyup( navigator.KEYS['viewMode'],toggleStereo,vizact.choice([False,True]))
-			navigator.setAsMain()
+			vizact.onkeyup( navigator.KEYS['stereo'],toggleStereo,vizact.choice([False,True]))
 		else:
-			navigator = navigation.Navigator()
+			navigator = navigation.KeyboardMouse()
+			navigator.setAsMain()
 			vizact.onkeyup( navigator.KEYS['mode'],cycleMode,vizact.choice([Mode.Edit,Mode.Build]))
 			vizact.onkeyup( navigator.KEYS['cycle'],cycleOrientation,vizact.choice([Orientation.Top,Orientation.Bottom,Orientation.Side]))
-			vizact.onkeyup( navigator.KEYS['viewMode'],toggleStereo,vizact.choice([False,True]))
-			viz.fov(START_FOV)
-			navigator.setAsMain()
+			vizact.onkeyup( navigator.KEYS['stereo'],toggleStereo,vizact.choice([False,True]))
 		
 		vizact.onkeyup( KEYS['angles'],cycleView,vizact.choice([0,1,2]) )
 
@@ -2339,11 +2339,12 @@ def MainTask():
 		axes = vizshape.addAxes()
 #		axes.visible(False)
 
+		viewPos = navigator.getPosition()
+		rotationCanvas.setEuler( [0,30,0] )
 #		playerLink = viz.link(viz.MainView,playerNode)
 #		playerLink.setMask(viz.LINK_POS)
 #		vizact.onupdate(0,updatePosition(inventoryCanvas,playerNode))
 #		viewPos = hmd.getPosition()
-		viewPos = navigator.getPosition()
 #		keyTracker = vizconnect.getTracker('rift_with_mouse_and_keyboard').getNode3d()
 #		keyTransport = vizconnect.getTransport('main_transport').getNode3d()
 #		viz.link(viz.MainView,keyTracker)
@@ -2352,7 +2353,6 @@ def MainTask():
 #		trackerLink = viz.link(keyTracker,axes)
 #		inventoryCanvas.setEuler( [0,30,0] )
 #		inventoryCanvas.setPosition ( [0,viewPos[1]-.2,viewPos[2]+.2] )
-		rotationCanvas.setEuler( [0,30,0] )
 #		rotationCanvas.setPosition ( [0,viewPos[1]-.1,viewPos[2]+.2] )
 #		link = viz.link(viz.MainView,rotationCanvas)
 #		link.postMultLinkable(viz.MainView)
@@ -2363,7 +2363,6 @@ def MainTask():
 #		vizact.onupdate(0,updatePosition,axes,keyTransport)
 #		link = viz.link(keyTransport,axes,viz.LINK_POS)
 
-#		axesLink = viz.link(hmd.viewLink,axes)
 		axesLink = viz.link(navigator.VIEW_LINK,axes)
 		axesLink.setMask(viz.LINK_POS)
 		axesLink.postTrans([0,-1,2])
@@ -2394,28 +2393,6 @@ viz.playSound('./resources/sounds/show_menu.wav',viz.SOUND_PRELOAD)
 viz.playSound('./resources/sounds/hide_menu.wav',viz.SOUND_PRELOAD)
 viz.playSound('./resources/sounds/page_advance.wav',viz.SOUND_PRELOAD)
 viz.playSound('./resources/sounds/out_of_bounds_warning.wav',viz.SOUND_PRELOAD)
-
-	
-def updatePosition(self):
-	"""Internal update function"""
-	# Update the transformation of the node
-	mat = self._target.getMatrix(viz.ABS_GLOBAL)
-	posOff = [0, self.getSize()[1]/2.0+self._target.getSize()[1]/2.0, -0.01]
-	pos = mat.preMultVec(posOff)
-	mat.setPosition(pos)
-	self.setMatrix(mat, viz.ABS_GLOBAL)
-	
-def updatePosition(obj,target):
-	"""Internal update function"""
-	# Update the transformation of the node
-	mat = target.getMatrix(viz.ABS_GLOBAL)
-#	posOff = [0, obj.getSize()[1]/2.0+target.getSize()[1]/2.0, -0.01]
-	posOff = [0, -1, 1]
-	pos = mat.preMultVec(posOff)
-	mat.setPosition(pos)
-	obj.setEuler([0,0,0])
-	obj.setMatrix(mat, viz.ABS_GLOBAL)
-
 
 def getAvatarPos(obj):
 	print obj.getPosition()
