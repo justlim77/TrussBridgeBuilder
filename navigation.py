@@ -470,7 +470,6 @@ class Joyoculus2(Navigator):
 		self.joy = getExtension().addJoystick(self.device)
 		if not self.joy:
 			viz.logError('** ERROR: Failed to connect to Joystick')
-			return None
 
 		# Set dead zone threshold so small movements of joystick are ignored
 		self.joy.setDeadZone(0.2)
@@ -487,8 +486,7 @@ class Joyoculus2(Navigator):
 		self.hmd = oculus.Rift()
 		
 		if not self.hmd.getSensor():
-			viz.logError('** ERROR: Failed to detect Oculus Rift')
-			return None
+			viz.logError('** ERROR: Failed to detect Oculus')
 		else:
 			# Reset HMD orientation
 			self.hmd.getSensor().reset()
@@ -529,22 +527,25 @@ class Joyoculus2(Navigator):
 				def toggleBounds():
 					self.camera_bounds.visible(viz.TOGGLE)
 				vizact.onkeydown(self.KEYS['camera'], toggleBounds)
+				
 	# Setup functions
 	def getJoy(self):
-		return self.joystick.joy
+		return self.joy
 		
 	def getHMD(self):
-		return self.oculus
+		return self.hmd
+	
+	def getPosition(self):
+		return self.NODE.getPosition()
 		
 	def setOrigin(self,pos,euler):
 		super(self.__class__,self).setOrigin(pos,euler)
-		self.joystick.setOrigin(pos,euler)
 	
 	def reset(self):
-		print 'Joyoculus: Reset'
 		super(self.__class__,self).reset()
-		self.joystick.reset()
-		self.oculus.reset()
+		self.NODE.setPosition(self.ORIGIN_POS)
+		self.NODE.setEuler(self.ORIGIN_ROT)
+		self.hmd.getSensor().reset()
 		
 	def updateView(self):
 		elapsed = viz.elapsed()

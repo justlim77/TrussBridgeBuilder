@@ -365,7 +365,7 @@ warningSound.volume(WARNING_VOLUME)
 def updateResolution(panel,canvas):
 	bb = panel.getBoundingBox()
 	canvas.setRenderWorldOverlay([bb.width + 5, bb.height + 5], fov=bb.height * 0.15, distance=3.0)	
-	canvas.setCursorPosition([0,0])
+	canvas.setCursorPosition([0.5,0.5])
 
 def updateMouseStyle(canvas):
 	canvas.setMouseStyle(viz.CANVAS_MOUSE_BUTTON)
@@ -2298,7 +2298,7 @@ def MainTask():
 		navigator = None
 		
 		if oculusConnected and joystickConnected:
-			navigator = navigation.Joyoculus()
+			navigator = navigation.Joyoculus2()
 			navigator.setAsMain()
 			vizact.onsensorup( navigator.getJoy(), navigator.KEYS['mode'],cycleMode,vizact.choice([Mode.Edit,Mode.Build]))
 			vizact.onsensorup( navigator.getJoy(), navigator.KEYS['cycle'],cycleOrientation,vizact.choice([Orientation.Top,Orientation.Bottom,Orientation.Side]))
@@ -2337,7 +2337,8 @@ def MainTask():
 		
 		global axes
 		axes = vizshape.addAxes()
-		axes.visible(False)
+#		axes.visible(False)
+
 #		playerLink = viz.link(viz.MainView,playerNode)
 #		playerLink.setMask(viz.LINK_POS)
 #		vizact.onupdate(0,updatePosition(inventoryCanvas,playerNode))
@@ -2349,8 +2350,8 @@ def MainTask():
 #		viz.MainView.setPosition(START_POS)
 #		playerLink = viz.link(viz.MainView,keyTracker)
 #		trackerLink = viz.link(keyTracker,axes)
-		inventoryCanvas.setEuler( [0,30,0] )
-		inventoryCanvas.setPosition ( [0,viewPos[1]-.2,viewPos[2]+.2] )
+#		inventoryCanvas.setEuler( [0,30,0] )
+#		inventoryCanvas.setPosition ( [0,viewPos[1]-.2,viewPos[2]+.2] )
 		rotationCanvas.setEuler( [0,30,0] )
 #		rotationCanvas.setPosition ( [0,viewPos[1]-.1,viewPos[2]+.2] )
 #		link = viz.link(viz.MainView,rotationCanvas)
@@ -2366,16 +2367,13 @@ def MainTask():
 		axesLink = viz.link(navigator.VIEW_LINK,axes)
 		axesLink.setMask(viz.LINK_POS)
 		axesLink.postTrans([0,-1,2])
+		
+		inventoryLink = viz.link(navigator.VIEW_LINK,inventoryCanvas)
+		inventoryLink.setMask(viz.LINK_POS)
+		inventoryLink.preTrans([0,-.1,.2])
+		inventoryLink.preEuler([0,30,0])		
 
-		viz.grab(axes,inventoryCanvas)
-		
-#		pos = START_POS
-#		pos[1] += -1
-#		pos[2] += 1
-#		axes.setPosition(pos)
-#		viz.grab(keyTransport,axes)
-		cycleMode(Mode.View)
-		
+		cycleMode(Mode.View)		
 		
 		INITIALIZED = True
 viztask.schedule( MainTask() )
