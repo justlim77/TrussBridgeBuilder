@@ -260,14 +260,33 @@ class Joystick(Navigator):
 		# Display joystick information in config window
 		vizconfig.register(self.joy)
 		vizconfig.getConfigWindow().setWindowVisible(True)
-
-		# Create node for applying joystick movement and link to main view
-#		self.NODE = viz.addGroup()
-#		self.VIEW_LINK = viz.link(self.NODE, self.VIEW)
+		
+		#Override parameters
+		self.ORIGIN_POS = [0,self.EYE_HEIGHT,0]
+		self.VIEW_LINK.remove()
+		self.VIEW_LINK = viz.link(self.VIEW,self.NODE)
 			
 	def onSliderChange(self,e):
 		val = mathlite.getNewRange(e.value,1,-1,self.MIN_SPEED,self.MAX_SPEED)
 		self.MOVE_SPEED = val
+	
+	def getPosition(self):
+		return self.VIEW.getPosition()
+		
+	def setPosition(self,position):
+#		self.navigationNode.setPosition(position, viz.REL_PARENT)
+		self.VIEW.setPosition(position)
+
+	def getEuler(self):
+		return self.VIEW.getEuler()
+		
+	def setEuler(self,euler):
+#		self.navigationNode.setEuler(euler, viz.REL_PARENT)
+		self.VIEW.setEuler(euler)	
+		
+	def reset(self):
+		self.VIEW.setPosition(self.ORIGIN_POS)
+		self.VIEW.setEuler(self.ORIGIN_ROT)	
 		
 	# Horizontal (X) axis controls yaw
 	# Vertical (Y) axis controls position
@@ -283,9 +302,9 @@ class Joystick(Navigator):
 			elevation_amount = -self.MOVE_SPEED * elapsed
 		move_amount = self.MOVE_SPEED * elapsed
 #		self.NODE.setPosition([0, 0, y * self.MOVE_SPEED * viz.getFrameElapsed()], viz.REL_LOCAL)
-		self.NODE.setPosition([x*move_amount,elevation_amount,y*move_amount], viz.REL_LOCAL)
+		self.VIEW.setPosition([x*move_amount,elevation_amount,y*move_amount], viz.REL_LOCAL)
 		turn_amount = self.TURN_SPEED * elapsed
-		self.NODE.setEuler([twist*turn_amount,0,0], viz.REL_LOCAL)
+#		self.VIEW.setEuler([twist*turn_amount,0,0], viz.REL_LOCAL)
 #		self.NODE.setEuler([x * self.TURN_SPEED * , 0, 0], viz.REL_LOCAL)
 
 	def getSensor(self):
@@ -298,14 +317,23 @@ class Joystick(Navigator):
 			return True
 	
 	def setAsMain(self):
-		self.VIEW_LINK.setOffset([0,self.EYE_HEIGHT,0])
+		self.VIEW_LINK.setOffset([0,-self.EYE_HEIGHT,0])
+#		self.VIEW_LINK.preTrans([0,-self.EYE_HEIGHT,0])
 		
+		viz.mouse.setOverride(viz.ON) 
 		viz.fov(self.FOV)
-		self.MOVE_SPEED = 3
 		
 		vizact.ontimer(0, self.updateView)
 		vizact.onsensorup(self.joy, self.KEYS['reset'], self.reset)
 		viz.callback(getExtension().SLIDER_EVENT,self.onSliderChange)
+		
+		def onMouseMove(e):
+			euler = self.VIEW.getEuler()
+			euler[0] += e.dx*0.05
+			euler[1] += -e.dy*0.05
+			euler[1] = viz.clamp(euler[1],-85.0,85.0)
+			self.VIEW.setEuler(euler)
+		viz.callback(viz.MOUSE_MOVE_EVENT, onMouseMove)	
 
 class Oculus(Navigator):
 	def __init__(self):		
@@ -505,7 +533,7 @@ class Joyculus(Navigator):
 				vizact.onkeydown(self.KEYS['camera'], toggleBounds)
 				
 	# Setup functions
-	def getJoy(self):
+	def getSensor(self):
 		return self.joy
 		
 	def getHMD(self):
@@ -583,6 +611,7 @@ if __name__ == '__main__':
 	
 	nav = getNavigator()
  
+	nav.setPosition([0,4,0])
 	def printPos():
 		print nav.getPosition()
 	vizact.onkeyup(' ',printPos)

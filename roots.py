@@ -61,7 +61,9 @@ def EnvironmentRoot(visibility=True):
 	day = viz.addChild('resources/sky_day.osgb', scale=([5,5,5]),parent=environment_root)
 	day.renderToBackground(order=8)
 	environment = viz.addChild('resources/environment.osgb',parent=environment_root)
-	walkway = viz.addChild('resources/walkway.osgb',parent=environment_root)	
+#	walkway = viz.addChild('resources/walkway.osgb',parent=environment_root)	
+	walkway_L = viz.addChild('resources/walkway_L.osgb',pos=([-60.72457,0,31.85828]),parent=environment_root)
+	walkway_R = viz.addChild('resources/walkway_R.osgb',pos=([64.14527,0,0]),parent=environment_root)	
 	environment.renderToBackground()
 	environment_root.visible(visibility)
 	return environment_root
@@ -98,7 +100,7 @@ if __name__ == '__main__':
 	hmd = oculus.Rift()
 	if not hmd.getSensor(): 
 		viz.logError('**ERROR: Failed to detect Oculus!')
-		
+	
 #	bridgeRoot = BridgeRoot()
 	environmentRoot = EnvironmentRoot()
 #	gridRoot = GridRoot()

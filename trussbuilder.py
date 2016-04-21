@@ -303,7 +303,7 @@ def initLink(modelPath,tracker):
 	"""Initialize hand link with tracker and link group with main view"""
 	model = viz.addChild(modelPath)
 	link = viz.link(tracker,model)
-	link.postMultLinkable(viz.MainView)
+#	link.postMultLinkable(viz.MainView)
 	return link
 	
 	
@@ -801,10 +801,7 @@ def addOrder(orderTab,orderList=inventory.OrderList(),orderRow=[],flag=''):
 	elif flag == ORDERS_TOP_FLAG:
 		orderList = inventory.OrderList(ORDERS_TOP)
 	elif flag == ORDERS_BOT_FLAG:
-		orderList = inventory.OrderList(ORDERS_BOT)
-		
-	print 'addOrder: orderList:', orderList
-	
+		orderList = inventory.OrderList(ORDERS_BOT)	
 	
 	#Check for existing order
 	append = True
@@ -1107,7 +1104,6 @@ def createTrussNew(order=Order(),path='',loading=False):
 		
 		truss.isNewMember = True		
 		cycleMode(Mode.Add)
-		print 'New truss: Not loading'
 	else:
 		truss.isNewMember = False
 	
@@ -1455,12 +1451,6 @@ def onHighlightGrab2():
 		raycaster = highlightTool.getRayCaster().getLineForward()
 		newPos = raycaster.endFromDistance(dist)
 		newPos[2] = GRID_Z
-#		print newPos
-#		print startPos
-#		pos[0] += -dir[0]*GRID_Z
-#		pos[1] += -dir[1]*GRID_Z
-#		pos[2] = GRID_Z
-#		newPos = pos + (dir * dist)
 		grabbedItem.setPosition(newPos)
 vizact.ontimer(0,onHighlightGrab2)
 
@@ -1711,7 +1701,6 @@ def cycleOrientation(val):
 	runFeedbackTask(str(ORIENTATION.name))
 	orientation_text.message(str(ORIENTATION.name))
 	orientation_text_shadow.message(str(ORIENTATION.name))
-	hideMenuSound.play()
 
 def cycleMode(mode=Mode.Add):
 	global SHOW_HIGHLIGHTER
@@ -1806,12 +1795,8 @@ def cycleMode(mode=Mode.Add):
 		mouseTracker.distance = HAND_DISTANCE
 		bridge_root.setPosition(BRIDGE_ROOT_POS)
 		bridge_root.setEuler(SIDE_VIEW_ROT)
-#		viewport.getNode3d().setPosition(WALK_POS)
-#		viewport.getNode3d().setEuler(WALK_ROT)
-#		hmd.setPosition(WALK_POS)
-#		hmd.setEuler(WALK_ROT)
 		navigator.setPosition(WALK_POS)
-		navigator.setPosition(WALK_ROT)
+		navigator.setEuler(WALK_ROT)
 		
 		# Show all truss members
 		for member in SIDE_CLONES:
@@ -1843,7 +1828,6 @@ def cycleView(index):
 	if MODE is Mode.Build or MODE is Mode.Add or MODE is Mode.Edit:
 		runFeedbackTask('Switch to View Mode!')
 		return
-	
 	try:
 		targetPos = VIEW_SPOTS[index][0]
 		targetRot = VIEW_SPOTS[index][1]
@@ -2298,19 +2282,19 @@ def MainTask():
 		if oculusConnected and joystickConnected:
 			navigator = navigation.Joyculus()
 			navigator.setAsMain()
-			vizact.onsensorup( navigator.getJoy(), navigator.KEYS['mode'],cycleMode,vizact.choice([Mode.Edit,Mode.Build]))
-			vizact.onsensorup( navigator.getJoy(), navigator.KEYS['orient'],cycleOrientation,vizact.choice([Orientation.Top,Orientation.Bottom,Orientation.Side]))
-			vizact.onsensorup( navigator.getJoy(), navigator.KEYS['angles'],cycleView,vizact.choice([0,1,2]))					
-			vizact.onsensorup( navigator.getJoy(), navigator.KEYS['stereo'],toggleStereo,vizact.choice([False,True]))		
+			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['mode'],cycleMode,vizact.choice([Mode.Edit,Mode.Build]))
+			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['orient'],cycleOrientation,vizact.choice([Orientation.Top,Orientation.Bottom,Orientation.Side]))
+			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['angles'],cycleView,vizact.choice([0,1,2]))					
+			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['stereo'],toggleStereo,vizact.choice([False,True]))		
 			viz.callback( navigation.getExtension().HAT_EVENT, onHatChange )
 			vizact.ontimer( 0,slideRootHat )	
 		elif joystickConnected:
 			navigator = navigation.Joystick()
 			navigator.setAsMain()
-			vizact.onsensorup( navigator.getJoy(), navigator.KEYS['mode'],cycleMode,vizact.choice([Mode.Edit,Mode.Build]))
-			vizact.onsensorup( navigator.getJoy(), navigator.KEYS['orient'],cycleOrientation,vizact.choice([Orientation.Top,Orientation.Bottom,Orientation.Side]))
-			vizact.onsensorup( navigator.getJoy(), navigator.KEYS['angles'],cycleView,vizact.choice([0,1,2]))			
-			vizact.onsensorup( navigator.getJoy(), navigator.KEYS['stereo'],toggleStereo,vizact.choice([False,True]))		
+			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['mode'],cycleMode,vizact.choice([Mode.Edit,Mode.Build]))
+			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['orient'],cycleOrientation,vizact.choice([Orientation.Top,Orientation.Bottom,Orientation.Side]))
+			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['angles'],cycleView,vizact.choice([0,1,2]))			
+			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['stereo'],toggleStereo,vizact.choice([False,True]))		
 			viz.callback( navigation.getExtension().HAT_EVENT, onHatChange )
 			vizact.ontimer( 0,slideRootHat )				
 		elif oculusConnected:
@@ -2339,6 +2323,7 @@ def MainTask():
 		mouseTracker = initTracker(HAND_DISTANCE)
 		initMouse()
 		gloveLink = initLink('glove.cfg',mouseTracker)
+		gloveLink.postMultLinkable(navigator.VIEW_LINK)
 		viz.link(gloveLink,highlightTool)	
 		vizact.ontimer(0,clampTrackerScroll,mouseTracker,SCROLL_MIN,SCROLL_MAX)
 		vizact.whilemousedown ( navigator.KEYS['rotate'], rotateTruss, objToRotate, rotationSlider, rotationLabel )
@@ -2375,10 +2360,10 @@ def MainTask():
 		axesLink.setMask(viz.LINK_POS)
 		axesLink.postTrans([0,-1,2])
 		
-		inventoryLink = viz.link(navigator.VIEW_LINK,inventoryCanvas)
+		inventoryLink = viz.link(navigator.VIEW,inventoryCanvas)
 		inventoryLink.setMask(viz.LINK_POS)
-		inventoryLink.preTrans([0,-.3,.5])
-		inventoryLink.preEuler([0,30,0])		
+		inventoryLink.postTrans([0,-.1,.1])
+#		inventoryLink.postEuler([0,30,0])		
 
 		cycleMode(Mode.View)		
 		
