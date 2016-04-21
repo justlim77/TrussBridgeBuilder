@@ -198,7 +198,7 @@ KEYS = { 'forward'	: 'w'
 		,'interact' : viz.MOUSEBUTTON_LEFT
 		,'utility'	: viz.MOUSEBUTTON_MIDDLE
 		,'rotate'	: viz.MOUSEBUTTON_RIGHT
-		,'cycle'	: viz.KEY_TAB
+		,'orient'	: viz.KEY_TAB
 		,'mode'		: viz.KEY_SHIFT_L
 		,'angles'	: ';'
 		,'road'		: 'n'
@@ -208,6 +208,8 @@ KEYS = { 'forward'	: 'w'
 		,'esc'		: viz.KEY_ESCAPE
 		,'viewMode' : 'm'
 		,'capslock'	: viz.KEY_CAPS_LOCK
+		,'slideFar'	: '2'
+		,'slideNear': '1'
 }
 
 # Initialize scene
@@ -217,7 +219,9 @@ def initScene(res=RESOLUTION,quality=4,fov=FOV,stencil=8,stereoMode=viz.STEREO_H
 	viz.fov(fov)
 	viz.setOption('viz.display.stencil', stencil)
 	viz.setOption('viz.default_key.quit', 0)
+	viz.setOption('viz.dwm_composition',viz.OFF)
 	viz.setOption('viz.model.optimize', 1)
+	viz.setOption('viz.publish.allow_capture_video', 1)	# Allow capturing videos in published EXE 
 	viz.window.setName( 'Virtual Truss Bridge Builder & Visualizer' ) 
 	viz.window.setBorder( viz.BORDER_FIXED )
 	viz.clearcolor(clearColor)
@@ -384,23 +388,18 @@ def applyEnvironmentEffect(obj):
 #	obj.apply(lightEffect)	
 
 
-environment = viz.addChild('resources/environment.osgb',parent=environment_root)
-walkway = viz.addChild('resources/walkway.osgb',parent=environment_root)
+#environment = viz.addChild('resources/environment.osgb',parent=environment_root)
+#walkway = viz.addChild('resources/walkway.osgb',parent=environment_root)
 wave_M = viz.addChild('resources/wave2.osgb',cache=viz.CACHE_CLONE,pos=([0,0.75,0]),parent=environment_root)
-wave_M.setAnimationSpeed(0.01)
+wave_M.setAnimationSpeed(0.02)
 wave_B = viz.addChild('resources/wave2.osgb',cache=viz.CACHE_CLONE,pos=([0,0.75,-50]),parent=environment_root)
-wave_B.setAnimationSpeed(0.01)
-road_M = viz.addChild('resources/road3.osgb',cache=viz.CACHE_CLONE,pos=(0,5,0))
-road_M.setParent(environment_root)
+wave_B.setAnimationSpeed(0.02)
+road_L1 = viz.addChild('resources/road3.osgb',cache=viz.CACHE_CLONE,pos=(-20,5,0),parent=environment_root)
+road_L2 = viz.addChild('resources/road3.osgb',cache=viz.CACHE_CLONE,pos=(-40,5,0),parent=environment_root)
+road_R1 = viz.addChild('resources/road3.osgb',cache=viz.CACHE_CLONE,pos=(20,5,0),parent=environment_root)
+road_R2 = viz.addChild('resources/road3.osgb',cache=viz.CACHE_CLONE,pos=(40,5,0),parent=environment_root)
+road_M = viz.addChild('resources/road3.osgb',cache=viz.CACHE_CLONE,pos=(0,5,0),parent=environment_root)
 road_M.visible(False)
-road_L1 = viz.addChild('resources/road3.osgb',cache=viz.CACHE_CLONE,pos=(-20,5,0))
-road_L1.setParent(environment_root)
-road_L2 = viz.addChild('resources/road3.osgb',cache=viz.CACHE_CLONE,pos=(-40,5,0))
-road_L2.setParent(environment_root)
-road_R1 = viz.addChild('resources/road3.osgb',cache=viz.CACHE_CLONE,pos=(20,5,0))
-road_R1.setParent(environment_root)
-road_R2 = viz.addChild('resources/road3.osgb',cache=viz.CACHE_CLONE,pos=(40,5,0))
-road_R2.setParent(environment_root)
 #clamp_L = viz.addChild('resources/clamp3.osgb',cache=viz.CACHE_CLONE,pos=(-21,-2.5,0),euler=(-90,0,0),scale=(0.25,0.5,0.5))
 #clamp_L.setParent(environment_root)
 #clamp_R = viz.addChild('resources/clamp3.osgb',cache=viz.CACHE_CLONE,pos=(21,-2.5,0),euler=(90,0,0),scale=(0.25,0.5,0.5))
@@ -412,8 +411,8 @@ applyEnvironmentEffect(road_R1)
 applyEnvironmentEffect(road_R2)
 applyEnvironmentEffect(wave_M)
 applyEnvironmentEffect(wave_B)
-day = viz.addChild('resources/sky_day.osgb', scale=([5,5,5]),parent=environment_root)
-walkway.disable(viz.LIGHTING)
+#day = viz.addChild('resources/sky_day.osgb', scale=([5,5,5]),parent=environment_root)
+#walkway.disable(viz.LIGHTING)
 
 # Bridge pin and roller supports
 pinSupport = viz.addChild('resources/pinSupport.osgb',pos=(-9.5,4,0),scale=[1,1,11])
@@ -1997,12 +1996,10 @@ def slideRoot(val):
 			clampedZ = viz.clamp(pos[2],BOT_Z_MIN,SLIDE_MAX)
 			pos[2] = clampedZ
 			BOT_CACHED_Z = pos[2]
-		bridge_root.setPosition(pos)
-vizact.whilekeydown('1',slideRoot,-SLIDE_INTERVAL)		
-vizact.whilekeydown('2',slideRoot,SLIDE_INTERVAL)	
+		bridge_root.setPosition(pos)	
 	
 global SLIDE_VAL
-SLIDE_VAL = 0
+SLIDE_VAL = -1
 def slideRootHat():
 	global SLIDE_VAL
 	global TOP_CACHED_Z
@@ -2294,10 +2291,10 @@ def MainTask():
 		navigator = None
 		
 		if oculusConnected and joystickConnected:
-			navigator = navigation.Joyoculus2()
+			navigator = navigation.Joyculus()
 			navigator.setAsMain()
 			vizact.onsensorup( navigator.getJoy(), navigator.KEYS['mode'],cycleMode,vizact.choice([Mode.Edit,Mode.Build]))
-			vizact.onsensorup( navigator.getJoy(), navigator.KEYS['cycle'],cycleOrientation,vizact.choice([Orientation.Top,Orientation.Bottom,Orientation.Side]))
+			vizact.onsensorup( navigator.getJoy(), navigator.KEYS['orient'],cycleOrientation,vizact.choice([Orientation.Top,Orientation.Bottom,Orientation.Side]))
 			vizact.onsensorup( navigator.getJoy(), navigator.KEYS['stereo'],toggleStereo,vizact.choice([False,True]))		
 			viz.callback( navigation.getExtension().HAT_EVENT, onHatChange )
 			vizact.ontimer(0,slideRootHat)	
@@ -2305,7 +2302,7 @@ def MainTask():
 			navigator = navigation.Joystick()
 			navigator.setAsMain()
 			vizact.onsensorup( navigator.getJoy(), navigator.KEYS['mode'],cycleMode,vizact.choice([Mode.Edit,Mode.Build]))
-			vizact.onsensorup( navigator.getJoy(), navigator.KEYS['cycle'],cycleOrientation,vizact.choice([Orientation.Top,Orientation.Bottom,Orientation.Side]))
+			vizact.onsensorup( navigator.getJoy(), navigator.KEYS['orient'],cycleOrientation,vizact.choice([Orientation.Top,Orientation.Bottom,Orientation.Side]))
 			vizact.onsensorup( navigator.getJoy(), navigator.KEYS['stereo'],toggleStereo,vizact.choice([False,True]))		
 			viz.callback( navigation.getExtension().HAT_EVENT, onHatChange )
 			vizact.ontimer(0,slideRootHat)				
@@ -2313,15 +2310,19 @@ def MainTask():
 			navigator = navigation.Oculus()
 			navigator.setAsMain()
 			vizact.onkeyup( navigator.KEYS['mode'],cycleMode,vizact.choice([Mode.Edit,Mode.Build]))
-			vizact.onkeyup( navigator.KEYS['cycle'],cycleOrientation,vizact.choice([Orientation.Top,Orientation.Bottom,Orientation.Side]))
+			vizact.onkeyup( navigator.KEYS['orient'],cycleOrientation,vizact.choice([Orientation.Top,Orientation.Bottom,Orientation.Side]))
 			vizact.onkeyup( navigator.KEYS['stereo'],toggleStereo,vizact.choice([False,True]))
+			vizact.whilekeydown( KEYS['slideNear'],slideRoot,-SLIDE_INTERVAL)		
+			vizact.whilekeydown( KEYS['slideFar'],slideRoot,SLIDE_INTERVAL)		
 		else:
 			navigator = navigation.KeyboardMouse()
 			navigator.setAsMain()
 			vizact.onkeyup( navigator.KEYS['mode'],cycleMode,vizact.choice([Mode.Edit,Mode.Build]))
-			vizact.onkeyup( navigator.KEYS['cycle'],cycleOrientation,vizact.choice([Orientation.Top,Orientation.Bottom,Orientation.Side]))
+			vizact.onkeyup( navigator.KEYS['orient'],cycleOrientation,vizact.choice([Orientation.Top,Orientation.Bottom,Orientation.Side]))
 			vizact.onkeyup( navigator.KEYS['stereo'],toggleStereo,vizact.choice([False,True]))
-		
+			vizact.whilekeydown('1',slideRoot,-SLIDE_INTERVAL)		
+			vizact.whilekeydown('2',slideRoot,SLIDE_INTERVAL)
+			
 		vizact.onkeyup( KEYS['angles'],cycleView,vizact.choice([0,1,2]) )
 
 		navigator.setOrigin(START_POS,[0,0,0])

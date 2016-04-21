@@ -59,8 +59,10 @@ def GridRoot(gridColor=viz.CYAN,origin=([0,0,0])):
 def EnvironmentRoot(visibility=True):
 	environment_root = viz.addGroup()
 	day = viz.addChild('resources/sky_day.osgb', scale=([5,5,5]),parent=environment_root)
+	day.renderToBackground(order=8)
 	environment = viz.addChild('resources/environment.osgb',parent=environment_root)
-#	walkway = viz.addChild('resources/walkway.osgb',parent=environment_root)	
+	walkway = viz.addChild('resources/walkway.osgb',parent=environment_root)	
+	environment.renderToBackground()
 	environment_root.visible(visibility)
 	return environment_root
 	
@@ -74,3 +76,13 @@ def BridgeRoot(pos=([0,0,0]),euler=([0,0,0])):
 	bridge_root.setPosition(pos)
 	bridge_root.setEuler(euler)
 	return bridge_root
+	
+if __name__ == '__main__':
+	viz.setMultiSample(8)
+	viz.fov(100)
+	
+	viz.go()
+	
+	bridgeRoot = BridgeRoot()
+	environmentRoot = EnvironmentRoot()
+	gridRoot = GridRoot()
