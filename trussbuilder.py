@@ -2377,7 +2377,7 @@ def MainTask():
 		
 		inventoryLink = viz.link(navigator.VIEW_LINK,inventoryCanvas)
 		inventoryLink.setMask(viz.LINK_POS)
-		inventoryLink.preTrans([0,-1,2])
+		inventoryLink.preTrans([0,-.3,.5])
 		inventoryLink.preEuler([0,30,0])		
 
 		cycleMode(Mode.View)		
