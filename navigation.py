@@ -41,6 +41,7 @@ class Navigator(object):
 					,'collide'	: 'c'
 					,'walk'		: ','
 					,'angles'	: '.'
+					,'road'		: 'n'
 					,'esc'		: viz.KEY_ESCAPE
 					,'stereo' 	: '='
 					,'capslock'	: viz.KEY_CAPS_LOCK
@@ -217,16 +218,19 @@ class Joystick(Navigator):
 					,'restart'	: viz.KEY_END
 					,'home'		: viz.KEY_HOME
 					,'reset'	: 0
-					,'showMenu' : 1
+					,'utility'	: 1
 					,'mode'		: 5
 					,'orient'	: 3
 					,'builder'	: 6
 					,'walk'		: 7
 					,'angles'	: 8
-					,'env'		: '-'
-					,'grid'		: '-'
-					,'utility'	: 10
+					,'road'		: 10
 					,'esc'		: 11
+					,'slideFar'	: 0
+					,'slideNear': 180
+					,'env'		: '-'
+					,'showMenu' : ' '
+					,'grid'		: '-'
 					,'snapMenu'	: viz.KEY_CONTROL_L
 					,'interact' : viz.MOUSEBUTTON_LEFT
 					,'rotate'	: viz.MOUSEBUTTON_RIGHT
@@ -235,8 +239,6 @@ class Joystick(Navigator):
 					,'collide'	: 'c'
 					,'stereo' 	: 'm'
 					,'hand'		: 'h'
-					,'slideFar'	: 0
-					,'slideNear': 180
 		}
 		
 		# Get device from extension if not specified
@@ -256,10 +258,6 @@ class Joystick(Navigator):
 
 		# Set dead zone threshold so small movements of joystick are ignored
 		self.joy.setDeadZone(0.2)
-
-		# Display joystick information in config window
-		vizconfig.register(self.joy)
-		vizconfig.getConfigWindow().setWindowVisible(True)
 		
 		#Override parameters
 		self.ORIGIN_POS = [0,self.EYE_HEIGHT,0]
@@ -434,22 +432,25 @@ class Joyculus(Navigator):
 					,'back' 	: 's'
 					,'left' 	: 'a'
 					,'right'	: 'd'
-					,'up'		: 4
-					,'down'		: 2
 					,'camera'	: 'c'
 					,'restart'	: viz.KEY_END
 					,'home'		: viz.KEY_HOME
 					,'reset'	: 0
-					,'showMenu' : 1
-					,'mode'		: 5
+					,'utility'	: 1
+					,'down'		: 2
 					,'orient'	: 3
+					,'up'		: 4
+					,'mode'		: 5
 					,'builder'	: 6
 					,'walk'		: 7
 					,'angles'	: 8
+					,'road'		: 10
+					,'esc'		: 11
+					,'slideFar'	: 0
+					,'slideNear': 180
 					,'env'		: '-'
 					,'grid'		: '-'
-					,'utility'	: 10
-					,'esc'		: 11
+					,'showMenu' : ' '
 					,'snapMenu'	: viz.KEY_CONTROL_L
 					,'interact' : viz.MOUSEBUTTON_LEFT
 					,'rotate'	: viz.MOUSEBUTTON_RIGHT
@@ -459,8 +460,6 @@ class Joyculus(Navigator):
 					,'stereo' 	: 'm'
 					,'hand'		: 'h'
 					,'capslock'	: viz.KEY_CAPS_LOCK
-					,'slideFar'	: 0
-					,'slideNear': 180
 		}
 		
 		# Get device from extension if not specified
@@ -596,6 +595,9 @@ def getNavigator():
 		nav = Joyculus()
 	elif joystickConnected:
 		nav = Joystick()
+		# Display joystick information in config window
+		vizconfig.register(nav.getSensor())
+		vizconfig.getConfigWindow().setWindowVisible(True)
 	elif oculusConnected:
 		nav = Oculus()
 	else:

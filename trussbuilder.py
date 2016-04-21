@@ -85,7 +85,7 @@ ISMUTED = False
 BUILD_ROAM_LIMIT = ([12,-12,-10,10])	# Front,back,left,right limits in meters(m)
 START_POS = ([0,6,-17])					# Set at 5m + avatar height above ground and 17m back fron center
 BUILD_ROTATION = ([0,0,0])				# Zero-rotation to face dead center
-WALK_POS = ([35,7,-13])
+WALK_POS = ([22,8,-9])
 WALK_ROT = ([-30,0,0])
 VIEW_SPOTS = {
 	 0	: [[35,20,-13],[-60,0,0]]
@@ -866,8 +866,8 @@ def createInventory():
 	inventoryCanvas = viz.addGUICanvas(align=viz.ALIGN_CENTER_TOP)
 	inventoryGrid = vizdlg.GridPanel(align=viz.ALIGN_CENTER_TOP,cellAlign=vizdlg.LAYOUT_HORZ_TOP,parent=inventoryCanvas,border=False,background=False)
 	
-	global tabbedPanel
-	tabbedPanel = vizdlg.TabPanel(align=viz.ALIGN_CENTER_TOP,layout=vizdlg.LAYOUT_VERT_LEFT,parent=inventoryCanvas,border=False)
+	global inventoryTabPanel
+	inventoryTabPanel = vizdlg.TabPanel(align=viz.ALIGN_CENTER_TOP,layout=vizdlg.LAYOUT_VERT_LEFT,parent=inventoryCanvas,border=False)
 
 	# Side truss inventory
 	global sideInventory
@@ -875,7 +875,7 @@ def createInventory():
 	sideInventory.layout = vizdlg.LAYOUT_VERT_LEFT
 	
 	global sidePanel
-	sidePanel = tabbedPanel.addPanel('Side',sideInventory)
+	sidePanel = inventoryTabPanel.addPanel('Side',sideInventory)
 	
 	global sideRows
 	sideRows = []
@@ -886,7 +886,7 @@ def createInventory():
 	topInventory.layout = vizdlg.LAYOUT_VERT_LEFT
 	
 	global topPanel
-	topPanel = tabbedPanel.addPanel('Top',topInventory)
+	topPanel = inventoryTabPanel.addPanel('Top',topInventory)
 	
 	global topRows
 	topRows = []
@@ -897,13 +897,13 @@ def createInventory():
 	bottomInventory.layout = vizdlg.LAYOUT_VERT_LEFT
 	
 	global bottomPanel
-	bottomPanel = tabbedPanel.addPanel('Bottom',bottomInventory)
+	bottomPanel = inventoryTabPanel.addPanel('Bottom',bottomInventory)
 
 	global bottomRows
 	bottomRows = []
 
 	inventoryGrid.addRow([statPanel])
-	inventoryGrid.addRow([tabbedPanel])
+	inventoryGrid.addRow([inventoryTabPanel])
 
 	inventoryCanvas.setRenderWorld(RESOLUTION,[1,viz.AUTO_COMPUTE])
 	inventoryCanvas.setMouseStyle(viz.CANVAS_MOUSE_VIRTUAL)
@@ -1699,6 +1699,7 @@ def cycleOrientation(val):
 	
 	# Show feedback
 	runFeedbackTask(str(ORIENTATION.name))
+	clickSound.play()
 	orientation_text.message(str(ORIENTATION.name))
 	orientation_text_shadow.message(str(ORIENTATION.name))
 
@@ -1723,8 +1724,6 @@ def cycleMode(mode=Mode.Add):
 	
 	if MODE == Mode.Build:
 		inventoryCanvas.setMouseStyle(viz.CANVAS_MOUSE_VIRTUAL)
-#		viewport.getNode3d().setPosition(START_POS)
-#		hmd.setPosition(START_POS)
 		navigator.setPosition(START_POS)
 		
 		# Clear highlighter
@@ -1737,8 +1736,6 @@ def cycleMode(mode=Mode.Add):
 		cycleOrientation(ORIENTATION)
 	if MODE == Mode.Edit:
 		inventoryCanvas.setMouseStyle(viz.CANVAS_MOUSE_VISIBLE)
-#		viewport.getNode3d().setPosition(START_POS)
-#		hmd.setPosition(START_POS)
 		navigator.setPosition(START_POS)
 		
 		# Clear highlighter
@@ -1753,8 +1750,6 @@ def cycleMode(mode=Mode.Add):
 		cycleOrientation(ORIENTATION)
 	if MODE == Mode.Add:
 		inventoryCanvas.setMouseStyle(viz.CANVAS_MOUSE_VISIBLE)
-#		viewport.getNode3d().setPosition(START_POS)
-#		hmd.setPosition(START_POS)
 		navigator.setPosition(START_POS)
 		
 		# Show highlighter
@@ -1821,12 +1816,12 @@ def cycleMode(mode=Mode.Add):
 	
 	# UI/Sound feedback
 	runFeedbackTask(str(MODE.name))
-	hideMenuSound.play()
 	
 def cycleView(index):
 	global MODE
 	if MODE is Mode.Build or MODE is Mode.Add or MODE is Mode.Edit:
 		runFeedbackTask('Switch to View Mode!')
+		warningSound.play()
 		return
 	try:
 		targetPos = VIEW_SPOTS[index][0]
@@ -1867,7 +1862,6 @@ def onKeyUp(key):
 		toggleEnvironment()	
 	elif key == KEYS['reset'] or key == KEYS['reset'].upper():
 		try:
-#			hmd.getSensor().reset(0)
 			runFeedbackTask('Orientation reset!')
 			clickSound.play()
 		except:
@@ -2013,7 +2007,37 @@ def slideRootHat():
 def onHatChange(e):
 	global SLIDE_VAL
 	SLIDE_VAL = e.value
-
+	
+	if e.value == 90:	# Right
+		if menuCanvas.getVisible() is True:
+			index = menuTabPanel.panels.index(menuTabPanel.getSelectedPanel())
+			try:
+				menuTabPanel.selectPanel(index+1)
+			except:
+				menuTabPanel.selectPanel(0)
+			clickSound.play()
+		if inventoryCanvas.getVisible() is True:
+			index = inventoryTabPanel.panels.index(inventoryTabPanel.getSelectedPanel())
+			try:
+				inventoryTabPanel.selectPanel(index+1)
+			except:
+				inventoryTabPanel.selectPanel(0)
+			clickSound.play()
+	elif e.value == 270:	# Left
+		if menuCanvas.getVisible() is True:		
+			index = menuTabPanel.panels.index(menuTabPanel.getSelectedPanel())	
+			try:
+				menuTabPanel.selectPanel(index-1)
+			except:
+				menuTabPanel.selectPanel(menuTabPanel.panels.count-1)
+			clickSound.play()
+		if inventoryCanvas.getVisible() is True:
+			index = inventoryTabPanel.panels.index(inventoryTabPanel.getSelectedPanel())
+			try:
+				inventoryTabPanel.selectPanel(index-1)
+			except:
+				inventoryTabPanel.selectPanel(inventoryTabPanel.panels.count-1)
+			clickSound.play()
 
 def onMouseDown(button):
 	global objToRotate
@@ -2069,7 +2093,7 @@ def onList(e):
 		thicknessDropList.clearItems()
 		thicknessDropList.addItems(thicknesses)
 		
-	if e.object == tabbedPanel.tabGroup:
+	if e.object == inventoryTabPanel.tabGroup:
 		if e.newSel == 0:
 			ORIENTATION = Orientation.Side
 		if e.newSel == 1:
@@ -2323,7 +2347,7 @@ def MainTask():
 		mouseTracker = initTracker(HAND_DISTANCE)
 		initMouse()
 		gloveLink = initLink('glove.cfg',mouseTracker)
-		gloveLink.postMultLinkable(navigator.VIEW_LINK)
+		gloveLink.postMultLinkable(navigator.VIEW)
 		viz.link(gloveLink,highlightTool)	
 		vizact.ontimer(0,clampTrackerScroll,mouseTracker,SCROLL_MIN,SCROLL_MAX)
 		vizact.whilemousedown ( navigator.KEYS['rotate'], rotateTruss, objToRotate, rotationSlider, rotationLabel )
@@ -2337,9 +2361,7 @@ def MainTask():
 #		playerLink = viz.link(viz.MainView,playerNode)
 #		playerLink.setMask(viz.LINK_POS)
 #		vizact.onupdate(0,updatePosition(inventoryCanvas,playerNode))
-#		viewPos = hmd.getPosition()
-#		keyTracker = vizconnect.getTracker('rift_with_mouse_and_keyboard').getNode3d()
-#		keyTransport = vizconnect.getTransport('main_transport').getNode3d()
+#		
 #		viz.link(viz.MainView,keyTracker)
 #		viz.MainView.setPosition(START_POS)
 #		playerLink = viz.link(viz.MainView,keyTracker)
@@ -2356,14 +2378,14 @@ def MainTask():
 #		vizact.onupdate(0,updatePosition,axes,keyTransport)
 #		link = viz.link(keyTransport,axes,viz.LINK_POS)
 
-		axesLink = viz.link(navigator.VIEW_LINK,axes)
-		axesLink.setMask(viz.LINK_POS)
-		axesLink.postTrans([0,-1,2])
+#		axesLink = viz.link(navigator.VIEW_LINK,axes)
+#		axesLink.setMask(viz.LINK_POS)
+#		axesLink.postTrans([0,-1,2])
 		
 		inventoryLink = viz.link(navigator.VIEW,inventoryCanvas)
 		inventoryLink.setMask(viz.LINK_POS)
-		inventoryLink.postTrans([0,-.1,.1])
-#		inventoryLink.postEuler([0,30,0])		
+		inventoryLink.postTrans([0,-.1,.2])
+		inventoryLink.preEuler([0,30,0])		
 
 		cycleMode(Mode.View)		
 		
