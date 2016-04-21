@@ -9,6 +9,7 @@ import viz
 import vizact
 import vizconfig
 import oculus
+import mathlite
 
 # Navigator Base Class
 class Navigator(object):
@@ -47,6 +48,8 @@ class Navigator(object):
 					,'slideNear': '1'
 		}
 		self.MOVE_SPEED = 1.4
+		self.MIN_SPEED = 0.7
+		self.MAX_SPEED = 2.8
 		self.STRAFE_SPEED = 2.0
 		self.TURN_SPEED = 90
 		self.ORIGIN_POS = [0,0,0]
@@ -262,7 +265,10 @@ class Joystick(Navigator):
 #		self.NODE = viz.addGroup()
 #		self.VIEW_LINK = viz.link(self.NODE, self.VIEW)
 			
-			
+	def onSliderChange(self,e):
+		val = mathlite.getNewRange(e.value,1,-1,self.MIN_SPEED,self.MAX_SPEED)
+		self.MOVE_SPEED = val
+		
 	# Horizontal (X) axis controls yaw
 	# Vertical (Y) axis controls position
 	def updateView(self):
@@ -299,6 +305,7 @@ class Joystick(Navigator):
 		
 		vizact.ontimer(0, self.updateView)
 		vizact.onsensorup(self.joy, self.KEYS['reset'], self.reset)
+		viz.callback(getExtension().SLIDER_EVENT,self.onSliderChange)
 
 class Oculus(Navigator):
 	def __init__(self):		
@@ -385,7 +392,7 @@ class Oculus(Navigator):
 
 	def setAsMain(self):
 		self.MOVE_SPEED = 2.0	
-		
+
 		vizact.ontimer(0,self.updateView)
 		vizact.onkeyup(self.KEYS['reset'], self.reset)
 		
@@ -504,6 +511,13 @@ class Joyculus(Navigator):
 	def getHMD(self):
 		return self.hmd
 	
+	def onSliderChange(self,e):
+		val = mathlite.getNewRange(e.value,1,-1,self.MIN_SPEED,self.MAX_SPEED)
+		self.MOVE_SPEED = val
+	
+	def resetOrientation(self):
+		self.hmd.getSensor().reset()
+	
 	def reset(self):
 		super(self.__class__,self).reset()
 		self.hmd.getSensor().reset()
@@ -529,6 +543,7 @@ class Joyculus(Navigator):
 #		self.VIEW_LINK = viz.link(self.joystick.VIEW_LINK,self.oculus.NODE)
 		vizact.onsensordown(self.joy,self.KEYS['reset'],self.reset)
 		vizact.ontimer(0,self.updateView)
+		viz.callback(getExtension().SLIDER_EVENT,self.onSliderChange)
 		
 # Check for devices
 def checkOculus():

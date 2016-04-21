@@ -256,21 +256,6 @@ def initMouse():
 	viz.mouse.setTrap()
 	viz.mouse.setOverride(viz.ON) 
 	
-	
-def initLighting():
-	# Disable the head lamps since we're doing lighting ourselves
-	for window in viz.getWindowList():
-		window.getView().getHeadLight().disable()
-	# Create directional light
-	sky_light = viz.addDirectionalLight(euler=(-66,37,0),color=[0.8,0.8,0.8])
-#	light1 = vizfx.addDirectionalLight(euler=(40,20,0), color=[0.7,0.7,0.7])
-#	light2 = vizfx.addDirectionalLight(euler=(-65,15,0), color=[0.5,0.25,0.0])
-#	sky_light.color(viz.WHITE)
-	# Adjust ambient color
-	viz.setOption('viz.lightModel.ambient',[0]*3)
-	sky_light.ambient([0.8]*3)
-	vizfx.setAmbientColor([0.3,0.3,0.4])
-
 
 # Highlighter	
 def initHighlightTool():
@@ -320,7 +305,21 @@ def initLink(modelPath,tracker):
 	link = viz.link(tracker,model)
 	link.postMultLinkable(viz.MainView)
 	return link
-
+	
+	
+def initLighting():
+	# Disable the head lamps since we're doing lighting ourselves
+	for window in viz.getWindowList():
+		window.getView().getHeadLight().disable()
+	# Create directional light
+	sky_light = viz.addDirectionalLight(euler=(-66,37,0),color=[0.8,0.8,0.8])
+#	light1 = vizfx.addDirectionalLight(euler=(40,20,0), color=[0.7,0.7,0.7])
+#	light2 = vizfx.addDirectionalLight(euler=(-65,15,0), color=[0.5,0.25,0.0])
+#	sky_light.color(viz.WHITE)
+	# Adjust ambient color
+#	viz.setOption('viz.lightModel.ambient',[0]*3)
+	sky_light.ambient([0.8]*3)
+#	vizfx.setAmbientColor([0.3,0.3,0.4])
 
 def getCatalogue(path):
 	"""Parse catalogue from data subdirectory"""
@@ -387,12 +386,9 @@ def applyEnvironmentEffect(obj):
 #	obj.apply(effect)
 #	obj.apply(lightEffect)	
 
-
-#environment = viz.addChild('resources/environment.osgb',parent=environment_root)
-#walkway = viz.addChild('resources/walkway.osgb',parent=environment_root)
-wave_M = viz.addChild('resources/wave2.osgb',cache=viz.CACHE_CLONE,pos=([0,0.75,0]),parent=environment_root)
+wave_M = viz.addChild('resources/wave.osgb',cache=viz.CACHE_CLONE,pos=([0,0.75,0]),parent=environment_root)
 wave_M.setAnimationSpeed(0.02)
-wave_B = viz.addChild('resources/wave2.osgb',cache=viz.CACHE_CLONE,pos=([0,0.75,-50]),parent=environment_root)
+wave_B = viz.addChild('resources/wave.osgb',cache=viz.CACHE_CLONE,pos=([0,0.75,-50]),parent=environment_root)
 wave_B.setAnimationSpeed(0.02)
 road_L1 = viz.addChild('resources/road3.osgb',cache=viz.CACHE_CLONE,pos=(-20,5,0),parent=environment_root)
 road_L2 = viz.addChild('resources/road3.osgb',cache=viz.CACHE_CLONE,pos=(-40,5,0),parent=environment_root)
@@ -411,8 +407,6 @@ applyEnvironmentEffect(road_R1)
 applyEnvironmentEffect(road_R2)
 applyEnvironmentEffect(wave_M)
 applyEnvironmentEffect(wave_B)
-#day = viz.addChild('resources/sky_day.osgb', scale=([5,5,5]),parent=environment_root)
-#walkway.disable(viz.LIGHTING)
 
 # Bridge pin and roller supports
 pinSupport = viz.addChild('resources/pinSupport.osgb',pos=(-9.5,4,0),scale=[1,1,11])
@@ -1324,6 +1318,15 @@ def toggleMenuLink():
 		menuLink = viz.grab( gloveLink, menuCanvas )
 		menuCanvas.visible(True)
 		
+
+def toggleStereo(val=viz.TOGGLE):
+	if val is True:
+		runFeedbackTask('Stereo Horz')
+		viz.MainWindow.stereo(STEREOMODE)
+	else:
+		runFeedbackTask('Stereo Right')
+		viz.MainWindow.stereo(viz.STEREO_RIGHT)	
+		
 		
 def toggleCollision(val=viz.TOGGLE):
 	viz.collision(val)
@@ -2027,6 +2030,7 @@ def onHatChange(e):
 	global SLIDE_VAL
 	SLIDE_VAL = e.value
 
+
 def onMouseDown(button):
 	global objToRotate
 	global CACHED_GLOVE_Z
@@ -2279,12 +2283,13 @@ def MainTask():
 		
 		# Setup callbacks
 		viz.callback ( viz.KEYUP_EVENT, onKeyUp )
-		viz.callback ( viz.KEYDOWN_EVENT, onKeyDown )
+#		viz.callback ( viz.KEYDOWN_EVENT, onKeyDown )
 		viz.callback ( viz.MOUSEUP_EVENT, onMouseUp )
 		viz.callback ( viz.MOUSEDOWN_EVENT, onMouseDown )
-		viz.callback ( viz.MOUSEWHEEL_EVENT, onMouseWheel )
+#		viz.callback ( viz.MOUSEWHEEL_EVENT, onMouseWheel )
 		viz.callback ( viz.SENSOR_UP_EVENT, onJoyButton )
 		
+		# Setup navigation
 		import navigation
 		joystickConnected = navigation.checkJoystick()
 		oculusConnected = navigation.checkOculus()
@@ -2295,39 +2300,41 @@ def MainTask():
 			navigator.setAsMain()
 			vizact.onsensorup( navigator.getJoy(), navigator.KEYS['mode'],cycleMode,vizact.choice([Mode.Edit,Mode.Build]))
 			vizact.onsensorup( navigator.getJoy(), navigator.KEYS['orient'],cycleOrientation,vizact.choice([Orientation.Top,Orientation.Bottom,Orientation.Side]))
+			vizact.onsensorup( navigator.getJoy(), navigator.KEYS['angles'],cycleView,vizact.choice([0,1,2]))					
 			vizact.onsensorup( navigator.getJoy(), navigator.KEYS['stereo'],toggleStereo,vizact.choice([False,True]))		
 			viz.callback( navigation.getExtension().HAT_EVENT, onHatChange )
-			vizact.ontimer(0,slideRootHat)	
+			vizact.ontimer( 0,slideRootHat )	
 		elif joystickConnected:
 			navigator = navigation.Joystick()
 			navigator.setAsMain()
 			vizact.onsensorup( navigator.getJoy(), navigator.KEYS['mode'],cycleMode,vizact.choice([Mode.Edit,Mode.Build]))
 			vizact.onsensorup( navigator.getJoy(), navigator.KEYS['orient'],cycleOrientation,vizact.choice([Orientation.Top,Orientation.Bottom,Orientation.Side]))
+			vizact.onsensorup( navigator.getJoy(), navigator.KEYS['angles'],cycleView,vizact.choice([0,1,2]))			
 			vizact.onsensorup( navigator.getJoy(), navigator.KEYS['stereo'],toggleStereo,vizact.choice([False,True]))		
 			viz.callback( navigation.getExtension().HAT_EVENT, onHatChange )
-			vizact.ontimer(0,slideRootHat)				
+			vizact.ontimer( 0,slideRootHat )				
 		elif oculusConnected:
 			navigator = navigation.Oculus()
 			navigator.setAsMain()
 			vizact.onkeyup( navigator.KEYS['mode'],cycleMode,vizact.choice([Mode.Edit,Mode.Build]))
 			vizact.onkeyup( navigator.KEYS['orient'],cycleOrientation,vizact.choice([Orientation.Top,Orientation.Bottom,Orientation.Side]))
 			vizact.onkeyup( navigator.KEYS['stereo'],toggleStereo,vizact.choice([False,True]))
-			vizact.whilekeydown( KEYS['slideNear'],slideRoot,-SLIDE_INTERVAL)		
-			vizact.whilekeydown( KEYS['slideFar'],slideRoot,SLIDE_INTERVAL)		
+			vizact.onkeyup( navigator.KEYS['angles'],cycleView,vizact.choice([0,1,2]))
+			vizact.whilekeydown( navigator.KEYS['slideNear'],slideRoot,-SLIDE_INTERVAL )		
+			vizact.whilekeydown( navigator.KEYS['slideFar'],slideRoot,SLIDE_INTERVAL )		
 		else:
 			navigator = navigation.KeyboardMouse()
 			navigator.setAsMain()
 			vizact.onkeyup( navigator.KEYS['mode'],cycleMode,vizact.choice([Mode.Edit,Mode.Build]))
 			vizact.onkeyup( navigator.KEYS['orient'],cycleOrientation,vizact.choice([Orientation.Top,Orientation.Bottom,Orientation.Side]))
+			vizact.onkeyup( navigator.KEYS['angles'],cycleView,vizact.choice([0,1,2]) )
 			vizact.onkeyup( navigator.KEYS['stereo'],toggleStereo,vizact.choice([False,True]))
-			vizact.whilekeydown('1',slideRoot,-SLIDE_INTERVAL)		
-			vizact.whilekeydown('2',slideRoot,SLIDE_INTERVAL)
-			
-		vizact.onkeyup( KEYS['angles'],cycleView,vizact.choice([0,1,2]) )
-
+			vizact.whilekeydown( navigator.KEYS['slideNear'],slideRoot,-SLIDE_INTERVAL)		
+			vizact.whilekeydown( navigator.KEYS['slideFar'],slideRoot,SLIDE_INTERVAL)
+		
 		navigator.setOrigin(START_POS,[0,0,0])
 		navigator.reset()
-		print navigator.getPosition()
+		
 		highlightTool.setUpdateFunction(updateHighlightTool)
 		mouseTracker = initTracker(HAND_DISTANCE)
 		initMouse()
@@ -2370,7 +2377,7 @@ def MainTask():
 		
 		inventoryLink = viz.link(navigator.VIEW_LINK,inventoryCanvas)
 		inventoryLink.setMask(viz.LINK_POS)
-		inventoryLink.preTrans([0,-.1,.2])
+		inventoryLink.preTrans([0,-1,2])
 		inventoryLink.preEuler([0,30,0])		
 
 		cycleMode(Mode.View)		
@@ -2378,13 +2385,6 @@ def MainTask():
 		INITIALIZED = True
 viztask.schedule( MainTask() )
 
-def toggleStereo(val=viz.TOGGLE):
-	if val is True:
-		runFeedbackTask('Stereo Horz')
-		viz.MainWindow.stereo(STEREOMODE)
-	else:
-		runFeedbackTask('Stereo Right')
-		viz.MainWindow.stereo(viz.STEREO_RIGHT)
 		
 # Pre-load sounds
 viz.playSound('./resources/sounds/return_to_holodeck.wav',viz.SOUND_PRELOAD)

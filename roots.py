@@ -79,10 +79,26 @@ def BridgeRoot(pos=([0,0,0]),euler=([0,0,0])):
 	
 if __name__ == '__main__':
 	viz.setMultiSample(8)
-	viz.fov(100)
 	
 	viz.go()
 	
-	bridgeRoot = BridgeRoot()
+	for window in viz.getWindowList():
+		window.getView().getHeadLight().disable()
+#		
+#	# Create directional light
+	sky_light = viz.addDirectionalLight(euler=(-66,37,0),color=[1,1,1])
+##	light1 = vizfx.addDirectionalLight(euler=(40,20,0), color=[0.7,0.7,0.7])
+##	light2 = vizfx.addDirectionalLight(euler=(-65,15,0), color=[0.5,0.25,0.0])
+##	sky_light.color(viz.WHITE)
+#	# Adjust ambient color
+#	viz.setOption('viz.lightModel.ambient',[0]*3)
+#	sky_light.ambient([0.8]*3)
+#	vizfx.setAmbientColor([0.3,0.3,0.4])	
+	import oculus
+	hmd = oculus.Rift()
+	if not hmd.getSensor(): 
+		viz.logError('**ERROR: Failed to detect Oculus!')
+		
+#	bridgeRoot = BridgeRoot()
 	environmentRoot = EnvironmentRoot()
-	gridRoot = GridRoot()
+#	gridRoot = GridRoot()
