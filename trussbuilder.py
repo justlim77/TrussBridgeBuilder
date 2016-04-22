@@ -939,7 +939,7 @@ def populateInventory():
 	# Generate truss buttons based on respective lists
 	global ORDERS_SIDE
 	for sideOrder in ORDERS_SIDE:
-		msg = '{}mm(d) x {}mm(th) x {}m(l) [{}]'.format ( sideOrder.diameter, sideOrder.thickness, sideOrder.length, sideOrder.quantity )
+		msg = '{}m(l) x {}mm(d) x {}mm(th) [{}]'.format ( sideOrder.length, sideOrder.diameter, sideOrder.thickness, sideOrder.quantity )
 		sideButton = viz.addButtonLabel ( msg )
 		vizact.onbuttonup ( sideButton, createTrussNew, sideOrder, 'resources/chs.osgb' )
 		row = sideInventory.addRow ( [sideButton] )
@@ -948,7 +948,7 @@ def populateInventory():
 		vizact.onbuttonup ( sideButton, clickSound.play )
 	global ORDERS_TOP
 	for topOrder in ORDERS_TOP:
-		msg = '{}mm(d) x {}mm(th) x {}m(l) [{}]'.format ( topOrder.diameter, topOrder.thickness, topOrder.length, topOrder.quantity )
+		msg = '{}m(l) x {}mm(d) x {}mm(th) [{}]'.format ( topOrder.length, topOrder.diameter, topOrder.thickness, topOrder.quantity )
 		topButton = viz.addButtonLabel ( msg )
 		vizact.onbuttonup ( topButton, createTrussNew, topOrder, 'resources/chs.osgb' )
 		row = topInventory.addRow( [topButton] )
@@ -957,7 +957,7 @@ def populateInventory():
 		vizact.onbuttonup ( topButton, clickSound.play )
 	global ORDERS_BOT
 	for botOrder in ORDERS_BOT:
-		msg = '{}mm(d) x {}mm(th) x {}m(l) [{}]'.format ( botOrder.diameter, botOrder.thickness, botOrder.length, botOrder.quantity )
+		msg = '{}m(l) x {}mm(d) x {}mm(th) [{}]'.format ( botOrder.length, botOrder.diameter, botOrder.thickness,  botOrder.quantity )
 		botButton = viz.addButtonLabel ( msg )
 		vizact.onbuttonup ( botButton, createTrussNew, botOrder, 'resources/chs.osgb' )
 		row = bottomInventory.addRow ( [botButton] )
@@ -1041,14 +1041,14 @@ def createTrussNew(order=Order(),path='',loading=False):
 	# Setup proximity-based snapping nodes
 	posA = truss.getPosition()
 	posA[0] -= truss.length * 0.5
-	nodeA = vizshape.addSphere(0.2,pos=posA)
-	nodeA.visible(False)
+	nodeA = vizshape.addSphere(0.3,pos=posA)
+#	nodeA.visible(False)
 	viz.grab(truss,nodeA)
 	
 	posB = truss.getPosition()
 	posB[0] += truss.length * 0.5
-	nodeB = vizshape.addSphere(0.2,pos=posB)
-	nodeB.visible(False)
+	nodeB = vizshape.addSphere(0.3,pos=posB)
+#	nodeB.visible(False)
 	viz.grab(truss,nodeB)
 	
 	truss.proxyNodes = [nodeA,nodeB]
@@ -1278,6 +1278,8 @@ def toggleGrid(value=viz.TOGGLE):
 		hideMenuSound.play()
 			
 def toggleUtility(val=viz.TOGGLE):
+	if grabbedItem is not None:
+		return
 	utilityCanvas.visible(val)
 	menuCanvas.visible(False)
 
@@ -1294,6 +1296,8 @@ def clampTrackerScroll(tracker,min=0.2,max=20):
 
 
 def toggleMenu(val=viz.TOGGLE):
+	if grabbedItem is not None:
+		return
 	menuCanvas.visible(val)
 	utilityCanvas.visible(False)
 	if menuCanvas.getVisible() is True or MODE is Mode.Edit or MODE is Mode.View:
@@ -1474,6 +1478,7 @@ def onRelease(e=None):
 	global bridge_root
 	global GRAB_LINKS
 	global SHOW_HIGHLIGHTER
+	global PROXY_NODES
 	global highlightTool
 		
 	if VALID_SNAP:
@@ -1521,6 +1526,10 @@ def onRelease(e=None):
 			BUILD_MEMBERS.remove(grabbedItem)
 			proxyManager.removeTarget(grabbedItem.targetNodes[0])
 			proxyManager.removeTarget(grabbedItem.targetNodes[1])
+			PROXY_NODES.remove(grabbedItem.proxyNodes[0])
+			PROXY_NODES.remove(grabbedItem.proxyNodes[1])
+			grabbedItem.proxyNodes[0].remove()
+			grabbedItem.proxyNodes[1].remove()
 #			grabbedItem.setPosition(0,10,-5)
 			grabbedItem.remove()
 			highlightedItem = None
@@ -2397,10 +2406,11 @@ def MainTask():
 		
 		inventoryLink = viz.link(navigator.VIEW,inventoryCanvas)
 		inventoryLink.setMask(viz.LINK_POS)
-		inventoryLink.postTrans([0,-.1,.2])
+		inventoryLink.postTrans([0,-.1,.5])
 		inventoryLink.preEuler([0,30,0])		
 
-		cycleMode(Mode.View)		
+#		cycleMode(Mode.View)		
+		cycleMode(Mode.Build)
 		
 		INITIALIZED = True
 viztask.schedule( MainTask() )
