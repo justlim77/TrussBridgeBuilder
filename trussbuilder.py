@@ -64,6 +64,8 @@ from vizfx.postprocess.color import GrayscaleEffect
 from vizfx.postprocess.composite import BlendEffect
 from enum import Enum
 
+
+
 # Globals
 RESOLUTION = ([1280,720])
 UTILITY_CANVAS_RES = ([80,80])
@@ -2157,6 +2159,7 @@ def LoadData():
 	
 	currentOrientation = ORIENTATION
 	cycleOrientation(Orientation.Side)
+	currentMode = MODE
 	
 	ORDERS = []
 	with open(filePath,'rb') as f:
@@ -2186,9 +2189,10 @@ def LoadData():
 		truss.link = link
 		GRAB_LINKS.append(link)
 	
-	toggleRoad(road_M)
+#	toggleRoad(road_M)
 		
 	cycleOrientation(currentOrientation)
+	cycleMode(MODE)
 	
 	# Show load feedback
 	runFeedbackTask('Load success!')
@@ -2304,46 +2308,51 @@ def MainTask():
 		# Setup navigation
 		import navigation
 		joystickConnected = navigation.checkJoystick()
+		print joystickConnected
 		oculusConnected = navigation.checkOculus()
+		print oculusConnected
+#		yield viztask.waitTime(1)
 		navigator = None
 		
 		if oculusConnected and joystickConnected:
 			navigator = navigation.Joyculus()
-			navigator.setAsMain()
 			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['mode'],cycleMode,vizact.choice([Mode.Edit,Mode.Build]))
 			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['orient'],cycleOrientation,vizact.choice([Orientation.Top,Orientation.Bottom,Orientation.Side]))
 			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['angles'],cycleView,vizact.choice([0,1,2]))					
 			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['stereo'],toggleStereo,vizact.choice([False,True]))		
 			viz.callback( navigation.getExtension().HAT_EVENT, onHatChange )
 			vizact.ontimer( 0,slideRootHat )	
+			navigator.setAsMain()
 		elif joystickConnected:
 			navigator = navigation.Joystick()
-			navigator.setAsMain()
 			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['mode'],cycleMode,vizact.choice([Mode.Edit,Mode.Build]))
 			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['orient'],cycleOrientation,vizact.choice([Orientation.Top,Orientation.Bottom,Orientation.Side]))
 			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['angles'],cycleView,vizact.choice([0,1,2]))			
 			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['stereo'],toggleStereo,vizact.choice([False,True]))		
 			viz.callback( navigation.getExtension().HAT_EVENT, onHatChange )
 			vizact.ontimer( 0,slideRootHat )				
+			navigator.setAsMain()
 		elif oculusConnected:
 			navigator = navigation.Oculus()
-			navigator.setAsMain()
 			vizact.onkeyup( navigator.KEYS['mode'],cycleMode,vizact.choice([Mode.Edit,Mode.Build]))
 			vizact.onkeyup( navigator.KEYS['orient'],cycleOrientation,vizact.choice([Orientation.Top,Orientation.Bottom,Orientation.Side]))
 			vizact.onkeyup( navigator.KEYS['stereo'],toggleStereo,vizact.choice([False,True]))
 			vizact.onkeyup( navigator.KEYS['angles'],cycleView,vizact.choice([0,1,2]))
 			vizact.whilekeydown( navigator.KEYS['slideNear'],slideRoot,-SLIDE_INTERVAL )		
-			vizact.whilekeydown( navigator.KEYS['slideFar'],slideRoot,SLIDE_INTERVAL )		
+			vizact.whilekeydown( navigator.KEYS['slideFar'],slideRoot,SLIDE_INTERVAL )	
+			navigator.setAsMain()
 		else:
 			navigator = navigation.KeyboardMouse()
-			navigator.setAsMain()
 			vizact.onkeyup( navigator.KEYS['mode'],cycleMode,vizact.choice([Mode.Edit,Mode.Build]))
 			vizact.onkeyup( navigator.KEYS['orient'],cycleOrientation,vizact.choice([Orientation.Top,Orientation.Bottom,Orientation.Side]))
 			vizact.onkeyup( navigator.KEYS['angles'],cycleView,vizact.choice([0,1,2]) )
 			vizact.onkeyup( navigator.KEYS['stereo'],toggleStereo,vizact.choice([False,True]))
 			vizact.whilekeydown( navigator.KEYS['slideNear'],slideRoot,-SLIDE_INTERVAL)		
 			vizact.whilekeydown( navigator.KEYS['slideFar'],slideRoot,SLIDE_INTERVAL)
+			navigator.setAsMain()
 		
+#		navigator.setAsMain()
+		yield viztask.waitTime(1)
 		navigator.setOrigin(START_POS,[0,0,0])
 		navigator.reset()
 		
@@ -2358,7 +2367,7 @@ def MainTask():
 		
 		global axes
 		axes = vizshape.addAxes()
-#		axes.visible(False)
+		axes.visible(False)
 
 		viewPos = navigator.getPosition()
 		rotationCanvas.setEuler( [0,30,0] )

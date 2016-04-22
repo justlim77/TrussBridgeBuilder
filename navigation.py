@@ -499,8 +499,8 @@ class Joyculus(Navigator):
 #		vizconfig.getConfigWindow().setWindowVisible(True)
 
 		# Create node for applying joystick movement and link to main view
-		self.NODE = viz.addGroup()
-		self.VIEW_LINK = viz.link(self.NODE, self.VIEW)
+#		self.NODE = viz.addGroup()
+#		self.VIEW_LINK = viz.link(self.NODE, self.VIEW)
 		
 		# --add oculus as HMD
 		self.hmd = oculus.Rift()
@@ -628,7 +628,7 @@ if __name__ == '__main__':
 	
 	nav = getNavigator()
  
-	nav.setPosition([0,4,0])
+	nav.setPosition([0,0,0])
 	def printPos():
 		print nav.getPosition()
 	vizact.onkeyup(' ',printPos)
