@@ -145,6 +145,21 @@ class KeyboardMouse(Navigator):
 		self.VIEW_LINK.remove()
 		self.VIEW_LINK = viz.link(self.VIEW, self.NODE)
 		
+	def getPosition(self):
+#		return self.navigationNode.getPosition(viz.REL_PARENT)
+		return self.VIEW.getPosition()
+		
+	def setPosition(self,position):
+#		self.navigationNode.setPosition(position, viz.REL_PARENT)
+		self.VIEW.setPosition(position)
+					
+	def getEuler(self):
+		return self.VIEW.getEuler()
+		
+	def setEuler(self,euler):
+#		self.navigationNode.setEuler(euler, viz.REL_PARENT)
+		self.VIEW.setEuler(euler)	
+		
 	# Setup functions				
 	def updateView(self):
 		yaw,pitch,roll = self.VIEW.getEuler()

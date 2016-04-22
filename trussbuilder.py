@@ -9,7 +9,7 @@ Order truss members required to build a 20m-long bridge across the Singapore Riv
 [ VR HEADSET or Mouse] Look around
 [ JOYSTICK or WASD ] Navigate
 [ JOYBUTTON5 | JOYBUTTON3 or Z | X ] Lower/Raise elevation
-[ JOYHATDOWN | JOYHATUP or 1 | 2 ] Slide bridge towards or away from you in TOP/BOTTOM ORIENTATION
+[ JOYCURSOR or 1 | 2 ] Slide bridge towards or away from you in TOP/BOTTOM ORIENTATION
 
 [ Build ]
 [ JOYBUTTON6 or TAB ] Cycle through Bridge Orientation
@@ -68,7 +68,7 @@ from enum import Enum
 RESOLUTION = ([1280,720])
 UTILITY_CANVAS_RES = ([80,80])
 MULTISAMPLING = 8
-FOV = 45
+FOV = 40
 START_FOV = 100
 STENCIL = 8
 STEREOMODE = viz.STEREO_HORZ
@@ -522,7 +522,7 @@ saveButton = optionPanel.addItem(viz.addButtonLabel('Save Bridge'))
 saveButton.length(2)
 loadButton = optionPanel.addItem(viz.addButtonLabel('Load Bridge'))
 loadButton.length(2)
-optionPanel.addSection('Game')
+optionPanel.addSection('Application')
 soundButton = optionPanel.addItem(viz.addButtonLabel('Toggle Audio'))
 soundButton.length(2)
 resetButton = optionPanel.addItem(viz.addButtonLabel('Clear Bridge'))
@@ -594,6 +594,8 @@ for i, button in enumerate(utilityButtons):
 utilityLink = viz.link(viz.MainView,utilityCanvas)
 #utilityLink.postMultLinkable(viz.MainView)
 utilityLink.preTrans( [0, 0, 1.5] )
+
+
 
 # Rotation Panel
 rotationCanvas = viz.addGUICanvas(align=viz.ALIGN_CENTER)
@@ -714,8 +716,9 @@ def showdialog(message,func):
 	dialog = vizdlg.MessageDialog(message=message, title='Warning', accept='Yes (Enter)', cancel='No (Esc)',parent=dialogCanvas)
 	dialog.setScreenAlignment(viz.ALIGN_CENTER)
 	
-	bb = dialog.getBoundingBox()
-	dialogCanvas.setRenderWorldOverlay([bb.width + 5, bb.height + 5], fov=bb.height * 0.15, distance=3.0)	
+	updateResolution(dialog,dialogCanvas)
+#	bb = dialog.getBoundingBox()
+#	dialogCanvas.setRenderWorldOverlay([bb.width + 5, bb.height + 5], fov=bb.height * 0.15, distance=3.0)	
 	dialogCanvas.visible(viz.ON)
 	
 	warningSound.play()
@@ -740,6 +743,7 @@ def quitGame():
 	viztask.schedule(showdialog(QUIT_MESSAGE,viz.quit))
 	
 def loadBridge():
+	clickSound.play()
 	viztask.schedule(showdialog(LOAD_MESSAGE,LoadData))
 	
 class Order(object):

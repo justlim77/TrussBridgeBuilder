@@ -61,9 +61,11 @@ def EnvironmentRoot(visibility=True):
 	day = viz.addChild('resources/sky_day.osgb', scale=([5,5,5]),parent=environment_root)
 	day.renderToBackground(order=8)
 	environment = viz.addChild('resources/environment.osgb',parent=environment_root)
-#	walkway = viz.addChild('resources/walkway.osgb',parent=environment_root)	
-	walkway_L = viz.addChild('resources/walkway_L.osgb',pos=([-60.72457,0,31.85828]),parent=environment_root)
-	walkway_R = viz.addChild('resources/walkway_R.osgb',pos=([64.14527,0,0]),parent=environment_root)	
+#	walkway = viz.addChild('resources/walkway.osgb',parent=environment_root)
+	L_offset = 27
+	R_offset = -14
+	walkway_L = viz.addChild('resources/walkway_L.osgb',pos=([-60.72457+L_offset,-1.75,31.85828+3.25]),parent=environment_root)
+	walkway_R = viz.addChild('resources/walkway_R.osgb',pos=([64.14527+R_offset,-1,0-11]),parent=environment_root)	
 	environment.renderToBackground()
 	environment_root.visible(visibility)
 	return environment_root
@@ -102,5 +104,14 @@ if __name__ == '__main__':
 		viz.logError('**ERROR: Failed to detect Oculus!')
 	
 #	bridgeRoot = BridgeRoot()
-	environmentRoot = EnvironmentRoot()
+	environment_root = EnvironmentRoot()
 #	gridRoot = GridRoot()
+	wave_M = viz.addChild('resources/wave.osgb',cache=viz.CACHE_CLONE,pos=([0,0.75,0]),parent=environment_root)
+	wave_M.setAnimationSpeed(0.02)
+	wave_B = viz.addChild('resources/wave.osgb',cache=viz.CACHE_CLONE,pos=([0,0.75,-50]),parent=environment_root)
+	wave_B.setAnimationSpeed(0.02)
+	road_L1 = viz.addChild('resources/road3.osgb',cache=viz.CACHE_CLONE,pos=(-20,5,0),parent=environment_root)
+	road_L2 = viz.addChild('resources/road3.osgb',cache=viz.CACHE_CLONE,pos=(-40,5,0),parent=environment_root)
+	road_R1 = viz.addChild('resources/road3.osgb',cache=viz.CACHE_CLONE,pos=(20,5,0),parent=environment_root)
+	road_R2 = viz.addChild('resources/road3.osgb',cache=viz.CACHE_CLONE,pos=(40,5,0),parent=environment_root)
+#	road_M = viz.addChild('resources/road3.osgb',cache=viz.CACHE_CLONE,pos=(0,5,0),parent=environment_root)
