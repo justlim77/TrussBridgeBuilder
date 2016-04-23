@@ -2293,6 +2293,7 @@ def MainTask():
 		vizact.onbuttonup(orderBottomButton,createConfirmButton)
 		
 		menuCanvas.visible(viz.OFF)
+		menuCanvas.setRenderWorldOverlay(RESOLUTION, fov=START_FOV, distance=3.0)
 		menuCanvas.setPosition(0,-2,2)
 		dialogCanvas.setPosition(0,-2,2)
 		feedbackCanvas.setPosition(0,-2,2)
