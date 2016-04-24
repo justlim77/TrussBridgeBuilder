@@ -2321,7 +2321,6 @@ def MainTask():
 		print joystickConnected
 		oculusConnected = navigation.checkOculus()
 		print oculusConnected
-#		yield viztask.waitTime(1)
 		navigator = None
 		
 		if oculusConnected and joystickConnected:
@@ -2362,7 +2361,7 @@ def MainTask():
 			navigator.setAsMain()
 		
 #		navigator.setAsMain()
-		yield viztask.waitTime(1)
+#		yield viztask.waitTime(1)
 		navigator.setOrigin(START_POS,[0,0,0])
 		navigator.reset()
 		

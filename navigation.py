@@ -284,11 +284,11 @@ class Joystick(Navigator):
 		self.MOVE_SPEED = val
 	
 	def getPosition(self):
-		return self.VIEW.getPosition()
+		return self.VIEW_LINK.getPosition()
 		
 	def setPosition(self,position):
 #		self.navigationNode.setPosition(position, viz.REL_PARENT)
-		self.VIEW.setPosition(position)
+		self.VIEW_LINK.setPosition(position)
 
 	def getEuler(self):
 		return self.VIEW.getEuler()
@@ -330,8 +330,8 @@ class Joystick(Navigator):
 			return True
 	
 	def setAsMain(self):
-		self.VIEW_LINK.setOffset([0,-self.EYE_HEIGHT,0])
-#		self.VIEW_LINK.preTrans([0,-self.EYE_HEIGHT,0])
+#		self.VIEW_LINK.setOffset([0,self.EYE_HEIGHT,0])
+		self.VIEW_LINK.preTrans([0,-self.EYE_HEIGHT,0])
 		
 		viz.mouse.setOverride(viz.ON) 
 		viz.fov(self.FOV)
@@ -477,6 +477,8 @@ class Joyculus(Navigator):
 					,'capslock'	: viz.KEY_CAPS_LOCK
 		}
 		
+		self.TURN_SPEED = 45
+		
 		# Get device from extension if not specified
 		self.device = None
 		if self.device is None:
@@ -497,10 +499,6 @@ class Joyculus(Navigator):
 		# Display joystick information in config window
 #		vizconfig.register(self.joy)
 #		vizconfig.getConfigWindow().setWindowVisible(True)
-
-		# Create node for applying joystick movement and link to main view
-#		self.NODE = viz.addGroup()
-#		self.VIEW_LINK = viz.link(self.NODE, self.VIEW)
 		
 		# --add oculus as HMD
 		self.hmd = oculus.Rift()
