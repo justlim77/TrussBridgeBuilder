@@ -636,13 +636,14 @@ def initCanvas():
 	# Set canvas resolution to fit bounds of info panel
 #	updateResolution(menuTabPanel,menuCanvas)
 	bb = menuTabPanel.getBoundingBox()
-	menuCanvas.setRenderWorldOverlay([bb.width + 5, bb.height + 100], fov=bb.height * 0.15, distance=3.0)	
+#	menuCanvas.setRenderWorldOverlay([bb.width + 5, bb.height + 100], fov=bb.height * 0.15, distance=3.0)	
+	menuCanvas.setRenderWorld([bb.width,bb.height+100],[2,viz.AUTO_COMPUTE])
 	menuCanvas.setCursorPosition([0,0])
-	menuCanvas.setPosition(0,0,8)
+	menuCanvas.setPosition(0,2.7,3)
 	menuCanvas.setMouseStyle(viz.CANVAS_MOUSE_VIRTUAL)
 	
 	updateResolution(dialog,dialogCanvas)
-	dialogCanvas.setPosition(0,0,6)
+	dialogCanvas.setPosition(0,1.5,3)
 	dialogCanvas.setMouseStyle(viz.CANVAS_MOUSE_VIRTUAL)
 	
 	updateResolution(feedbackQuad,feedbackCanvas)
@@ -714,9 +715,9 @@ def showdialog(message,func):
 	dialog = vizdlg.MessageDialog(message=message, title='Warning', accept='Yes (Enter)', cancel='No (Esc)',parent=dialogCanvas)
 	dialog.setScreenAlignment(viz.ALIGN_CENTER)
 	
-	updateResolution(dialog,dialogCanvas)
-#	bb = dialog.getBoundingBox()
-#	dialogCanvas.setRenderWorldOverlay([bb.width + 5, bb.height + 5], fov=bb.height * 0.15, distance=3.0)	
+#	updateResolution(dialog,dialogCanvas)
+	bb = dialog.getBoundingBox()
+	dialogCanvas.setRenderWorld([bb.width + 5, bb.height + 5], [1,viz.AUTO_COMPUTE])	
 	dialogCanvas.visible(viz.ON)
 	
 	warningSound.play()
@@ -1278,11 +1279,12 @@ def toggleUtility(val=viz.TOGGLE):
 		return
 	utilityCanvas.visible(val)
 	menuCanvas.visible(False)
-
 	if utilityCanvas.getVisible() is True:
+		glove.visible(False)
 		inventoryCanvas.setMouseStyle(viz.CANVAS_MOUSE_VISIBLE)
 		showMenuSound.play()
 	else:
+		glove.visible(True)
 		updateMouseStyle(inventoryCanvas)
 		hideMenuSound.play()
 
@@ -1297,16 +1299,20 @@ def toggleMenu(val=viz.TOGGLE):
 	menuCanvas.visible(val)
 	utilityCanvas.visible(False)
 	if menuCanvas.getVisible() is True or MODE is Mode.Edit or MODE is Mode.View:
-		pos = viz.MainView.getLineForward().endFromDistance(1)
+		pos = viz.MainView.getLineForward().endFromDistance(1.5)
 		rot = viz.MainView.getLineForward().euler
 		menuCanvas.setPosition(pos)
 		menuCanvas.setEuler(rot)
+		dialogCanvas.setPosition([pos[0],pos[1]-1,pos[2]])
+		dialogCanvas.setEuler(rot)
 		inventoryCanvas.visible(False)
+		glove.visible(False)
 		createConfirmButton()
 		runFeedbackTask('Menu')
 		showMenuSound.play()
 	else:
 		hideMenuSound.play()
+		glove.visible(True)
 		if MODE == Mode.Build:
 			inventoryCanvas.visible(True)
 
@@ -1580,6 +1586,7 @@ def cloneSide(truss):
 	clone.visible(False)
 	return clone
 
+
 def toggleRoad(road):
 	if len(BOT_MEMBERS) is not 0:
 		message = ''
@@ -1592,6 +1599,7 @@ def toggleRoad(road):
 	else:
 		runFeedbackTask('No bottom support!')
 		road.visible(False)
+	
 	
 def updateQuantity(order,button,orderList,inventory,row):
 	if order.quantity > 0:
@@ -1625,10 +1633,12 @@ def rotateTruss(obj,slider,label):
 		string = str(rotation)
 		rotationLabel.message(string)
 
+
 def resetSensors():
 	proxyManager.clearSensors()
 	proxyManager.addSensor(pinAnchorSensor)
 	proxyManager.addSensor(rollerAnchorSensor)
+
 	
 def cycleOrientation(val):
 	global ORIENTATION
@@ -1717,6 +1727,7 @@ def cycleOrientation(val):
 	clickSound.play()
 	orientation_text.message(str(ORIENTATION.name))
 	orientation_text_shadow.message(str(ORIENTATION.name))
+
 
 def cycleMode(mode=Mode.Add):
 	global SHOW_HIGHLIGHTER
@@ -1832,6 +1843,7 @@ def cycleMode(mode=Mode.Add):
 	# UI/Sound feedback
 	runFeedbackTask(str(MODE.name))
 	
+	
 def cycleView(index):
 	global MODE
 	if MODE is Mode.Build or MODE is Mode.Add or MODE is Mode.Edit:
@@ -1853,6 +1865,7 @@ def cycleView(index):
 	# Feedback
 	runFeedbackTask('View ' + str(index))
 	viewChangeSound.play()
+
 
 # Setup Callbacks and Events
 def onKeyUp(key):
@@ -1918,6 +1931,7 @@ def onKeyDown(key):
 	if key == KEYS['snapMenu']:
 #		toggleMenuLink()
 		pass
+
 
 def onJoyButton(e):
 	KEYS = navigator.KEYS
@@ -2201,7 +2215,10 @@ def LoadData():
 #	toggleRoad(road_M)
 		
 	cycleOrientation(currentOrientation)
-	cycleMode(MODE)
+	cycleMode(currentMode)
+	
+	if menuCanvas.getVisible() is True:
+		toggleMenu(False)
 	
 	# Show load feedback
 	runFeedbackTask('Load success!')
@@ -2277,6 +2294,7 @@ def createConfirmButton():
 	vizact.onbuttonup ( doneButton, cycleMode, Mode.Build )
 	vizact.onbuttonup ( doneButton, menuCanvas.visible, viz.OFF )
 
+
 # Schedule tasks
 def MainTask():
 	global INITIALIZED
@@ -2294,8 +2312,16 @@ def MainTask():
 		
 		menuCanvas.visible(viz.OFF)
 #		menuCanvas.setRenderWorldOverlay(RESOLUTION, fov=START_FOV, distance=3.0)
-		menuCanvas.setRenderWorld(RESOLUTION,[2,viz.AUTO_COMPUTE])
-		dialogCanvas.setPosition(0,-2,2)
+		bb = menuTabPanel.getBoundingBox()
+		menuCanvas.setRenderWorld([bb.width, bb.height + 100],[2,viz.AUTO_COMPUTE])
+		menuTabPanel.selectPanel(0)
+		
+		bb = dialog.getBoundingBox()
+		print bb.width,bb.height
+		dialogCanvas.setRenderWorld([bb.width,bb.height],[1,viz.AUTO_COMPUTE])
+
+#		dialogCanvas.setParent(menuCanvas)
+#		dialogCanvas.setPosition(0,-2,2)
 		feedbackCanvas.setPosition(0,-2,2)
 		
 		viz.clearcolor(CLEAR_COLOR)
@@ -2306,6 +2332,7 @@ def MainTask():
 		global highlightTool
 		global playerNode
 		global navigator
+		global glove
 		
 		# Setup callbacks
 		viz.callback ( viz.KEYUP_EVENT, onKeyUp )
@@ -2360,15 +2387,14 @@ def MainTask():
 			vizact.whilekeydown( navigator.KEYS['slideFar'],slideRoot,SLIDE_INTERVAL)
 			navigator.setAsMain()
 		
-#		navigator.setAsMain()
-#		yield viztask.waitTime(1)
 		navigator.setOrigin(START_POS,[0,0,0])
 		navigator.reset()
 		
+		initMouse()
 		highlightTool.setUpdateFunction(updateHighlightTool)
 		mouseTracker = initTracker(HAND_DISTANCE)
-		initMouse()
-		gloveLink = initLink('glove.cfg',mouseTracker)
+		glove = viz.addChild('glove.cfg')
+		gloveLink = viz.link(mouseTracker,glove)
 		gloveLink.postMultLinkable(navigator.VIEW)
 		viz.link(gloveLink,highlightTool)	
 		vizact.ontimer(0,clampTrackerScroll,mouseTracker,SCROLL_MIN,SCROLL_MAX)
@@ -2379,31 +2405,7 @@ def MainTask():
 		axes.visible(False)
 
 		viewPos = navigator.getPosition()
-		menuCanvas.setPosition(0,viewPos[1]+1.5,viewPos[2]+1.5)
 		rotationCanvas.setEuler( [0,30,0] )
-#		playerLink = viz.link(viz.MainView,playerNode)
-#		playerLink.setMask(viz.LINK_POS)
-#		vizact.onupdate(0,updatePosition(inventoryCanvas,playerNode))
-#		
-#		viz.link(viz.MainView,keyTracker)
-#		viz.MainView.setPosition(START_POS)
-#		playerLink = viz.link(viz.MainView,keyTracker)
-#		trackerLink = viz.link(keyTracker,axes)
-#		inventoryCanvas.setEuler( [0,30,0] )
-#		inventoryCanvas.setPosition ( [0,viewPos[1]-.2,viewPos[2]+.2] )
-#		rotationCanvas.setPosition ( [0,viewPos[1]-.1,viewPos[2]+.2] )
-#		link = viz.link(viz.MainView,rotationCanvas)
-#		link.postMultLinkable(viz.MainView)
-#		rotationCanvas.visible(viz.OFF)
-#		vizact.onupdate(0,getAvatarPos,keyTransport)
-#		vizact.onupdate(0,getAvatarPos,viz.MainView)
-#		vizact.onupdate(0,getAvatarPos,viewport.getNode3d())
-#		vizact.onupdate(0,updatePosition,axes,keyTransport)
-#		link = viz.link(keyTransport,axes,viz.LINK_POS)
-
-#		axesLink = viz.link(navigator.VIEW_LINK,axes)
-#		axesLink.setMask(viz.LINK_POS)
-#		axesLink.postTrans([0,-1,2])
 		
 		inventoryLink = viz.link(navigator.VIEW,inventoryCanvas)
 		inventoryLink.setMask(viz.LINK_POS)
