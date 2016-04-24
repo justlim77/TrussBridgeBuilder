@@ -632,7 +632,7 @@ if __name__ == '__main__':
 	vizact.onkeyup(' ',printPos)
 	
 #	viz.mouse(viz.OFF)
-	viz.mouse.setVisible(False)
+#	viz.mouse.setVisible(False)
 	viz.mouse.setTrap()
 
 	# Add environment

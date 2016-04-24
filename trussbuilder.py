@@ -64,8 +64,6 @@ from vizfx.postprocess.color import GrayscaleEffect
 from vizfx.postprocess.composite import BlendEffect
 from enum import Enum
 
-
-
 # Globals
 RESOLUTION = ([1280,720])
 UTILITY_CANVAS_RES = ([80,80])
@@ -246,17 +244,15 @@ def initViewport(position):
 	#Set the current position and orientation as point to reset to. 
 	viz.cam.setReset() 
 	viz.stepsize(0.5)
-	
-
 	return vp
 	
 	
 # Disable mouse navigation and hide the mouse cursor
 def initMouse():
-	viz.mouse(viz.OFF)
+#	viz.mouse(viz.OFF)
 	viz.mouse.setVisible(viz.OFF)
 	viz.mouse.setTrap()
-	viz.mouse.setOverride(viz.ON) 
+	viz.mouse.setOverride() 
 	
 
 # Highlighter	
@@ -1301,6 +1297,10 @@ def toggleMenu(val=viz.TOGGLE):
 	menuCanvas.visible(val)
 	utilityCanvas.visible(False)
 	if menuCanvas.getVisible() is True or MODE is Mode.Edit or MODE is Mode.View:
+		pos = viz.MainView.getLineForward().endFromDistance(1)
+		rot = viz.MainView.getLineForward().euler
+		menuCanvas.setPosition(pos)
+		menuCanvas.setEuler(rot)
 		inventoryCanvas.visible(False)
 		createConfirmButton()
 		runFeedbackTask('Menu')
@@ -1312,7 +1312,7 @@ def toggleMenu(val=viz.TOGGLE):
 
 
 def toggleMenuLink():
-	global menuLink
+#	global menuLink
 	if menuLink:
 		# If link exists, stop grabbing
 		menuLink.remove()
@@ -2293,8 +2293,8 @@ def MainTask():
 		vizact.onbuttonup(orderBottomButton,createConfirmButton)
 		
 		menuCanvas.visible(viz.OFF)
-		menuCanvas.setRenderWorldOverlay(RESOLUTION, fov=START_FOV, distance=3.0)
-		menuCanvas.setPosition(0,-2,2)
+#		menuCanvas.setRenderWorldOverlay(RESOLUTION, fov=START_FOV, distance=3.0)
+		menuCanvas.setRenderWorld(RESOLUTION,[2,viz.AUTO_COMPUTE])
 		dialogCanvas.setPosition(0,-2,2)
 		feedbackCanvas.setPosition(0,-2,2)
 		
@@ -2379,6 +2379,7 @@ def MainTask():
 		axes.visible(False)
 
 		viewPos = navigator.getPosition()
+		menuCanvas.setPosition(0,viewPos[1]+1.5,viewPos[2]+1.5)
 		rotationCanvas.setEuler( [0,30,0] )
 #		playerLink = viz.link(viz.MainView,playerNode)
 #		playerLink.setMask(viz.LINK_POS)
