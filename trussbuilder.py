@@ -254,6 +254,7 @@ def initProxy():
 		SENSOR_NODE = e.sensor.getSource()
 		SNAP_TO_POS = e.sensor.getSource().getPosition()
 		VALID_SNAP = True
+		print 'EnterProximity: SNAP_TO_POS',SNAP_TO_POS
 	
 	def exitProximity(e):
 		global VALID_SNAP
@@ -1011,7 +1012,7 @@ def createTrussNew(order=Order(),path='',loading=False):
 	truss.orientation = ORIENTATION
 	
 	truss.setScale([truss.length,truss.diameter*0.001,truss.diameter*0.001])	
-
+	
 	# Setup proximity-based snapping nodes
 	posA = truss.getPosition()
 	posA[0] -= truss.length * 0.5
@@ -1047,7 +1048,7 @@ def createTrussNew(order=Order(),path='',loading=False):
 	
 	global PRE_SNAP_POS	
 	global PRE_SNAP_ROT
-	global SNAP_TO_POS
+
 	PRE_SNAP_POS = truss.getPosition()
 	PRE_SNAP_ROT = truss.getEuler()
 	
@@ -1477,6 +1478,7 @@ def onRelease(e=None):
 	
 	print 'OnRelease: VALID_SNAP is',VALID_SNAP
 	print 'OnRelease: SNAP_TO_POS is', SNAP_TO_POS
+	print 'OnRelease: PRE_SNAP_POS is', PRE_SNAP_POS
 	
 	if VALID_SNAP:
 		# If new member, group appropriately
@@ -2118,6 +2120,11 @@ def onMouseUp(button):
 	global isgrabbing
 	global grabbedItem
 	global highlightedItem
+	global PRE_SNAP_POS
+	global PRE_SNAP_ROT
+	global grabbedRotation
+	global SNAP_TO_POS
+	
 	if button == KEYS['interact']:
 		if isgrabbing is True and grabbedItem is not None:
 			print 'MouseUp: Releasing',grabbedItem
@@ -2143,8 +2150,9 @@ def onMouseUp(button):
 			
 			PRE_SNAP_POS = grabbedItem.getPosition()
 			PRE_SNAP_ROT = grabbedItem.getEuler()
+			SNAP_TO_POS = PRE_SNAP_POS	# Wrong value to snap to
 			grabbedRotation = PRE_SNAP_ROT
-			SNAP_TO_POS = PRE_SNAP_POS
+			print 'MouseUp: PRE_SNAP_POS',PRE_SNAP_POS,' | SNAP_TO_POS',SNAP_TO_POS
 			isgrabbing = True
 		print 'MouseUp: IsGrabbing is',isgrabbing,' | GrabbedItem is',grabbedItem
 	
@@ -2379,7 +2387,6 @@ def MainTask():
 		menuTabPanel.selectPanel(0)
 		
 		bb = dialog.getBoundingBox()
-		print bb.width,bb.height
 		dialogCanvas.setRenderWorld([bb.width,bb.height],[1,viz.AUTO_COMPUTE])
 
 #		dialogCanvas.setParent(menuCanvas)
