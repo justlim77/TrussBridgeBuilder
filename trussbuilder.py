@@ -44,12 +44,17 @@ import vizcam
 import vizconnect
 import vizdlg
 import vizfx
+import vizfx.postprocess
+from vizfx.postprocess.color import GrayscaleEffect
+from vizfx.postprocess.composite import BlendEffect
 import vizinfo
 import vizinput
 import vizmenu
 import vizproximity
 import vizshape
 import viztask
+import csv
+from enum import Enum
 import inventory
 import mathlite
 import navigation
@@ -58,11 +63,8 @@ import roots
 import sys
 import themes
 import tools
+from tools import highlighter
 import xml.etree.ElementTree as ET
-import vizfx.postprocess
-from vizfx.postprocess.color import GrayscaleEffect
-from vizfx.postprocess.composite import BlendEffect
-from enum import Enum
 
 # Globals
 RESOLUTION = ([1280,720])
@@ -229,23 +231,6 @@ def initScene(res=RESOLUTION,quality=4,fov=FOV,stencil=8,stereoMode=viz.STEREO_H
 	darkTheme = themes.getDarkTheme()
 	viz.setTheme(darkTheme)	
 	
-			
-def initViewport(position):
-	# Add a viewpoint so the user starts at the specified position
-	vp = vizconnect.addViewpoint(pos=position,euler=(0,0,0))
-	vp.add(vizconnect.getDisplay())
-	print vp.getName()
-	print vp.getNode3d().getPosition()
-	#Start collision detection.
-#	viz.MainView.collision( viz.ON )
-#	viz.phys.enable()
-	#Make gravity weaker.
-#	viz.MainView.gravity(2)
-	#Set the current position and orientation as point to reset to. 
-	viz.cam.setReset() 
-	viz.stepsize(0.5)
-	return vp
-	
 	
 # Disable mouse navigation and hide the mouse cursor
 def initMouse():
@@ -253,13 +238,6 @@ def initMouse():
 	viz.mouse.setVisible(viz.OFF)
 	viz.mouse.setTrap()
 	viz.mouse.setOverride() 
-	
-
-# Highlighter	
-def initHighlightTool():
-	"""Initiailze highlighter tool"""
-	from tools import highlighter
-	return highlighter.Highlighter()
 	
 	
 def initProxy():
@@ -323,12 +301,11 @@ def getCatalogue(path):
 	"""Parse catalogue from data subdirectory"""
 	return ET.parse(str(path)).getroot()
 
-getCatalogue
 # Initialize
 initScene(RESOLUTION,MULTISAMPLING,FOV,STENCIL,viz.PROMPT,FULLSCREEN,(0.1, 0.1, 0.1, 1.0))
 initMouse()
 initLighting()
-highlightTool = initHighlightTool()
+highlightTool = highlighter.Highlighter()
 proxyManager = initProxy()
 catalogue_root = getCatalogue('data/catalogues/catalogue_CHS.xml')
 environment_root = roots.EnvironmentRoot(visibility=False)
@@ -1367,12 +1344,11 @@ grabbedItem = None
 highlightedItem = None
 grabbedRotation = []
 objToRotate = None
+
 def updateHighlightTool(highlightTool):
 	global grabbedItem
 	global grabbedRotation
-	global isgrabbing
 	global GRAB_LINKS
-	
 	global proxyManager
 	global PRE_SNAP_POS
 	global PRE_SNAP_ROT
@@ -1381,46 +1357,74 @@ def updateHighlightTool(highlightTool):
 	if SHOW_HIGHLIGHTER == True:
 		highlightTool.highlight()
 	else:
-#		highlightTool.clear()
+		highlightTool.clear()
 #		highlightTool.setItems([])
 		return
 		
 	if highlightTool.getSelection() is None:
 		return	
 		
-	state = viz.mouse.getState()
-	if state & viz.MOUSEBUTTON_LEFT:
-		if isgrabbing == False:
-			# Prevent grabbing truss of other orientation groups
-			if highlightTool.getSelection().orientation != ORIENTATION:
-				return
+#	state = viz.mouse.getState()
+#	if state & viz.MOUSEBUTTON_LEFT:
+#		if isgrabbing == False:
+#			# Prevent grabbing truss of other orientation groups
+#			if highlightTool.getSelection().orientation != ORIENTATION:
+#				return
+#
+#			grabbedItem = highlightTool.getSelection()
+#				
+#			try:
+#				GRAB_LINKS.remove(grabbedItem.link)
+#				grabbedItem.link.remove()
+#				grabbedItem.link = None
+#			except:
+#				print 'No link'
+#				
+#
+#			# Enable truss member target nodes
+#			proxyManager.addTarget(grabbedItem.targetNodes[0])
+#			proxyManager.addTarget(grabbedItem.targetNodes[1])
+#			
+#			# Disable truss member sensor nodes
+#			proxyManager.removeSensor(grabbedItem.sensorNodes[0])
+#			proxyManager.removeSensor(grabbedItem.sensorNodes[1])
+#			
+#			PRE_SNAP_POS = grabbedItem.getPosition()
+#			PRE_SNAP_ROT = grabbedItem.getEuler()
+#			grabbedRotation = PRE_SNAP_ROT
+#			SNAP_TO_POS = PRE_SNAP_POS
+#			
+#			isgrabbing = True
 
-			grabbedItem = highlightTool.getSelection()
-				
-			try:
-				GRAB_LINKS.remove(grabbedItem.link)
-				grabbedItem.link.remove()
-				grabbedItem.link = None
-			except:
-				print 'No link'
-				
-
-			# Enable truss member target nodes
-			proxyManager.addTarget(grabbedItem.targetNodes[0])
-			proxyManager.addTarget(grabbedItem.targetNodes[1])
-			
-			# Disable truss member sensor nodes
-			proxyManager.removeSensor(grabbedItem.sensorNodes[0])
-			proxyManager.removeSensor(grabbedItem.sensorNodes[1])
-			
-			PRE_SNAP_POS = grabbedItem.getPosition()
-			PRE_SNAP_ROT = grabbedItem.getEuler()
-			grabbedRotation = PRE_SNAP_ROT
-			SNAP_TO_POS = PRE_SNAP_POS
-			
-			isgrabbing = True
-			
+#	if isgrabbing == True:
+#		# Prevent grabbing truss of other orientation groups
+#		if highlightTool.getSelection().orientation != ORIENTATION:
+#			return
+#
+#		grabbedItem = highlightTool.getSelection()
+#			
+#		try:
+#			GRAB_LINKS.remove(grabbedItem.link)
+#			grabbedItem.link.remove()
+#			grabbedItem.link = None
+#		except:
+#			print 'No link'
+#			
+#		# Enable truss member target nodes
+#		proxyManager.addTarget(grabbedItem.targetNodes[0])
+#		proxyManager.addTarget(grabbedItem.targetNodes[1])
+#		
+#		# Disable truss member sensor nodes
+#		proxyManager.removeSensor(grabbedItem.sensorNodes[0])
+#		proxyManager.removeSensor(grabbedItem.sensorNodes[1])
+#		
+#		PRE_SNAP_POS = grabbedItem.getPosition()
+#		PRE_SNAP_ROT = grabbedItem.getEuler()
+#		grabbedRotation = PRE_SNAP_ROT
+#		SNAP_TO_POS = PRE_SNAP_POS
+	
 	global objToRotate
+	state = viz.mouse.getState()
 	if state & KEYS['rotate']:
 		if objToRotate == None:
 			objToRotate = highlightTool.getSelection()
@@ -1429,14 +1433,14 @@ def updateHighlightTool(highlightTool):
 
 # Register a callback function for the highlight event
 def onHighlight(e):
-	global isgrabbing
 	global highlightedItem
 	if e.new != None and e.new.length != None:
-		inspectMember(e.new)
 		highlightedItem = e.new
+		inspectMember(highlightedItem)
 	else:
+		highlightedItem = None
 		inspectMember(None)
-from tools import highlighter
+	print 'OnHighlight: Highlighting',highlightedItem
 viz.callback(highlighter.HIGHLIGHT_EVENT,onHighlight)
 
 
@@ -1444,37 +1448,21 @@ def onHighlightGrab():
 	""" Clamp grabbed member to front glove position and grid z """
 	global grabbedItem
 	global isgrabbing
-	global gloveLink	
-	if grabbedItem != None and isgrabbing == True:
-#		dir = gloveLink.getLineForward().getDir()
-		
-		xOffset = grabbedItem.getScale()[0] / 2
-		clampedX =  viz.clamp( gloveLink.getPosition()[0], (BRIDGE_LENGTH * (-0.5)) + xOffset,(BRIDGE_LENGTH * 0.5) - xOffset )
-		clampedY =  viz.clamp( gloveLink.getPosition()[1],2,10 )
-#		pos = [ (BRIDGE_LENGTH)*(dir[0]*dir[2]), gloveLink.getPosition()[1], GRID_Z ]
-		pos = [ gloveLink.getPosition()[0] , gloveLink.getPosition()[1] , GRID_Z ]
-
-		grabbedItem.setPosition(pos)
-#vizact.ontimer(0,onHighlightGrab)
-
-def onHighlightGrab2():
-	""" Clamp grabbed member to front glove position and grid z """
-	global grabbedItem
-	global isgrabbing
-	if grabbedItem != None and isgrabbing == True:		
+	if grabbedItem is not None and isgrabbing is True:		
 		startPos = highlightTool.getRayCaster().getPosition()
 		dist = mathlite.math.fabs(startPos[2] - GRID_Z)
 		raycaster = highlightTool.getRayCaster().getLineForward()
 		newPos = raycaster.endFromDistance(dist)
 		newPos[2] = GRID_Z
 		grabbedItem.setPosition(newPos)
-vizact.ontimer(0,onHighlightGrab2)
+vizact.ontimer(0,onHighlightGrab)
 
 
 def onRelease(e=None):
 	global INVENTORY
 	global BUILD_MEMBERS
 	global grabbedItem
+	global isgrabbing
 	global highlightedItem
 	global proxyManager
 	global PRE_SNAP_POS
@@ -1486,7 +1474,10 @@ def onRelease(e=None):
 	global SHOW_HIGHLIGHTER
 	global PROXY_NODES
 	global highlightTool
-		
+	
+	print 'OnRelease: VALID_SNAP is',VALID_SNAP
+	print 'OnRelease: SNAP_TO_POS is', SNAP_TO_POS
+	
 	if VALID_SNAP:
 		# If new member, group appropriately
 		if grabbedItem.isNewMember == True:
@@ -1501,6 +1492,7 @@ def onRelease(e=None):
 			grabbedItem.isNewMember = False
 			
 		# Check facing of truss
+
 		xFacing = 1
 		if grabbedItem.getPosition()[0] < SNAP_TO_POS[0]:
 			xFacing = -1
@@ -1536,7 +1528,6 @@ def onRelease(e=None):
 			PROXY_NODES.remove(grabbedItem.proxyNodes[1])
 			grabbedItem.proxyNodes[0].remove()
 			grabbedItem.proxyNodes[1].remove()
-#			grabbedItem.setPosition(0,10,-5)
 			grabbedItem.remove()
 			highlightedItem = None
 			grabbedItem = None
@@ -1554,7 +1545,7 @@ def onRelease(e=None):
 #	for members in BUILD_MEMBERS:
 #		link = viz.grab(bridge_root,members)
 #		GRAB_LINKS.append(link)
-	if grabbedItem != None:
+	if grabbedItem is not None:
 		link = viz.grab(bridge_root,grabbedItem)
 		GRAB_LINKS.append(link)
 		grabbedItem.link = link
@@ -1568,7 +1559,8 @@ def onRelease(e=None):
 	# Clear item references
 	highlightedItem = None
 	grabbedItem = None
-	
+	isgrabbing = False
+	print 'OnRelease: HighlightedItem is',highlightedItem,'GrabbedItem is',grabbedItem,'IsGrabbing is',isgrabbing
 	# Change mode back to Build if not editing
 	if MODE != Mode.Edit:
 		cycleMode(Mode.Build)
@@ -1750,7 +1742,7 @@ def cycleMode(mode=Mode.Add):
 	
 	if MODE == Mode.Build:
 		inventoryCanvas.setMouseStyle(viz.CANVAS_MOUSE_VIRTUAL)
-		navigator.setPosition(START_POS)
+#		navigator.setPosition(START_POS)
 		
 		# Clear highlighter
 		SHOW_HIGHLIGHTER = False
@@ -2069,26 +2061,97 @@ def onHatChange(e):
 			clickSound.play()
 
 def onMouseDown(button):
+	global GRAB_LINKS
+	global proxyManager
+	global PRE_SNAP_POS
+	global PRE_SNAP_ROT
+	global SNAP_TO_POS
+	global grabbedRotation
+	global isgrabbing
+	global highlightTool
+	global highlightedItem
+	
+	if button == KEYS['interact']:
+		print 'MouseDown: IsGrabbing is',isgrabbing
+			
+#		if highlightTool.getSelection() is None:
+#			isgrabbing = False
+#		else:
+#			print 'MouseDown: HighlightedItem is',highlightedItem
+#			isgrabbing = True
+#			print 'MouseDown: Grabbing onto', highlightTool.getSelection().length,'m truss'
+#			
+#			if highlightTool.getSelection().orientation != ORIENTATION:
+#				return
+#
+#			grabbedItem = highlightTool.getSelection()
+#			try:
+#				GRAB_LINKS.remove(grabbedItem.link)
+#				grabbedItem.link.remove()
+#				grabbedItem.link = None
+#			except:
+#				print 'No link'
+#				
+#			# Enable truss member target nodes
+#			proxyManager.addTarget(grabbedItem.targetNodes[0])
+#			proxyManager.addTarget(grabbedItem.targetNodes[1])
+#			
+#			# Disable truss member sensor nodes
+#			proxyManager.removeSensor(grabbedItem.sensorNodes[0])
+#			proxyManager.removeSensor(grabbedItem.sensorNodes[1])
+#			
+#			PRE_SNAP_POS = grabbedItem.getPosition()
+#			PRE_SNAP_ROT = grabbedItem.getEuler()
+#			grabbedRotation = PRE_SNAP_ROT
+#			SNAP_TO_POS = PRE_SNAP_POS
+				
 	global objToRotate
 	global CACHED_GLOVE_Z
 	if button == KEYS['rotate']:
 		CACHED_GLOVE_Z = mouseTracker.distance
-		if objToRotate != None:
+		if objToRotate is not None:
 			print 'Rotating', objToRotate.name, CACHED_GLOVE_Z
 			rotationCanvas.visible(True)
 
 
 def onMouseUp(button):	
 	global isgrabbing
+	global grabbedItem
+	global highlightedItem
 	if button == KEYS['interact']:
-		if isgrabbing == True:
+		if isgrabbing is True and grabbedItem is not None:
+			print 'MouseUp: Releasing',grabbedItem
 			onRelease()
-			isgrabbing = False
+		# Edit Mode: If highlighting a valid member & not currently grabbing
+		elif isgrabbing is False and highlightedItem is not None:
+			grabbedItem = highlightedItem
+			print 'MouseUp: Grabbing onto', grabbedItem.length,'m truss'
+			try:
+				GRAB_LINKS.remove(grabbedItem.link)
+				grabbedItem.link.remove()
+				grabbedItem.link = None
+			except:
+				print 'No link'
+				
+			# Enable truss member target nodes
+			proxyManager.addTarget(grabbedItem.targetNodes[0])
+			proxyManager.addTarget(grabbedItem.targetNodes[1])
+			
+			# Disable truss member sensor nodes
+			proxyManager.removeSensor(grabbedItem.sensorNodes[0])
+			proxyManager.removeSensor(grabbedItem.sensorNodes[1])
+			
+			PRE_SNAP_POS = grabbedItem.getPosition()
+			PRE_SNAP_ROT = grabbedItem.getEuler()
+			grabbedRotation = PRE_SNAP_ROT
+			SNAP_TO_POS = PRE_SNAP_POS
+			isgrabbing = True
+		print 'MouseUp: IsGrabbing is',isgrabbing,' | GrabbedItem is',grabbedItem
 	
 	global CACHED_GLOVE_Z
 	global objToRotate
 	if button == KEYS['rotate']:
-		if objToRotate != None:
+		if objToRotate is not None:
 			objToRotate = None
 			mouseTracker.visible(viz.ON)
 			mouseTracker.distance = CACHED_GLOVE_Z
@@ -2133,7 +2196,6 @@ def onList(e):
 	clickSound.play()
 	
 		
-import csv
 # Saves current Build members' truss dimensions, position, rotation to './data/bridge#.csv'
 def SaveData():
 	global BUILD_MEMBERS

@@ -61,12 +61,11 @@ def EnvironmentRoot(visibility=True):
 	day = viz.addChild('resources/sky_day.osgb', scale=([5,5,5]),parent=environment_root)
 	day.renderToBackground(order=8)
 	environment = viz.addChild('resources/environment.osgb',parent=environment_root)
-#	walkway = viz.addChild('resources/walkway.osgb',parent=environment_root)
-	L_offset = 27
-	R_offset = -14
+	environment.renderToBackground()
+	L_offset = 26
+	R_offset = -13
 	walkway_L = viz.addChild('resources/walkway_L.osgb',pos=([-60.72457+L_offset,-1.75,31.85828+3.25]),parent=environment_root)
 	walkway_R = viz.addChild('resources/walkway_R.osgb',pos=([64.14527+R_offset,-1,0-11]),parent=environment_root)	
-	environment.renderToBackground()
 	environment_root.visible(visibility)
 	return environment_root
 	
