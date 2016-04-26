@@ -453,8 +453,9 @@ class Joyculus(Navigator):
 					,'camera'	: 'c'
 					,'restart'	: viz.KEY_END
 					,'home'		: viz.KEY_HOME
-					,'reset'	: 0
 					,'utility'	: ' '
+					,'reset'	: 0
+					,'showMenu' : 1
 					,'down'		: 2
 					,'orient'	: 3
 					,'up'		: 4
@@ -468,7 +469,6 @@ class Joyculus(Navigator):
 					,'slideNear': 180
 					,'env'		: '-'
 					,'grid'		: '-'
-					,'showMenu' : 1
 					,'snapMenu'	: viz.KEY_CONTROL_L
 					,'interact' : viz.MOUSEBUTTON_LEFT
 					,'rotate'	: viz.MOUSEBUTTON_RIGHT

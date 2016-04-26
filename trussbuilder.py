@@ -1021,12 +1021,16 @@ def createTrussNew(order=Order(),path='',loading=False):
 	posA = truss.getPosition()
 	posA[0] -= truss.length * 0.5
 	nodeA = vizshape.addSphere(0.3,pos=posA)
+	nodeA.isNode = True
+	nodeA.parent = truss
 #	nodeA.visible(False)
 	viz.grab(truss,nodeA)
 	
 	posB = truss.getPosition()
 	posB[0] += truss.length * 0.5
 	nodeB = vizshape.addSphere(0.3,pos=posB)
+	nodeB.isNode = True
+	nodeB.parent = truss
 #	nodeB.visible(False)
 	viz.grab(truss,nodeB)
 	
@@ -1166,6 +1170,7 @@ def clearMembers():
 	except:
 		pass
 		
+	highlightTool.clear()
 	proxyManager.clearTargets()
 			
 	for item in INVENTORY:
@@ -1248,7 +1253,6 @@ def toggleGrid(value=viz.TOGGLE):
 	grid_root.visible(value)
 	
 	# Show feedback
-
 	if grid_root.getVisible() is True:
 		runFeedbackTask('Grid On')
 		clickSound.play()
@@ -1439,9 +1443,12 @@ def updateHighlightTool(highlightTool):
 # Register a callback function for the highlight event
 def onHighlight(e):
 	global highlightedItem
-	if e.new != None and e.new.length != None:
+	if e.new != None:
 		highlightedItem = e.new
-		inspectMember(highlightedItem)
+		if hasattr(e.new,'length'):
+			inspectMember(highlightedItem)
+		elif hasattr(e.new,'isNode'):
+			print 'onHighlight: Node parent is',e.new.parent
 	else:
 		highlightedItem = None
 		inspectMember(None)
@@ -1481,9 +1488,9 @@ def onRelease(e=None):
 	global PROXY_NODES
 	global highlightTool
 	
-	print 'OnRelease: VALID_SNAP is',VALID_SNAP
-	print 'OnRelease: SNAP_TO_POS is', SNAP_TO_POS
-	print 'OnRelease: PRE_SNAP_POS is', PRE_SNAP_POS
+#	print 'OnRelease: VALID_SNAP is',VALID_SNAP
+#	print 'OnRelease: SNAP_TO_POS is', SNAP_TO_POS
+#	print 'OnRelease: PRE_SNAP_POS is', PRE_SNAP_POS
 	
 	if VALID_SNAP:
 		# If new member, group appropriately
@@ -1749,13 +1756,13 @@ def cycleMode(mode=Mode.Add):
 	
 	if MODE == Mode.Build:
 		inventoryCanvas.setMouseStyle(viz.CANVAS_MOUSE_VIRTUAL)
-#		navigator.setPosition(START_POS)
 		
 		# Clear highlighter
 		SHOW_HIGHLIGHTER = False
 		highlightedItem = None
 		highlightTool.clear()
 		highlightTool.removeItems(BUILD_MEMBERS)
+		highlightTool.removeItems(PROXY_NODES)
 		highlightTool.setItems([])
 		
 		cycleOrientation(ORIENTATION)
@@ -1764,13 +1771,16 @@ def cycleMode(mode=Mode.Add):
 #		navigator.setPosition(START_POS)
 		
 		# Clear highlighter
-		SHOW_HIGHLIGHTER = True
-
 		highlightTool.clear()
+
 		highlightTool.removeItems(BUILD_MEMBERS)
 		highlightTool.setItems([])
 		
-		highlightTool.setItems(BUILD_MEMBERS)
+		highlightables = BUILD_MEMBERS + PROXY_NODES
+		
+		highlightTool.setItems(highlightables)
+		
+		SHOW_HIGHLIGHTER = True
 		
 		cycleOrientation(ORIENTATION)
 	if MODE == Mode.Add:
@@ -2079,38 +2089,10 @@ def onMouseDown(button):
 	global highlightedItem
 	
 	if button == KEYS['interact']:
-		print 'MouseDown: IsGrabbing is',isgrabbing
-			
-#		if highlightTool.getSelection() is None:
-#			isgrabbing = False
-#		else:
-#			print 'MouseDown: HighlightedItem is',highlightedItem
-#			isgrabbing = True
-#			print 'MouseDown: Grabbing onto', highlightTool.getSelection().length,'m truss'
-#			
-#			if highlightTool.getSelection().orientation != ORIENTATION:
-#				return
-#
-#			grabbedItem = highlightTool.getSelection()
-#			try:
-#				GRAB_LINKS.remove(grabbedItem.link)
-#				grabbedItem.link.remove()
-#				grabbedItem.link = None
-#			except:
-#				print 'No link'
-#				
-#			# Enable truss member target nodes
-#			proxyManager.addTarget(grabbedItem.targetNodes[0])
-#			proxyManager.addTarget(grabbedItem.targetNodes[1])
-#			
-#			# Disable truss member sensor nodes
-#			proxyManager.removeSensor(grabbedItem.sensorNodes[0])
-#			proxyManager.removeSensor(grabbedItem.sensorNodes[1])
-#			
-#			PRE_SNAP_POS = grabbedItem.getPosition()
-#			PRE_SNAP_ROT = grabbedItem.getEuler()
-#			grabbedRotation = PRE_SNAP_ROT
-#			SNAP_TO_POS = PRE_SNAP_POS
+#		print 'MouseDown: IsGrabbing is',isgrabbing
+		#--Rotation
+		
+		pass
 				
 	global objToRotate
 	global CACHED_GLOVE_Z
@@ -2327,7 +2309,6 @@ vizact.onbuttonup ( saveButton, SaveData )
 vizact.onbuttonup ( loadButton, loadBridge )
 vizact.onbuttonup ( soundButton, toggleAudio )
 
-
 FLASH_TIME = 3.0			# Time to flash screen
 
 def CreateFlashQuad():
@@ -2489,8 +2470,8 @@ def MainTask():
 		inventoryLink.postTrans([0,-.1,.5])
 		inventoryLink.preEuler([0,30,0])		
 
-#		cycleMode(Mode.View)		
-		cycleMode(Mode.Build)
+		cycleMode(Mode.View)		
+#		cycleMode(Mode.Build)
 		
 		INITIALIZED = True
 viztask.schedule( MainTask() )
