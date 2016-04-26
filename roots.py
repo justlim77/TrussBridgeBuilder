@@ -64,6 +64,7 @@ def EnvironmentRoot(visibility=True):
 	environment.renderToBackground()
 	L_offset = 26
 	R_offset = -13
+#	walkway = viz.addChild('resources/walkwayTest.osgb',parent=environment_root)
 	walkway_L = viz.addChild('resources/walkway_L.osgb',pos=([-60.72457+L_offset,-1.75,31.85828+3.25]),parent=environment_root)
 	walkway_R = viz.addChild('resources/walkway_R.osgb',pos=([64.14527+R_offset,-1,0-11]),parent=environment_root)	
 	environment_root.visible(visibility)

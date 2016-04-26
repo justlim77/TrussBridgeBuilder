@@ -336,6 +336,9 @@ class Joystick(Navigator):
 		viz.mouse.setOverride(viz.ON) 
 		viz.fov(self.FOV)
 		
+		val = mathlite.getNewRange(self.joy.getSlider(),1,-1,self.MIN_SPEED,self.MAX_SPEED)
+		self.MOVE_SPEED = val
+		
 		vizact.ontimer(0, self.updateView)
 		vizact.onsensorup(self.joy, self.KEYS['reset'], self.reset)
 		viz.callback(getExtension().SLIDER_EVENT,self.onSliderChange)
@@ -451,7 +454,7 @@ class Joyculus(Navigator):
 					,'restart'	: viz.KEY_END
 					,'home'		: viz.KEY_HOME
 					,'reset'	: 0
-					,'utility'	: 1
+					,'utility'	: ' '
 					,'down'		: 2
 					,'orient'	: 3
 					,'up'		: 4
@@ -465,7 +468,7 @@ class Joyculus(Navigator):
 					,'slideNear': 180
 					,'env'		: '-'
 					,'grid'		: '-'
-					,'showMenu' : ' '
+					,'showMenu' : 1
 					,'snapMenu'	: viz.KEY_CONTROL_L
 					,'interact' : viz.MOUSEBUTTON_LEFT
 					,'rotate'	: viz.MOUSEBUTTON_RIGHT
@@ -580,7 +583,10 @@ class Joyculus(Navigator):
 
 	def setAsMain(self):
 		viz.logStatus('Setting Joyculus as main')
-#		self.VIEW_LINK = viz.link(self.joystick.VIEW_LINK,self.oculus.NODE)
+
+		val = mathlite.getNewRange(self.joy.getSlider(),1,-1,self.MIN_SPEED,self.MAX_SPEED)
+		self.MOVE_SPEED = val
+		
 		vizact.onsensordown(self.joy,self.KEYS['reset'],self.reset)
 		vizact.ontimer(0,self.updateView)
 		viz.callback(getExtension().SLIDER_EVENT,self.onSliderChange)

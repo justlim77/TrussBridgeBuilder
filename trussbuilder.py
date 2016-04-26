@@ -588,6 +588,10 @@ row = rotationPanel.addRow([rotationSlider,rotationLabel])
 menuCanvas = viz.addGUICanvas(align=viz.ALIGN_CENTER_TOP)
 menuTabPanel = vizdlg.TabPanel(align=viz.ALIGN_CENTER_TOP,parent=menuCanvas)
 menuTabPanel.addPanel('Instructions',instructionsPanel)
+controlsQuad = viz.addTexQuad(size=[1064,582],parent=menuCanvas)
+controlsPic = viz.addTexture('resources/gui/controls.png',parent=controlsQuad)
+controlsQuad.texture(controlsPic)
+menuTabPanel.addPanel('Controls',controlsQuad)
 menuTabPanel.addPanel('Inventory',inventoryPanel)
 menuTabPanel.addPanel('Options',optionPanel)
 
@@ -647,7 +651,7 @@ def initCanvas():
 	rotationCanvas.visible(False)
 initCanvas()
 
-menuTabPanel.selectPanel(1)
+menuTabPanel.selectPanel(2)
 
 def inspectMember(obj):
 #	inspector.diameter_stat.message('d (mm): ' + str(obj.diameter))
@@ -1441,6 +1445,7 @@ def onHighlight(e):
 	else:
 		highlightedItem = None
 		inspectMember(None)
+		highlightTool.clear()
 	print 'OnHighlight: Highlighting',highlightedItem
 viz.callback(highlighter.HIGHLIGHT_EVENT,onHighlight)
 
@@ -1756,7 +1761,7 @@ def cycleMode(mode=Mode.Add):
 		cycleOrientation(ORIENTATION)
 	if MODE == Mode.Edit:
 		inventoryCanvas.setMouseStyle(viz.CANVAS_MOUSE_VISIBLE)
-		navigator.setPosition(START_POS)
+#		navigator.setPosition(START_POS)
 		
 		# Clear highlighter
 		SHOW_HIGHLIGHTER = True
@@ -2287,8 +2292,8 @@ def LoadData():
 	cycleOrientation(currentOrientation)
 	cycleMode(currentMode)
 	
-	if menuCanvas.getVisible() is True:
-		toggleMenu(False)
+#	if menuCanvas.getVisible() is True:
+#		toggleMenu(False)
 	
 	# Show load feedback
 	runFeedbackTask('Load success!')
@@ -2369,6 +2374,11 @@ def createConfirmButton():
 def MainTask():
 	global INITIALIZED
 	viewChangeSound.play()	
+
+	global glove
+	glove = viz.addChild('glove.cfg')
+	
+#	viz.MainView.setPosition(START_POS)
 	
 	while True:		
 		FlashScreen()
@@ -2401,7 +2411,6 @@ def MainTask():
 		global highlightTool
 		global playerNode
 		global navigator
-		global glove
 		
 		# Setup callbacks
 		viz.callback ( viz.KEYUP_EVENT, onKeyUp )
@@ -2462,7 +2471,6 @@ def MainTask():
 		initMouse()
 		highlightTool.setUpdateFunction(updateHighlightTool)
 		mouseTracker = initTracker(HAND_DISTANCE)
-		glove = viz.addChild('glove.cfg')
 		gloveLink = viz.link(mouseTracker,glove)
 		gloveLink.postMultLinkable(navigator.VIEW)
 		viz.link(gloveLink,highlightTool)	
