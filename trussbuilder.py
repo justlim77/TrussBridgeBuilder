@@ -120,7 +120,6 @@ ORDERS_SIDE_FLAG = 'Side'
 ORDERS_TOP_FLAG = 'Top'
 ORDERS_BOT_FLAG = 'Bot'
 
-INVENTORY = []					# Deprecated
 BUILD_MEMBERS = []				# Array to store all truss members of bridge for saving/loading
 SIDE_MEMBERS = []				# Array to store Side truss
 SIDE_CLONES = []				# Array to store cloned Side truss
@@ -1057,7 +1056,6 @@ def createTrussNew(order=Order(),path='',loading=False):
 	sensorB =  vizproximity.addBoundingSphereSensor(truss.proxyNodes[1])	
 	truss.sensorNodes = [sensorA,sensorB]
 	
-	global INVENTORY
 	global BUILD_MEMBERS
 	global highlightTool
 	global proxyManager
@@ -1114,7 +1112,6 @@ def createTrussNew(order=Order(),path='',loading=False):
 
 def generateMembers(loading=False):
 	"""Create truss members based on order list"""
-	global INVENTORY
 	global BUILD_MEMBERS
 	global highlightTool
 	global ORDERS
@@ -1128,18 +1125,19 @@ def generateMembers(loading=False):
 	ROWS = []
 	
 	# Clear current inventory
-	for item in INVENTORY:
-		PROXY_NODES.remove(item.proxyNodes[0])
-		PROXY_NODES.remove(item.proxyNodes[1])
-		TARGET_NODES.remove(item.targetNodes[0])
-		TARGET_NODES.remove(item.targetNodes[1])
-		SENSOR_NODES.remove(item.sensorNodes[0])
-		SENSOR_NODES.remove(item.sensorNodes[1])
-		proxyManager.removeSensor(item.sensorNodes[0])
-		proxyManager.removeSensor(item.sensorNodes[1])
-		item.remove()
-		del item
-	INVENTORY = []
+	for member in BUILD_MEMBERS:
+		PROXY_NODES.remove(member.proxyNodes[0])
+		PROXY_NODES.remove(member.proxyNodes[1])
+		TARGET_NODES.remove(member.targetNodes[0])
+		TARGET_NODES.remove(member.targetNodes[1])
+		SENSOR_NODES.remove(member.sensorNodes[0])
+		SENSOR_NODES.remove(member.sensorNodes[1])
+		proxyManager.removeSensor(member.sensorNodes[0])
+		proxyManager.removeSensor(member.sensorNodes[1])
+		member.remove()
+		del member
+		member = None
+	BUILD_MEMBERS = []
 	
 #	clearMembers()
 	
@@ -1170,7 +1168,6 @@ def clearMembers():
 	global PROXY_NODES
 	global TARGET_NODES
 	global SENSOR_NODES
-	global INVENTORY
 	global BUILD_MEMBERS
 	global SIDE_MEMBERS
 	global TOP_MEMBERS
@@ -1178,22 +1175,17 @@ def clearMembers():
 	global SIDE_CLONES
 	global GRAB_LINKS
 	
+	#--Force clear highlight
+	highlightTool.clear()
+	
 	try:
-#		highlightTool.removeItems(INVENTORY)
 		highlightTool.removeItems(BUILD_MEMBERS)
 		highlightTool.removeItems(PROXY_NODES)
 	except:
 		print 'clearMembers: Failed to remove highlightable items'
-		
-	#--Force clear highlight
-	highlightTool.clear()
 	
 	proxyManager.clearTargets()
 			
-	for item in INVENTORY:
-		item.remove()
-		del item
-	INVENTORY = []
 	for node in PROXY_NODES:
 		node.remove()
 		del node
@@ -1214,9 +1206,7 @@ def clearMembers():
 	BUILD_MEMBERS = []
 	for clone in SIDE_CLONES:
 		clone.nodeA.remove()
-		clone.nodeA = None
 		clone.nodeB.remove()
-		clone.nodeB = None
 		clone.remove()
 		clone = None
 	SIDE_CLONES = []
@@ -1282,12 +1272,12 @@ def toggleGrid(value=viz.TOGGLE):
 		hideMenuSound.play()
 
 def toggleMembers(side=True,sideClones=True,top=True,bottom=True):
-		for member in SIDE_CLONES:
-			member.visible(side)
-			member.nodeA.visible(side)
-			member.nodeB.visible(side)
 		for member in SIDE_MEMBERS:
+			member.visible(side)
+		for member in SIDE_CLONES:
 			member.visible(sideClones)
+			member.nodeA.visible(sideClones)
+			member.nodeB.visible(sideClones)
 		for member in TOP_MEMBERS:
 			member.visible(top)
 		for member in BOT_MEMBERS:
@@ -1431,6 +1421,13 @@ def updateHighlightTool(highlightTool):
 def onHighlight(e):
 	global highlightedItem
 	global rotatingItem
+	
+	#--Force clear
+	highlightTool.clear()
+	highlightedItem = None
+	rotatingItem = None
+	inspectMember(None)
+	
 	if e.new != None:
 		highlightedItem = e.new
 		if hasattr(e.new,'length'):
@@ -1439,10 +1436,11 @@ def onHighlight(e):
 			print 'onHighlight: Node parent is',e.new.parent
 			rotatingItem = e.new
 	else:
+		#--Force clear highlight
+		highlightTool.clear()
 		highlightedItem = None
 		rotatingItem = None
 		inspectMember(None)
-		highlightTool.clear()
 #	print 'OnHighlight: Highlighting',highlightedItem
 viz.callback(highlighter.HIGHLIGHT_EVENT,onHighlight)
 
@@ -1462,7 +1460,6 @@ vizact.ontimer(0,onHighlightGrab)
 
 
 def onRelease(e=None):
-	global INVENTORY
 	global BUILD_MEMBERS
 	global grabbedItem
 	global isgrabbing
@@ -1575,23 +1572,30 @@ def onRelease(e=None):
 
 def cloneSide(truss):
 	pos = truss.getPosition()
+	rot = truss.getEuler()
+	scale = truss.getScale()
+	
 	pos[2] *= -1
 	clone = truss.clone()
-	clone.setScale(truss.getScale())
-	clone.setEuler(truss.getEuler())
+	clone.setScale(scale)
 	clone.setPosition(pos)
-	viz.grab(truss,clone)
 	
 	#--Create spherical connectors
-	posA = pos
-	posA[0] -= truss.length * 0.5
+	posA = truss.proxyNodes[0].getPosition()
+	posA[2] = pos[2]
 	nodeA = vizshape.addSphere(0.3,pos=posA)
+	clone.nodeA = nodeA
 	viz.grab(clone,nodeA)
 	
-	posB = pos
-	posB[0] += truss.length * 0.5
+	posB = truss.proxyNodes[1].getPosition()
+	posB[2] = pos[2]
 	nodeB = vizshape.addSphere(0.3,pos=posB)
+	clone.nodeB = nodeB
 	viz.grab(clone,nodeB)
+	
+	#--Adjust orientation of clone
+	clone.setEuler(rot)
+	viz.grab(truss,clone)
 	
 	#--Add clone to list
 	SIDE_CLONES.append(clone)
@@ -1719,7 +1723,9 @@ def cycleOrientation(val):
 	highlightTool.clear()
 	
 	for member in SIDE_CLONES:
-		member.visible(viz.OFF)
+		member.visible(False)
+		member.nodeA.visible(False)
+		member.nodeB.visible(False)
 	for model in supports:
 		model.alpha(SUPPORT_ALPHA)	
 		
@@ -2377,27 +2383,22 @@ def LoadData():
 
 	for truss in BUILD_MEMBERS:
 		truss.isNewMember = False
-		truss.setPosition(truss.order.pos)
-		truss.setEuler(truss.order.euler)
 		truss.orientation = truss.order.orientation
+		truss.setPosition(truss.order.pos)
 		if truss.orientation == Orientation.Side:
 			SIDE_MEMBERS.append(truss)
-			SIDE_CLONES.append(cloneSide(truss))
+			cloneSide(truss)
 		elif truss.orientation == Orientation.Top:
 			TOP_MEMBERS.append(truss)
 		elif truss.orientation == Orientation.Bottom:
 			BOT_MEMBERS.append(truss)
+		truss.setEuler(truss.order.euler)
 		link = viz.grab(bridge_root,truss)
 		truss.link = link
 		GRAB_LINKS.append(link)
-	
-#	toggleRoad(road_M)
 		
 	cycleOrientation(currentOrientation)
 	cycleMode(currentMode)
-	
-#	if menuCanvas.getVisible() is True:
-#		toggleMenu(False)
 	
 	# Show load feedback
 	runFeedbackTask('Load success!')
