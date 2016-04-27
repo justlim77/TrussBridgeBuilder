@@ -239,8 +239,8 @@ class Joystick(Navigator):
 					,'builder'	: 6
 					,'walk'		: 7
 					,'angles'	: 8
-					,'road'		: 10
-					,'esc'		: 11
+					,'road'		: 9
+					,'esc'		: 10
 					,'slideFar'	: 0
 					,'slideNear': 180
 					,'env'		: '-'
@@ -463,8 +463,8 @@ class Joyculus(Navigator):
 					,'builder'	: 6
 					,'walk'		: 7
 					,'angles'	: 8
-					,'road'		: 10
-					,'esc'		: 11
+					,'road'		: 9
+					,'esc'		: 10
 					,'slideFar'	: 0
 					,'slideNear': 180
 					,'env'		: '-'

@@ -1,37 +1,36 @@
 ﻿"""
-[ Objective ]
+[ Objectives ]
 Order truss members required to build a 20m-long bridge across the Singapore River, then proceed to build in VR
 
 [ Controls ]
-[ JOYBUTTON12 or ESC KEY ] Close Menu / Quit Application
+[ JOYBUTTON2 or SPACE BAR ] Toggle Menu
+[ JOYBUTTON11 or ESC KEY ] Close Menu / Quit Application
 
 [ Movement ]
-[ VR HEADSET or Mouse] Look around
+[ VR HEADSET or MOUSE ] Look around
 [ JOYSTICK or WASD ] Navigate
 [ JOYBUTTON5 | JOYBUTTON3 or Z | X ] Lower/Raise elevation
-[ JOYCURSOR or 1 | 2 ] Slide bridge towards or away from you in TOP/BOTTOM ORIENTATION
+[ JOYCURSOR or 1 | 2 ] Slide bridge towards or away from you in Top and Bottom Orientation
 
 [ Build ]
-[ JOYBUTTON6 or TAB ] Cycle through Bridge Orientation
-[ JOYBUTTON4 or SHIFT ] Cycle through Build Mode
-[ JOYBUTTON2 or SPACE BAR ] Toggle Main Menu
-[ JOYBUTTON11 or MIDDLE MOUSE ] Toggle Utilities Menu
+[ JOYBUTTON6 or SHIFT ] Cycle between Edit and Build Modes
+[ JOYBUTTON4 or TAB ] Cycle between Side, Top, and Bottom Orientations
 [ VIRTUAL MOUSE ] Interact with menu elements
-[ LEFT MOUSE ] Grab and hold onto highlighted truss members
-[ RIGHT MOUSE ] Adjust highlighted truss' angle by holding and dragging
+[ LEFT MOUSE CLICK ] Grab onto truss members in Edit Mode
+[ LEFT MOUSE HOLD ] Click and hold onto spherical ends to rotate truss in Edit Mode
 [ SCROLL WHEEL ] Extend and retract virtual hand
 """
 INVENTORY_TEXT = """Order truss members from the catalogue & manage your inventory"""
 
 FEEDBACK_MESSAGE = """<FEEDBACK>"""
 
-VIEW_MESSAGE = """[ 1 | 2 ] Slide bridge towards or away from you"""
+VIEW_MESSAGE = """[ JOYHATDOWN | JOYHATUP ] Slide bridge towards or away"""
 
 LOAD_MESSAGE = """Any unsaved progress will be lost! 
 Are you sure you want to proceed?
 (Please remove headset if proceeding)"""
 
-CLEAR_MESSAGE = """Your current bridge will be wiped! 
+CLEAR_MESSAGE = """The current bridge will be wiped! 
 Are you sure you want to proceed?"""
 
 QUIT_MESSAGE = """Any unsaved progress will be lost! 
@@ -172,7 +171,7 @@ SNAP_TO_POS = []
 VALID_SNAP = False
 
 SHOW_HIGHLIGHTER = False
-HAND_DISTANCE = 0.5
+HAND_DISTANCE = 2.5
 SCROLL_MIN = 0.2
 SCROLL_MAX = 20
 
@@ -528,37 +527,37 @@ menuButton.texture(viz.addTexture('resources/GUI/menu-128.png'))
 menuButton.setScale(BUTTON_SCALE,BUTTON_SCALE)
 # Reset View button
 homeButton = viz.addButton(parent=utilityCanvas)
-homeButton.texture(viz.addTexture('resources/GUI/reset-128.png'))
+homeButton.texture(viz.addTexture('resources/gui/reset-128.png'))
 #homeButton.setPosition(0,0)
 homeButton.setScale(BUTTON_SCALE,BUTTON_SCALE)
 # Build mode button
 buildModeButton = viz.addButton(parent=utilityCanvas)
-buildModeButton.texture(viz.addTexture('resources/GUI/wrench-128.png'))
+buildModeButton.texture(viz.addTexture('resources/gui/wrench-128.png'))
 #buildModeButton.setPosition(0,0)
 buildModeButton.setScale(BUTTON_SCALE,BUTTON_SCALE)
 # Viewer mode button
 viewerModeButton = viz.addButton(parent=utilityCanvas)
-viewerModeButton.texture(viz.addTexture('resources/GUI/viewer-128.png'))
+viewerModeButton.texture(viz.addTexture('resources/gui/viewer-128.png'))
 #viewerModeButton.setPosition(0,0)
 viewerModeButton.setScale(BUTTON_SCALE,BUTTON_SCALE)
 # Walk mode button
 walkModeButton = viz.addButton(parent=utilityCanvas)
-walkModeButton.texture(viz.addTexture('resources/GUI/walking-128.png'))
+walkModeButton.texture(viz.addTexture('resources/gui/walking-128.png'))
 #walkModeButton.setPosition(0,0)
 walkModeButton.setScale(BUTTON_SCALE,BUTTON_SCALE)
 # Toggle environment button
 toggleEnvButton = viz.addButton(parent=utilityCanvas)
-toggleEnvButton.texture(viz.addTexture('resources/GUI/environment-128.png'))
+toggleEnvButton.texture(viz.addTexture('resources/gui/environment-128.png'))
 #toggleEnvButton.setPosition(0,0)
 toggleEnvButton.setScale(BUTTON_SCALE,BUTTON_SCALE)
 # Toggle grid button
 toggleGridButton = viz.addButton(parent=utilityCanvas)
-toggleGridButton.texture(viz.addTexture('resources/GUI/grid-64.png'))
+toggleGridButton.texture(viz.addTexture('resources/gui/grid-64.png'))
 #toggleGridButton.setPosition(0,0)
 toggleGridButton.setScale(BUTTON_SCALE,BUTTON_SCALE)
 # Reset orientation button
 resetOriButton = viz.addButton(parent=utilityCanvas)
-resetOriButton.texture(viz.addTexture('resources/GUI/compass-128.png'))
+resetOriButton.texture(viz.addTexture('resources/gui/compass-128.png'))
 #resetOriButton.setPosition(0,0)
 resetOriButton.setScale(BUTTON_SCALE,BUTTON_SCALE)
 
@@ -570,7 +569,6 @@ for i, button in enumerate(utilityButtons):
 utilityLink = viz.link(viz.MainView,utilityCanvas)
 #utilityLink.postMultLinkable(viz.MainView)
 utilityLink.preTrans( [0, 0, 1.5] )
-
 
 
 # Rotation Panel
@@ -588,8 +586,8 @@ row = rotationPanel.addRow([rotationSlider,rotationLabel])
 menuCanvas = viz.addGUICanvas(align=viz.ALIGN_CENTER_TOP)
 menuTabPanel = vizdlg.TabPanel(align=viz.ALIGN_CENTER_TOP,parent=menuCanvas)
 menuTabPanel.addPanel('Instructions',instructionsPanel)
-controlsQuad = viz.addTexQuad(size=[1064,582],parent=menuCanvas)
-controlsPic = viz.addTexture('resources/gui/controls.png',parent=controlsQuad)
+controlsQuad = viz.addTexQuad(size=[512,512],parent=menuCanvas)
+controlsPic = viz.addTexture('resources/gui/joystick_mapping_truss.jpg',parent=controlsQuad)
 controlsQuad.texture(controlsPic)
 menuTabPanel.addPanel('Controls',controlsQuad)
 menuTabPanel.addPanel('Inventory',inventoryPanel)
@@ -631,10 +629,10 @@ def initCanvas():
 	updateResolution(feedbackQuad,feedbackCanvas)
 	feedbackCanvas.setPosition(0,0,6)	
 	
-#	inspectorCanvas.setRenderWorld(RESOLUTION,[20,viz.AUTO_COMPUTE])
-	inspectorCanvas.setRenderWorldOverlay(RESOLUTION,fov=90.0,distance=3.0)
-	inspectorCanvas.setPosition(0,0,2)
-	inspectorCanvas.setEuler(0,0,0)
+#	inspectorCanvas.setRenderWorldOverlay(RESOLUTION,fov=90.0,distance=3.0)
+	inspectorCanvas.setRenderWorld(RESOLUTION,[10,viz.AUTO_COMPUTE])
+#	inspectorCanvas.setPosition(0,0,2)
+#	inspectorCanvas.setEuler(0,0,0)
 	
 	utilityCanvas.setRenderWorld(UTILITY_CANVAS_RES,[1,viz.AUTO_COMPUTE])
 	utilityCanvas.setPosition(0,0,0)
@@ -654,18 +652,15 @@ initCanvas()
 menuTabPanel.selectPanel(2)
 
 def inspectMember(obj):
-#	inspector.diameter_stat.message('d (mm): ' + str(obj.diameter))
-#	inspector.thickness_stat.message('t (mm): ' + str(obj.thickness))
-#	inspector.length_stat.message('l (m): ' + str(obj.length))
-#	inspector.rotation_stat.message('angle: ' + str(obj.getEuler()[2]))
-	if obj != None:			
-		inspector.SetMessage(str(obj.diameter) + 'mm x ' +
-								str(obj.thickness) + 'mm x' +
-								str(obj.length) + 'm at' +
-								str(int(obj.getEuler()[2])) + 'deg')
+	if obj is not None:			
+		inspector.SetMessage(str(obj.length) + 'm x ' +
+								str(obj.diameter) + 'mm x ' +
+								str(obj.thickness) + 'mm x at ' +
+								str(int(obj.getEuler()[2])) + ' deg')
+		inspectorCanvas.visible(True)
 	else:
-		inspector.SetMessage(None)
-
+#		inspector.SetMessage(None)
+		inspectorCanvas.visible(False)
 
 def showFeedback():
 	while True:
@@ -849,6 +844,8 @@ def createInventory():
 #	Create inventory panel
 	global inventoryCanvas
 	inventoryCanvas = viz.addGUICanvas(align=viz.ALIGN_CENTER_TOP)
+	
+	global inventoryGrid
 	inventoryGrid = vizdlg.GridPanel(align=viz.ALIGN_CENTER_TOP,cellAlign=vizdlg.LAYOUT_HORZ_TOP,parent=inventoryCanvas,border=False,background=False)
 	
 	global inventoryTabPanel
@@ -887,10 +884,11 @@ def createInventory():
 	global bottomRows
 	bottomRows = []
 
-	inventoryGrid.addRow([statPanel])
+#	inventoryGrid.addRow([statPanel])
 	inventoryGrid.addRow([inventoryTabPanel])
 
-	inventoryCanvas.setRenderWorld(RESOLUTION,[1,viz.AUTO_COMPUTE])
+	bb = inventoryGrid.getBoundingBox()
+	inventoryCanvas.setRenderWorld([bb.width,bb.height],[1,viz.AUTO_COMPUTE])
 	inventoryCanvas.setMouseStyle(viz.CANVAS_MOUSE_VIRTUAL)
 createInventory()
 
@@ -965,6 +963,9 @@ def populateInventory():
 	
 	# Show menu
 	inventoryCanvas.visible(False)
+	
+	bb = inventoryGrid.getBoundingBox()
+	inventoryCanvas.setRenderWorld([bb.width+5,bb.height+5],[1,viz.AUTO_COMPUTE])
 
 
 def createTruss(order=Order(),path=''):
@@ -974,40 +975,46 @@ def createTruss(order=Order(),path=''):
 	truss.thickness = float(order.thickness)
 	truss.length = float(order.length)
 	truss.quantity = int(order.quantity)
+	truss.orientation = ORIENTATION
+	truss.isNewMember = False
 	
 	truss.setScale([truss.length,truss.diameter*0.001,truss.diameter*0.001])	
 
 	posA = truss.getPosition()
 	posA[0] -= truss.length * 0.5
-	nodeA = vizshape.addSphere(0.2,pos=posA)
-	nodeA.disable(viz.PICKING)
-	nodeA.visible(False)
+	nodeA = vizshape.addSphere(0.3,pos=posA)
+	nodeA.isNode = True
+	nodeA.parent = truss
+	nodeA.index = 0
+#	nodeA.visible(False)
 	viz.grab(truss,nodeA)
 	
 	posB = truss.getPosition()
 	posB[0] += truss.length * 0.5
-	nodeB = vizshape.addSphere(0.2,pos=posB)
-	nodeB.disable(viz.PICKING)
-	nodeB.visible(False)
+	nodeB = vizshape.addSphere(0.3,pos=posB)
+	nodeB.isNode = True
+	nodeB.parent = truss
+	nodeB.index = 1
+#	nodeB.visible(False)
 	viz.grab(truss,nodeB)
-	
+		
+	nodeA.otherNode = nodeB
+	nodeB.otherNode = nodeA
 	truss.proxyNodes = [nodeA,nodeB]
 	
 	targetA = vizproximity.Target(truss.proxyNodes[0])
 	targetB = vizproximity.Target(truss.proxyNodes[1])
-	
 	truss.targetNodes = [targetA,targetB]
 	
 	sensorA =  vizproximity.addBoundingSphereSensor(truss.proxyNodes[0])
 	sensorB =  vizproximity.addBoundingSphereSensor(truss.proxyNodes[1])
-	
 	truss.sensorNodes = [sensorA,sensorB]
 	
 	return truss
 
 
 def createTrussNew(order=Order(),path='',loading=False):
-	truss = vizfx.addChild(path,cache=viz.CACHE_COPY)
+	truss = viz.addChild(path,cache=viz.CACHE_COPY)
 	truss.order = order
 	truss.diameter = float(order.diameter)
 	truss.thickness = float(order.thickness)
@@ -1172,11 +1179,15 @@ def clearMembers():
 	global GRAB_LINKS
 	
 	try:
-		highlightTool.removeItems(INVENTORY)
+#		highlightTool.removeItems(INVENTORY)
+		highlightTool.removeItems(BUILD_MEMBERS)
+		highlightTool.removeItems(PROXY_NODES)
 	except:
-		pass
+		print 'clearMembers: Failed to remove highlightable items'
 		
+	#--Force clear highlight
 	highlightTool.clear()
+	
 	proxyManager.clearTargets()
 			
 	for item in INVENTORY:
@@ -1202,6 +1213,10 @@ def clearMembers():
 		member = None
 	BUILD_MEMBERS = []
 	for clone in SIDE_CLONES:
+		clone.nodeA.remove()
+		clone.nodeA = None
+		clone.nodeB.remove()
+		clone.nodeB = None
 		clone.remove()
 		clone = None
 	SIDE_CLONES = []
@@ -1269,6 +1284,8 @@ def toggleGrid(value=viz.TOGGLE):
 def toggleMembers(side=True,sideClones=True,top=True,bottom=True):
 		for member in SIDE_CLONES:
 			member.visible(side)
+			member.nodeA.visible(side)
+			member.nodeB.visible(side)
 		for member in SIDE_MEMBERS:
 			member.visible(sideClones)
 		for member in TOP_MEMBERS:
@@ -1380,6 +1397,7 @@ highlightedItem = None
 grabbedRotation = []
 objToRotate = None
 isrotating = False
+rotatingItem = None
 
 def updateHighlightTool(highlightTool):
 	global grabbedItem
@@ -1563,8 +1581,26 @@ def cloneSide(truss):
 	clone.setEuler(truss.getEuler())
 	clone.setPosition(pos)
 	viz.grab(truss,clone)
+	
+	#--Create spherical connectors
+	posA = pos
+	posA[0] -= truss.length * 0.5
+	nodeA = vizshape.addSphere(0.3,pos=posA)
+	viz.grab(clone,nodeA)
+	
+	posB = pos
+	posB[0] += truss.length * 0.5
+	nodeB = vizshape.addSphere(0.3,pos=posB)
+	viz.grab(clone,nodeB)
+	
+	#--Add clone to list
 	SIDE_CLONES.append(clone)
+	
+	#--Toggle visibility of side clones
 	clone.visible(False)
+	nodeA.visible(False)
+	nodeB.visible(False)
+	
 	return clone
 
 
@@ -1585,7 +1621,7 @@ def toggleRoad(road):
 def updateQuantity(order,button,orderList,inventory,row):
 	if order.quantity > 0:
 		order.quantity -= 1
-		button.message('{}mm(d) x {}mm(th) x {}m(l) [{}]'.format(order.diameter, order.thickness, order.length, order.quantity))
+		button.message('{}m(l] x {}mm(d) x {}mm(th) [{}]'.format(order.diameter, order.thickness, order.length, order.quantity))
 	if order.quantity <= 0:
 		inventory.removeRow(row)
 #		orderList.remove(order)
@@ -1646,12 +1682,16 @@ def rotateTruss2():
 		objToRotate.setEuler(rot)
 		print objToRotate.getEuler()
 		
+		updateAngle(objToRotate,rotationSlider,rotationLabel)
 #		slider.set(pos)
 #		rotateTo = mathlite.getNewRange(pos,0,1,90,-90)
 #		objToRotate.setEuler(0,0,int(rotateTo))
 #		rotation = int(objToRotate.getEuler()[2])
 #		string = str(rotation)
 #		rotationLabel.message(string)
+	else:
+		#--Hide rotation GUI
+		rotationCanvas.visible(False)
 vizact.ontimer(0,rotateTruss2)
 
 def resetSensors():
@@ -1664,16 +1704,19 @@ def cycleOrientation(val):
 	global ORIENTATION
 	global grabbedItem
 	
-	if MODE == Mode.View or MODE == Mode.Walk:
+	if MODE is Mode.View or MODE is Mode.Walk:
 		return
 	
-	if grabbedItem != None:
+	if grabbedItem is not None or isrotating is True:
 		return
 		
 	pos = []
 	rot = []
 
 	resetSensors()
+	
+	#--Force clear highlight
+	highlightTool.clear()
 	
 	for member in SIDE_CLONES:
 		member.visible(viz.OFF)
@@ -1690,15 +1733,20 @@ def cycleOrientation(val):
 			member.visible(viz.OFF)
 			proxyManager.addSensor(member.sensorNodes[0])
 			proxyManager.addSensor(member.sensorNodes[1])
+			member.proxyNodes[0].visible(False)
+			member.proxyNodes[1].visible(False)
 		for member in BOT_MEMBERS:
 			member.visible(viz.OFF)
 			proxyManager.removeSensor(member.sensorNodes[0])
 			proxyManager.removeSensor(member.sensorNodes[1])
+			member.proxyNodes[0].visible(False)
+			member.proxyNodes[1].visible(False)
 		for member in TOP_MEMBERS:
 			member.visible(viz.ON)	
 			proxyManager.addSensor(member.sensorNodes[0])
 			proxyManager.addSensor(member.sensorNodes[1])
-			
+			member.proxyNodes[0].visible(True)
+			member.proxyNodes[1].visible(True)			
 		info_text.message(VIEW_MESSAGE)
 		info_text_shadow.message(VIEW_MESSAGE)
 	elif val == Orientation.Bottom:
@@ -1710,14 +1758,20 @@ def cycleOrientation(val):
 			member.visible(viz.OFF)
 			proxyManager.addSensor(member.sensorNodes[0])
 			proxyManager.addSensor(member.sensorNodes[1])
+			member.proxyNodes[0].visible(False)
+			member.proxyNodes[1].visible(False)
 		for member in TOP_MEMBERS:
 			member.visible(viz.OFF)
 			proxyManager.removeSensor(member.sensorNodes[0])
 			proxyManager.removeSensor(member.sensorNodes[1])
+			member.proxyNodes[0].visible(False)
+			member.proxyNodes[1].visible(False)
 		for member in BOT_MEMBERS:
 			member.visible(viz.ON)
 			proxyManager.addSensor(member.sensorNodes[0])
 			proxyManager.addSensor(member.sensorNodes[1])
+			member.proxyNodes[0].visible(True)
+			member.proxyNodes[1].visible(True)
 			
 		info_text.message(VIEW_MESSAGE)
 		info_text_shadow.message(VIEW_MESSAGE)
@@ -1729,24 +1783,30 @@ def cycleOrientation(val):
 			member.visible(viz.ON)
 			proxyManager.addSensor(member.sensorNodes[0])
 			proxyManager.addSensor(member.sensorNodes[1])
+			member.proxyNodes[0].visible(True)
+			member.proxyNodes[1].visible(True)
 		for member in TOP_MEMBERS:
 			member.visible(viz.OFF)
 			proxyManager.removeSensor(member.sensorNodes[0])
 			proxyManager.removeSensor(member.sensorNodes[1])
+			member.proxyNodes[0].visible(False)
+			member.proxyNodes[1].visible(False)
 		for member in BOT_MEMBERS:
 			member.visible(viz.OFF)
 			proxyManager.removeSensor(member.sensorNodes[0])
 			proxyManager.removeSensor(member.sensorNodes[1])
+			member.proxyNodes[0].visible(False)
+			member.proxyNodes[1].visible(False)
 		info_text.message('')
 		info_text_shadow.message('')
 	bridge_root.setEuler(rot)
 	bridge_root.setPosition(pos)
 	
 	# Show feedback
-	runFeedbackTask(str(ORIENTATION.name))
+	runFeedbackTask(str(ORIENTATION.name) + 'View')
 	clickSound.play()
-	orientation_text.message(str(ORIENTATION.name))
-	orientation_text_shadow.message(str(ORIENTATION.name))
+	orientation_text.message(str(ORIENTATION.name) + 'View')
+	orientation_text_shadow.message(str(ORIENTATION.name) + 'View')
 
 
 def cycleMode(mode=Mode.Add):
@@ -1755,12 +1815,16 @@ def cycleMode(mode=Mode.Add):
 	global highlightTool
 	global highlightedItem
 	
-	if MODE is Mode.Add and grabbedItem is not None:
-		return		
-	
-	if MODE is Mode.Edit and grabbedItem is not None:
+	if isrotating: 
 		return
-		
+	if MODE == Mode.Add and grabbedItem is not None:
+		return
+	if MODE == Mode.Edit and grabbedItem is not None:
+		return
+	
+	#--Force clear highlight
+	highlightTool.clear()
+	
 	MODE = mode
 	
 	toggleEnvironment(False)
@@ -1772,8 +1836,9 @@ def cycleMode(mode=Mode.Add):
 	if MODE == Mode.Build:
 		inventoryCanvas.setMouseStyle(viz.CANVAS_MOUSE_VIRTUAL)
 
+		#--Hide menu and inspector
 		menuCanvas.visible(False)
-		glove.visible(False)
+		inspectorCanvas.visible(False)
 		
 		# Clear highlighter
 		SHOW_HIGHLIGHTER = False
@@ -1804,6 +1869,8 @@ def cycleMode(mode=Mode.Add):
 	elif MODE == Mode.Add:
 		inventoryCanvas.setMouseStyle(viz.CANVAS_MOUSE_VISIBLE)
 		inventoryCanvas.visible(False)
+		
+		glove.visible(True)
 		
 		# Show highlighter
 		SHOW_HIGHLIGHTER = True
@@ -2105,6 +2172,9 @@ def onMouseDown(button):
 #		print 'MouseDown: IsGrabbing is',isgrabbing
 		#--Rotation
 		if rotatingItem is not None:
+			#--Show rotation GUI
+			rotationCanvas.visible(True)
+			
 			newParentNode = None
 			#--Break links
 			try:
@@ -2423,7 +2493,7 @@ def MainTask():
 		vizact.onbuttonup(orderTopButton,createConfirmButton)
 		vizact.onbuttonup(orderBottomButton,createConfirmButton)
 		
-		menuCanvas.visible(viz.OFF)
+#		menuCanvas.visible(viz.OFF)
 #		menuCanvas.setRenderWorldOverlay(RESOLUTION, fov=START_FOV, distance=3.0)
 		bb = menuTabPanel.getBoundingBox()
 		menuCanvas.setRenderWorld([bb.width, bb.height + 100],[2,viz.AUTO_COMPUTE])
@@ -2456,16 +2526,15 @@ def MainTask():
 		# Setup navigation
 		import navigation
 		joystickConnected = navigation.checkJoystick()
-		print joystickConnected
 		oculusConnected = navigation.checkOculus()
-		print oculusConnected
 		navigator = None
 		
 		if oculusConnected and joystickConnected:
 			navigator = navigation.Joyculus()
 			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['mode'],cycleMode,vizact.choice([Mode.Edit,Mode.Build]))
 			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['orient'],cycleOrientation,vizact.choice([Orientation.Top,Orientation.Bottom,Orientation.Side]))
-			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['angles'],cycleView,vizact.choice([0,1,2]))					
+			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['angles'],cycleView,vizact.choice([0,1,2]))	
+			vizact.onsensorup ( navigator.getSensor(), navigator.KEYS['road'],toggleRoad,road_M)
 			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['stereo'],toggleStereo,vizact.choice([False,True]))		
 			viz.callback( navigation.getExtension().HAT_EVENT, onHatChange )
 			vizact.ontimer( 0,slideRootHat )	
@@ -2475,6 +2544,7 @@ def MainTask():
 			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['mode'],cycleMode,vizact.choice([Mode.Edit,Mode.Build]))
 			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['orient'],cycleOrientation,vizact.choice([Orientation.Top,Orientation.Bottom,Orientation.Side]))
 			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['angles'],cycleView,vizact.choice([0,1,2]))			
+			vizact.onsensorup ( navigator.getSensor(), navigator.KEYS['road'],toggleRoad,road_M)			
 			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['stereo'],toggleStereo,vizact.choice([False,True]))		
 			viz.callback( navigation.getExtension().HAT_EVENT, onHatChange )
 			vizact.ontimer( 0,slideRootHat )				
@@ -2507,23 +2577,27 @@ def MainTask():
 		gloveLink = viz.link(mouseTracker,glove)
 		gloveLink.postMultLinkable(navigator.VIEW)
 		viz.link(gloveLink,highlightTool)	
+		
+		#--Link inspector label to glove
+		inspectorLink = viz.link(gloveLink,inspectorCanvas)
+		inspectorLink.postTrans([0,-.2,0])
+		inspectorCanvas.visible(False)
+		
 		vizact.ontimer(0,clampTrackerScroll,mouseTracker,SCROLL_MIN,SCROLL_MAX)
 		vizact.whilemousedown ( navigator.KEYS['rotate'], rotateTruss, objToRotate, rotationSlider, rotationLabel )
-		
-		global axes
-		axes = vizshape.addAxes()
-		axes.visible(False)
 
-		viewPos = navigator.getPosition()
 		rotationCanvas.setEuler( [0,30,0] )
 		
 		inventoryLink = viz.link(navigator.VIEW,inventoryCanvas)
-		inventoryLink.setMask(viz.LINK_POS)
-		inventoryLink.postTrans([0,-.1,.5])
+#		inventoryLink.setMask(viz.LINK_POS)
+		inventoryLink.postTrans([0,-1,1])
 		inventoryLink.preEuler([0,30,0])		
 
 		cycleMode(Mode.View)		
 #		cycleMode(Mode.Build)
+
+		#--Show menu
+		toggleMenu(True)
 		
 		INITIALIZED = True
 viztask.schedule( MainTask() )
