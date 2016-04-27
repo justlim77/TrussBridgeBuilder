@@ -1023,6 +1023,7 @@ def createTrussNew(order=Order(),path='',loading=False):
 	nodeA = vizshape.addSphere(0.3,pos=posA)
 	nodeA.isNode = True
 	nodeA.parent = truss
+	nodeA.index = 0
 #	nodeA.visible(False)
 	viz.grab(truss,nodeA)
 	
@@ -1031,9 +1032,12 @@ def createTrussNew(order=Order(),path='',loading=False):
 	nodeB = vizshape.addSphere(0.3,pos=posB)
 	nodeB.isNode = True
 	nodeB.parent = truss
+	nodeB.index = 1
 #	nodeB.visible(False)
 	viz.grab(truss,nodeB)
 	
+	nodeA.otherNode = nodeB
+	nodeB.otherNode = nodeA
 	truss.proxyNodes = [nodeA,nodeB]
 	
 	# Setup target nodes at both ends
@@ -1086,10 +1090,12 @@ def createTrussNew(order=Order(),path='',loading=False):
 		global grabbedItem
 		global highlightedItem
 		global isgrabbing
+		global VALID_SNAP
 		
 		grabbedItem = truss		
 		highlightedItem = truss
 		isgrabbing = True
+		VALID_SNAP = False
 		
 		truss.isNewMember = True		
 		cycleMode(Mode.Add)
@@ -1259,7 +1265,26 @@ def toggleGrid(value=viz.TOGGLE):
 	else:
 		runFeedbackTask('Grid Off')
 		hideMenuSound.play()
-			
+
+def toggleMembers(side=True,sideClones=True,top=True,bottom=True):
+		for member in SIDE_CLONES:
+			member.visible(side)
+		for member in SIDE_MEMBERS:
+			member.visible(sideClones)
+		for member in TOP_MEMBERS:
+			member.visible(top)
+		for member in BOT_MEMBERS:
+			member.visible(bottom)
+
+def toggleHighlightables(val=True):
+	highlightTool.clear()
+	highlightables = BUILD_MEMBERS + PROXY_NODES
+	if val is True:
+		highlightTool.setItems(highlightables)
+	else:
+		highlightTool.removeItems(highlightables)
+		highlightTool.setItems([])
+
 def toggleUtility(val=viz.TOGGLE):
 	if grabbedItem is not None:
 		return
@@ -1280,11 +1305,13 @@ def clampTrackerScroll(tracker,min=0.2,max=20):
 
 
 def toggleMenu(val=viz.TOGGLE):
+	global SHOW_HIGHLIGHTER
+	
 	if grabbedItem is not None:
 		return
 	menuCanvas.visible(val)
 	utilityCanvas.visible(False)
-	if menuCanvas.getVisible() is True or MODE is Mode.Edit or MODE is Mode.View:
+	if menuCanvas.getVisible() is True:
 		pos = viz.MainView.getLineForward().endFromDistance(1.5)
 		rot = viz.MainView.getLineForward().euler
 		menuCanvas.setPosition(pos)
@@ -1293,14 +1320,13 @@ def toggleMenu(val=viz.TOGGLE):
 		dialogCanvas.setEuler(rot)
 		inventoryCanvas.visible(False)
 		glove.visible(False)
+		SHOW_HIGHLIGHTER = False
 		createConfirmButton()
-		runFeedbackTask('Menu')
 		showMenuSound.play()
 	else:
 		hideMenuSound.play()
-		glove.visible(True)
-		if MODE == Mode.Build:
-			inventoryCanvas.visible(True)
+		if MODE == Mode.Build or MODE is Mode.Edit:
+			cycleMode(MODE)
 
 
 def toggleMenuLink():
@@ -1353,6 +1379,7 @@ grabbedItem = None
 highlightedItem = None
 grabbedRotation = []
 objToRotate = None
+isrotating = False
 
 def updateHighlightTool(highlightTool):
 	global grabbedItem
@@ -1367,73 +1394,15 @@ def updateHighlightTool(highlightTool):
 		highlightTool.highlight()
 	else:
 		highlightTool.clear()
-#		highlightTool.setItems([])
 		return
 		
 	if highlightTool.getSelection() is None:
 		return	
 		
-#	state = viz.mouse.getState()
-#	if state & viz.MOUSEBUTTON_LEFT:
-#		if isgrabbing == False:
-#			# Prevent grabbing truss of other orientation groups
-#			if highlightTool.getSelection().orientation != ORIENTATION:
-#				return
-#
-#			grabbedItem = highlightTool.getSelection()
-#				
-#			try:
-#				GRAB_LINKS.remove(grabbedItem.link)
-#				grabbedItem.link.remove()
-#				grabbedItem.link = None
-#			except:
-#				print 'No link'
-#				
-#
-#			# Enable truss member target nodes
-#			proxyManager.addTarget(grabbedItem.targetNodes[0])
-#			proxyManager.addTarget(grabbedItem.targetNodes[1])
-#			
-#			# Disable truss member sensor nodes
-#			proxyManager.removeSensor(grabbedItem.sensorNodes[0])
-#			proxyManager.removeSensor(grabbedItem.sensorNodes[1])
-#			
-#			PRE_SNAP_POS = grabbedItem.getPosition()
-#			PRE_SNAP_ROT = grabbedItem.getEuler()
-#			grabbedRotation = PRE_SNAP_ROT
-#			SNAP_TO_POS = PRE_SNAP_POS
-#			
-#			isgrabbing = True
-
-#	if isgrabbing == True:
-#		# Prevent grabbing truss of other orientation groups
-#		if highlightTool.getSelection().orientation != ORIENTATION:
-#			return
-#
-#		grabbedItem = highlightTool.getSelection()
-#			
-#		try:
-#			GRAB_LINKS.remove(grabbedItem.link)
-#			grabbedItem.link.remove()
-#			grabbedItem.link = None
-#		except:
-#			print 'No link'
-#			
-#		# Enable truss member target nodes
-#		proxyManager.addTarget(grabbedItem.targetNodes[0])
-#		proxyManager.addTarget(grabbedItem.targetNodes[1])
-#		
-#		# Disable truss member sensor nodes
-#		proxyManager.removeSensor(grabbedItem.sensorNodes[0])
-#		proxyManager.removeSensor(grabbedItem.sensorNodes[1])
-#		
-#		PRE_SNAP_POS = grabbedItem.getPosition()
-#		PRE_SNAP_ROT = grabbedItem.getEuler()
-#		grabbedRotation = PRE_SNAP_ROT
-#		SNAP_TO_POS = PRE_SNAP_POS
-	
-	global objToRotate
 	state = viz.mouse.getState()
+#	if state & viz.MOUSEBUTTON_LEFT:
+
+	global objToRotate
 	if state & KEYS['rotate']:
 		if objToRotate == None:
 			objToRotate = highlightTool.getSelection()
@@ -1443,17 +1412,20 @@ def updateHighlightTool(highlightTool):
 # Register a callback function for the highlight event
 def onHighlight(e):
 	global highlightedItem
+	global rotatingItem
 	if e.new != None:
 		highlightedItem = e.new
 		if hasattr(e.new,'length'):
 			inspectMember(highlightedItem)
 		elif hasattr(e.new,'isNode'):
 			print 'onHighlight: Node parent is',e.new.parent
+			rotatingItem = e.new
 	else:
 		highlightedItem = None
+		rotatingItem = None
 		inspectMember(None)
 		highlightTool.clear()
-	print 'OnHighlight: Highlighting',highlightedItem
+#	print 'OnHighlight: Highlighting',highlightedItem
 viz.callback(highlighter.HIGHLIGHT_EVENT,onHighlight)
 
 
@@ -1575,9 +1547,12 @@ def onRelease(e=None):
 	grabbedItem = None
 	isgrabbing = False
 	print 'OnRelease: HighlightedItem is',highlightedItem,'GrabbedItem is',grabbedItem,'IsGrabbing is',isgrabbing
+	
 	# Change mode back to Build if not editing
 	if MODE != Mode.Edit:
 		cycleMode(Mode.Build)
+	else:
+		toggleHighlightables()
 
 
 def cloneSide(truss):
@@ -1634,11 +1609,42 @@ def rotateTruss(obj,slider,label):
 		pos = viz.Mouse.getPosition(viz.WINDOW_NORMALIZED)[0]
 		slider.set(pos)
 		rotateTo = mathlite.getNewRange(pos,0,1,90,-90)
-		objToRotate.setEuler(0,0,int(rotateTo))
+#		objToRotate.setEuler(0,0,int(rotateTo))
 		rotation = int(objToRotate.getEuler()[2])
 		string = str(rotation)
 		rotationLabel.message(string)
-
+		
+def rotateTruss2():
+	global objToRotate
+	global isrotating
+	
+	if objToRotate is not None and isrotating is True:
+		# Clamp glove link z-orientation
+		rotationCanvas.visible(viz.ON)
+#		mouseTracker.visible(viz.OFF)
+#		mouseTracker.distance = 0.1
+		line = viz.MainWindow.screenToWorld(viz.Mouse.getPosition())
+		dist = mathlite.math.fabs(navigator.getPosition()[2]-GRID_Z)
+		pos = line.endFromDistance(dist)
+#		pos[2] = GRID_Z
+		objToRotate.lookAt(pos)
+		rot = objToRotate.getEuler()
+		rot[0] = 0
+		if objToRotate.index is 0:
+			rot[2] = -rot[1]
+		else:
+			rot[2] = rot[1]
+		rot[1] = 0
+		objToRotate.setEuler(rot)
+		print objToRotate.getEuler()
+		
+#		slider.set(pos)
+#		rotateTo = mathlite.getNewRange(pos,0,1,90,-90)
+#		objToRotate.setEuler(0,0,int(rotateTo))
+#		rotation = int(objToRotate.getEuler()[2])
+#		string = str(rotation)
+#		rotationLabel.message(string)
+vizact.ontimer(0,rotateTruss2)
 
 def resetSensors():
 	proxyManager.clearSensors()
@@ -1751,11 +1757,15 @@ def cycleMode(mode=Mode.Add):
 	
 	toggleEnvironment(False)
 	toggleGrid(True)
+	glove.visible(False)
 	proxyManager.setDebug(True)
-	inventoryCanvas.visible(viz.ON)
+	inventoryCanvas.visible(True)
 	
 	if MODE == Mode.Build:
 		inventoryCanvas.setMouseStyle(viz.CANVAS_MOUSE_VIRTUAL)
+
+		menuCanvas.visible(False)
+		glove.visible(False)
 		
 		# Clear highlighter
 		SHOW_HIGHLIGHTER = False
@@ -1766,30 +1776,31 @@ def cycleMode(mode=Mode.Add):
 		highlightTool.setItems([])
 		
 		cycleOrientation(ORIENTATION)
-	if MODE == Mode.Edit:
+		
+	elif MODE == Mode.Edit:
 		inventoryCanvas.setMouseStyle(viz.CANVAS_MOUSE_VISIBLE)
-#		navigator.setPosition(START_POS)
+		
+		menuCanvas.visible(False)	
+		glove.visible(True)
 		
 		# Clear highlighter
 		highlightTool.clear()
-
 		highlightTool.removeItems(BUILD_MEMBERS)
 		highlightTool.setItems([])
-		
 		highlightables = BUILD_MEMBERS + PROXY_NODES
-		
 		highlightTool.setItems(highlightables)
-		
 		SHOW_HIGHLIGHTER = True
 		
 		cycleOrientation(ORIENTATION)
-	if MODE == Mode.Add:
+		
+	elif MODE == Mode.Add:
 		inventoryCanvas.setMouseStyle(viz.CANVAS_MOUSE_VISIBLE)
-		navigator.setPosition(START_POS)
+		inventoryCanvas.visible(False)
 		
 		# Show highlighter
 		SHOW_HIGHLIGHTER = True
-	if MODE == Mode.View:
+		
+	elif MODE == Mode.View:
 		inventoryCanvas.visible(viz.OFF)
 		toggleGrid(False)
 		toggleEnvironment(True)
@@ -1798,26 +1809,21 @@ def cycleMode(mode=Mode.Add):
 		bridge_root.setEuler(SIDE_VIEW_ROT)
 		
 		# Show all truss members
-		for member in SIDE_CLONES:
-			member.visible(viz.ON)
-		for member in SIDE_MEMBERS:
-			member.visible(viz.ON)
-		for member in TOP_MEMBERS:
-			member.visible(viz.ON)
-		for member in BOT_MEMBERS:
-			member.visible(viz.ON)
+		toggleMembers()
 		
 		# Clear highlighter
 		SHOW_HIGHLIGHTER = False
 		highlightedItem = None
 		highlightTool.clear()
 		highlightTool.removeItems(BUILD_MEMBERS)
+		highlightTool.removeItems(PROXY_NODES)
 		highlightTool.setItems([])
 		
 		# Hide supports
 		for model in supports:
 			model.alpha(0)
-	if MODE == Mode.Walk:
+			
+	elif MODE == Mode.Walk:
 		inventoryCanvas.visible(viz.OFF)
 		toggleEnvironment(True)
 		toggleGrid(False)
@@ -1829,20 +1835,14 @@ def cycleMode(mode=Mode.Add):
 		navigator.setEuler(WALK_ROT)
 		
 		# Show all truss members
-		for member in SIDE_CLONES:
-			member.visible(viz.ON)
-		for member in SIDE_MEMBERS:
-			member.visible(viz.ON)
-		for member in TOP_MEMBERS:
-			member.visible(viz.ON)
-		for member in BOT_MEMBERS:
-			member.visible(viz.ON)
+		toggleMembers()
 	
 		# Clear highlighter
 		SHOW_HIGHLIGHTER = False
 		highlightedItem = None
 		highlightTool.clear()
 		highlightTool.removeItems(BUILD_MEMBERS)
+		highlightTool.removeItems(PROXY_NODES)
 		highlightTool.setItems([])
 		
 		# Hide supports
@@ -1850,7 +1850,7 @@ def cycleMode(mode=Mode.Add):
 			model.alpha(0)
 	
 	# UI/Sound feedback
-	runFeedbackTask(str(MODE.name))
+	runFeedbackTask(str(MODE.name) + ' Mode')
 	
 	
 def cycleView(index):
@@ -2085,22 +2085,46 @@ def onMouseDown(button):
 	global SNAP_TO_POS
 	global grabbedRotation
 	global isgrabbing
+	global isrotating 
 	global highlightTool
 	global highlightedItem
+	global rotatingItem
+	global rotateLinkA
+	global rotateLinkB
+	global objToRotate
 	
 	if button == KEYS['interact']:
 #		print 'MouseDown: IsGrabbing is',isgrabbing
 		#--Rotation
-		
+		if rotatingItem is not None:
+			newParentNode = None
+			#--Break links
+			try:
+				GRAB_LINKS.remove(rotatingItem.parent.link)
+				rotatingItem.parent.link.remove()
+				rotatingItem.parent.link = None
+			except:
+				print 'No link'
+			#--Link with opposing node as main
+			if rotatingItem == rotatingItem.parent.proxyNodes[0]:
+				newParentNode = rotatingItem.parent.proxyNodes[1]
+			else:
+				newParentNode = rotatingItem.parent.proxyNodes[0]
+			#--New grab chain
+			rotateLinkA = viz.grab(newParentNode,rotatingItem.parent)
+			rotateLinkB = viz.grab(rotatingItem.parent,rotatingItem)
+			objToRotate = newParentNode
+			isrotating = True
+			print 'onMouseDown: objToRotate is',objToRotate,'and isrotating is',isrotating
 		pass
 				
-	global objToRotate
-	global CACHED_GLOVE_Z
-	if button == KEYS['rotate']:
-		CACHED_GLOVE_Z = mouseTracker.distance
-		if objToRotate is not None:
-			print 'Rotating', objToRotate.name, CACHED_GLOVE_Z
-			rotationCanvas.visible(True)
+#	global objToRotate
+#	global CACHED_GLOVE_Z
+#	if button == KEYS['rotate']:
+#		CACHED_GLOVE_Z = mouseTracker.distance
+#		if objToRotate is not None:
+#			print 'Rotating', objToRotate.name, CACHED_GLOVE_Z
+#			rotationCanvas.visible(True)
 
 
 def onMouseUp(button):	
@@ -2110,14 +2134,20 @@ def onMouseUp(button):
 	global PRE_SNAP_POS
 	global PRE_SNAP_ROT
 	global grabbedRotation
+	global GRAB_LINKS
+	global bridge_root
 	global SNAP_TO_POS
+	global objToRotate
+	global isrotating
+	global rotateLinkA
+	global rotateLinkB
 	
-	if button == KEYS['interact']:
+	if button == KEYS['interact']:	
 		if isgrabbing is True and grabbedItem is not None:
 			print 'MouseUp: Releasing',grabbedItem
 			onRelease()
 		# Edit Mode: If highlighting a valid member & not currently grabbing
-		elif isgrabbing is False and highlightedItem is not None:
+		elif isgrabbing is False and highlightedItem is not None and isrotating is False:
 			grabbedItem = highlightedItem
 			print 'MouseUp: Grabbing onto', grabbedItem.length,'m truss'
 			try:
@@ -2126,7 +2156,10 @@ def onMouseUp(button):
 				grabbedItem.link = None
 			except:
 				print 'No link'
-				
+			
+			#--Disable highlighting
+			toggleHighlightables(False)
+			
 			# Enable truss member target nodes
 			proxyManager.addTarget(grabbedItem.targetNodes[0])
 			proxyManager.addTarget(grabbedItem.targetNodes[1])
@@ -2141,16 +2174,27 @@ def onMouseUp(button):
 			grabbedRotation = PRE_SNAP_ROT
 			print 'MouseUp: PRE_SNAP_POS',PRE_SNAP_POS,' | SNAP_TO_POS',SNAP_TO_POS
 			isgrabbing = True
-		print 'MouseUp: IsGrabbing is',isgrabbing,' | GrabbedItem is',grabbedItem
-	
-	global CACHED_GLOVE_Z
-	global objToRotate
-	if button == KEYS['rotate']:
-		if objToRotate is not None:
+		elif isrotating is True and objToRotate is not None:
+			rotateLinkA.remove()
+			rotateLinkB.remove()
+			viz.grab(objToRotate.parent,objToRotate)
+			viz.grab(objToRotate.parent,objToRotate.otherNode)
+			link = viz.grab(bridge_root,objToRotate.parent)
+			GRAB_LINKS.append(link)
+			objToRotate.parent.link = link
+			
 			objToRotate = None
-			mouseTracker.visible(viz.ON)
-			mouseTracker.distance = CACHED_GLOVE_Z
-		rotationCanvas.visible(False)
+			isrotating = False
+		print 'MouseUp: IsGrabbing is',isgrabbing,' | GrabbedItem is',grabbedItem
+		
+#	global CACHED_GLOVE_Z
+#	global objToRotate
+#	if button == KEYS['rotate']:
+#		if objToRotate is not None:
+#			objToRotate = None
+#			mouseTracker.visible(viz.ON)
+#			mouseTracker.distance = CACHED_GLOVE_Z
+#		rotationCanvas.visible(False)
 	
 	if button == KEYS['utility']:
 		toggleUtility()
