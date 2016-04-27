@@ -1630,11 +1630,19 @@ def rotateTruss2():
 		objToRotate.lookAt(pos)
 		rot = objToRotate.getEuler()
 		rot[0] = 0
+		#--Rotate based on index
 		if objToRotate.index is 0:
 			rot[2] = -rot[1]
 		else:
 			rot[2] = rot[1]
 		rot[1] = 0
+		#--Check near 90
+		if mathlite.math.fabs(rot[2]+90) <= 5:
+			rot[2] = -90
+		elif mathlite.math.fabs(rot[2]-90) <= 5:
+			rot[2] = 90
+		elif mathlite.math.fabs(rot[2]) <= 5:
+			rot[2] = 0
 		objToRotate.setEuler(rot)
 		print objToRotate.getEuler()
 		
