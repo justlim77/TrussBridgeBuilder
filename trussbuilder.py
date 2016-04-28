@@ -2613,5 +2613,5 @@ viz.playSound('./resources/sounds/hide_menu.wav',viz.SOUND_PRELOAD)
 viz.playSound('./resources/sounds/page_advance.wav',viz.SOUND_PRELOAD)
 viz.playSound('./resources/sounds/out_of_bounds_warning.wav',viz.SOUND_PRELOAD)
 
-def getAvatarPos(obj):
-	print obj.getPosition()
+def getAvatarOrientation(obj):
+	print 'Pos:',obj.getPosition(),'Rot:',obj.getEuler()
