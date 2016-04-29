@@ -1283,6 +1283,7 @@ def toggleMembers(side=True,sideClones=True,top=True,bottom=True):
 		for member in BOT_MEMBERS:
 			member.visible(bottom)
 
+
 def toggleHighlightables(val=True):
 	highlightTool.clear()
 	highlightables = BUILD_MEMBERS + PROXY_NODES
@@ -1293,10 +1294,13 @@ def toggleHighlightables(val=True):
 		highlightTool.setItems([])
 
 def toggleUtility(val=viz.TOGGLE):
-	if grabbedItem is not None:
+	if isgrabbing or isrotating:
 		return
+	
+	if menuCanvas.getVisible() is True:
+		menuCanvas.visible(False)
+		
 	utilityCanvas.visible(val)
-	menuCanvas.visible(False)
 	if utilityCanvas.getVisible() is True:
 		glove.visible(False)
 		inventoryCanvas.setMouseStyle(viz.CANVAS_MOUSE_VISIBLE)
@@ -1314,10 +1318,14 @@ def clampTrackerScroll(tracker,min=0.2,max=20):
 def toggleMenu(val=viz.TOGGLE):
 	global SHOW_HIGHLIGHTER
 	
-	if grabbedItem is not None:
+	#--If grabbing or rotating truss, exit
+	if isgrabbing is True or isrotating is True:
 		return
+		
+	if utilityCanvas.getVisible() is True:
+		utilityCanvas.visible(False)
+		
 	menuCanvas.visible(val)
-	utilityCanvas.visible(False)
 	if menuCanvas.getVisible() is True:
 		pos = viz.MainView.getLineForward().endFromDistance(1.5)
 		rot = viz.MainView.getLineForward().euler
@@ -1389,15 +1397,7 @@ objToRotate = None
 isrotating = False
 rotatingItem = None
 
-def updateHighlightTool(highlightTool):
-	global grabbedItem
-	global grabbedRotation
-	global GRAB_LINKS
-	global proxyManager
-	global PRE_SNAP_POS
-	global PRE_SNAP_ROT
-	global SNAP_TO_POS
-	
+def updateHighlightTool(highlightTool):	
 	if SHOW_HIGHLIGHTER == True:
 		highlightTool.highlight()
 	else:
@@ -1405,17 +1405,7 @@ def updateHighlightTool(highlightTool):
 		return
 		
 	if highlightTool.getSelection() is None:
-		return	
-		
-	state = viz.mouse.getState()
-#	if state & viz.MOUSEBUTTON_LEFT:
-
-	global objToRotate
-	if state & KEYS['rotate']:
-		if objToRotate == None:
-			objToRotate = highlightTool.getSelection()
-		updateAngle(objToRotate,rotationSlider,rotationLabel)
-
+		return
 
 # Register a callback function for the highlight event
 def onHighlight(e):
@@ -2176,6 +2166,11 @@ def onMouseDown(button):
 	
 	if button == KEYS['interact']:
 #		print 'MouseDown: IsGrabbing is',isgrabbing
+		#--Translation
+		global isgrabbing
+		if highlightedItem is not None and isgrabbing is False:
+			isgrabbing = True
+			
 		#--Rotation
 		if rotatingItem is not None:
 			#--Show rotation GUI
@@ -2200,15 +2195,6 @@ def onMouseDown(button):
 			objToRotate = newParentNode
 			isrotating = True
 			print 'onMouseDown: objToRotate is',objToRotate,'and isrotating is',isrotating
-		pass
-				
-#	global objToRotate
-#	global CACHED_GLOVE_Z
-#	if button == KEYS['rotate']:
-#		CACHED_GLOVE_Z = mouseTracker.distance
-#		if objToRotate is not None:
-#			print 'Rotating', objToRotate.name, CACHED_GLOVE_Z
-#			rotationCanvas.visible(True)
 
 
 def onMouseUp(button):	
@@ -2227,11 +2213,15 @@ def onMouseUp(button):
 	global rotateLinkB
 	
 	if button == KEYS['interact']:	
+		#--Release truss member to stop translation
 		if isgrabbing is True and grabbedItem is not None:
 			print 'MouseUp: Releasing',grabbedItem
 			onRelease()
-		# Edit Mode: If highlighting a valid member & not currently grabbing
-		elif isgrabbing is False and highlightedItem is not None and isrotating is False:
+		#--Check if still highlighting before attempting to grab truss
+		elif highlightedItem is None:
+			isgrabbing = False
+		#--If highlighted truss is still valid, grab highlighted truss member
+		elif isgrabbing is True and highlightedItem is not None and isrotating is False:
 			grabbedItem = highlightedItem
 			print 'MouseUp: Grabbing onto', grabbedItem.length,'m truss'
 			try:
@@ -2257,7 +2247,7 @@ def onMouseUp(button):
 			SNAP_TO_POS = PRE_SNAP_POS	# Wrong value to snap to
 			grabbedRotation = PRE_SNAP_ROT
 			print 'MouseUp: PRE_SNAP_POS',PRE_SNAP_POS,' | SNAP_TO_POS',SNAP_TO_POS
-			isgrabbing = True
+		#--Grab onto rotation node
 		elif isrotating is True and objToRotate is not None:
 			rotateLinkA.remove()
 			rotateLinkB.remove()
@@ -2266,9 +2256,12 @@ def onMouseUp(button):
 			link = viz.grab(bridge_root,objToRotate.parent)
 			GRAB_LINKS.append(link)
 			objToRotate.parent.link = link
+			isgrabbing = False
 			
-			objToRotate = None
-			isrotating = False
+		#--Release objects
+		objToRotate = None
+		isrotating = False
+
 		print 'MouseUp: IsGrabbing is',isgrabbing,' | GrabbedItem is',grabbedItem
 		
 #	global CACHED_GLOVE_Z
