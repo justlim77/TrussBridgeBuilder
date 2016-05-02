@@ -2,7 +2,7 @@
 import vizfx
 import vizshape
 
-def GridRoot(gridColor=viz.CYAN,origin=([0,0,0])):
+def GridRoot(gridColor=viz.CYAN):
 	grid_root = viz.addGroup()
 	
 	# Create front grid
@@ -12,31 +12,36 @@ def GridRoot(gridColor=viz.CYAN,origin=([0,0,0])):
 	grid_front.setEuler(0,90,0)
 	grid_front.setParent(grid_root)
 
+#	grid_front_intersect = vizshape.addPlane(size=(20,10),cullFace=False)
+#	grid_front_intersect.setPosition(grid_front.getPosition())
+#	grid_front_intersect.setEuler(grid_front.getEuler())
+#	grid_front_intersect.setParent(grid_root)
+#	grid_front_intersect.snap = True
+
 	# Create back grid
 	grid_back = vizshape.addGrid(size=(20,10))
 	grid_back.color(gridColor)
 	grid_back.setPosition(0,5,-5-24)
 	grid_back.setEuler(0,90,0)
-	grid_back.setScale(1,z=-1)
 	grid_back.setParent(grid_root)
 
 	# Create bottom grid
 	grid_bottom = vizshape.addGrid(size=(20,24))
 	grid_bottom.color(gridColor)
-	grid_bottom.setPosition(0,0,origin[2])
+	grid_bottom.setPosition(0,0,-17)
 	grid_bottom.setParent(grid_root)
 	
 	# Create left grid
 	grid_left = vizshape.addGrid(size=(10,24))
 	grid_left.color(gridColor)
-	grid_left.setPosition(-10,5,origin[2])
+	grid_left.setPosition(-10,5,-17)
 	grid_left.setEuler(0,0,90)
 	grid_left.setParent(grid_root)
 	
 	# Create right grid
 	grid_right = vizshape.addGrid(size=(10,24))
 	grid_right.color(gridColor)
-	grid_right.setPosition(10,5,origin[2])
+	grid_right.setPosition(10,5,-17)
 	grid_right.setEuler(0,0,-90)
 	grid_right.setParent(grid_root)
 	
@@ -103,15 +108,19 @@ if __name__ == '__main__':
 	if not hmd.getSensor(): 
 		viz.logError('**ERROR: Failed to detect Oculus!')
 	
+	ORIGIN = [0,5,-17]
+	
+	gridRoot = GridRoot()
+	viz.MainView.setPosition(ORIGIN)
+	
 #	bridgeRoot = BridgeRoot()
-	environment_root = EnvironmentRoot()
-#	gridRoot = GridRoot()
-	wave_M = viz.addChild('resources/wave.osgb',cache=viz.CACHE_CLONE,pos=([0,0.75,0]),parent=environment_root)
-	wave_M.setAnimationSpeed(0.02)
-	wave_B = viz.addChild('resources/wave.osgb',cache=viz.CACHE_CLONE,pos=([0,0.75,-50]),parent=environment_root)
-	wave_B.setAnimationSpeed(0.02)
-	road_L1 = viz.addChild('resources/road3.osgb',cache=viz.CACHE_CLONE,pos=(-20,5,0),parent=environment_root)
-	road_L2 = viz.addChild('resources/road3.osgb',cache=viz.CACHE_CLONE,pos=(-40,5,0),parent=environment_root)
-	road_R1 = viz.addChild('resources/road3.osgb',cache=viz.CACHE_CLONE,pos=(20,5,0),parent=environment_root)
-	road_R2 = viz.addChild('resources/road3.osgb',cache=viz.CACHE_CLONE,pos=(40,5,0),parent=environment_root)
+#	environment_root = EnvironmentRoot()
+#	wave_M = viz.addChild('resources/wave.osgb',cache=viz.CACHE_CLONE,pos=([0,0.75,0]),parent=environment_root)
+#	wave_M.setAnimationSpeed(0.02)
+#	wave_B = viz.addChild('resources/wave.osgb',cache=viz.CACHE_CLONE,pos=([0,0.75,-50]),parent=environment_root)
+#	wave_B.setAnimationSpeed(0.02)
+#	road_L1 = viz.addChild('resources/road3.osgb',cache=viz.CACHE_CLONE,pos=(-20,5,0),parent=environment_root)
+#	road_L2 = viz.addChild('resources/road3.osgb',cache=viz.CACHE_CLONE,pos=(-40,5,0),parent=environment_root)
+#	road_R1 = viz.addChild('resources/road3.osgb',cache=viz.CACHE_CLONE,pos=(20,5,0),parent=environment_root)
+#	road_R2 = viz.addChild('resources/road3.osgb',cache=viz.CACHE_CLONE,pos=(40,5,0),parent=environment_root)
 #	road_M = viz.addChild('resources/road3.osgb',cache=viz.CACHE_CLONE,pos=(0,5,0),parent=environment_root)

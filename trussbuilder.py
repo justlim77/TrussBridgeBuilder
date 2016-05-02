@@ -69,7 +69,7 @@ import xml.etree.ElementTree as ET
 RESOLUTION = ([1280,720])
 UTILITY_CANVAS_RES = ([80,80])
 MULTISAMPLING = 8
-FOV = 40
+FOV = 35
 START_FOV = 100
 STENCIL = 8
 STEREOMODE = viz.STEREO_HORZ
@@ -150,7 +150,6 @@ class Orientation(Enum):
 	Bottom=3
 ORIENTATION = Orientation.Side
 
-
 class Mode(Enum):
 	Build=0
 	Edit=1
@@ -158,7 +157,6 @@ class Mode(Enum):
 	View=3
 	Walk=4
 MODE = Mode.View
-
 
 PROXY_NODES = []
 TARGET_NODES = []
@@ -309,7 +307,7 @@ proxyManager = initProxy()
 catalogue_root = getCatalogue('data/catalogues/catalogue_CHS.xml')
 environment_root = roots.EnvironmentRoot(visibility=False)
 bridge_root = roots.BridgeRoot(BRIDGE_ROOT_POS,SIDE_VIEW_ROT)
-grid_root = roots.GridRoot(gridColor=GRID_COLOR,origin=START_POS)
+grid_root = roots.GridRoot(gridColor=GRID_COLOR)
 orientation_text = viz.addText3D('<< View >>',pos=[0,13.5,-5],scale=(2,2,.5),parent=grid_root,align=viz.ALIGN_CENTER)
 orientation_text_shadow = viz.addText3D('<< View >>',parent=orientation_text,align=viz.ALIGN_CENTER)
 orientation_text_shadow.setPosition([0,0,0.2])
@@ -976,6 +974,7 @@ def createTruss(order=Order(),path=''):
 	truss.quantity = int(order.quantity)
 	truss.orientation = ORIENTATION
 	truss.isNewMember = False
+#	truss.disable(viz.INTERSECT_INFO_OBJECT)
 	
 	truss.setScale([truss.length,truss.diameter*0.001,truss.diameter*0.001])	
 
@@ -986,6 +985,7 @@ def createTruss(order=Order(),path=''):
 	nodeA.parent = truss
 	nodeA.index = 0
 #	nodeA.visible(False)
+#	nodeA.disable(viz.INTERSECT_INFO_OBJECT)
 	viz.grab(truss,nodeA)
 	
 	posB = truss.getPosition()
@@ -995,6 +995,7 @@ def createTruss(order=Order(),path=''):
 	nodeB.parent = truss
 	nodeB.index = 1
 #	nodeB.visible(False)
+#	nodeB.disable(viz.INTERSECT_INFO_OBJECT)
 	viz.grab(truss,nodeB)
 		
 	nodeA.otherNode = nodeB
@@ -1020,6 +1021,7 @@ def createTrussNew(order=Order(),path='',loading=False):
 	truss.length = float(order.length)
 	truss.quantity = int(order.quantity)
 	truss.orientation = ORIENTATION
+#	truss.disable(viz.INTERSECT_INFO_OBJECT)
 	
 	truss.setScale([truss.length,truss.diameter*0.001,truss.diameter*0.001])	
 	
@@ -1031,6 +1033,7 @@ def createTrussNew(order=Order(),path='',loading=False):
 	nodeA.parent = truss
 	nodeA.index = 0
 #	nodeA.visible(False)
+#	nodeA.disable(viz.INTERSECT_INFO_OBJECT)
 	viz.grab(truss,nodeA)
 	
 	posB = truss.getPosition()
@@ -1040,6 +1043,7 @@ def createTrussNew(order=Order(),path='',loading=False):
 	nodeB.parent = truss
 	nodeB.index = 1
 #	nodeB.visible(False)
+#	nodeB.disable(viz.INTERSECT_INFO_OBJECT)
 	viz.grab(truss,nodeB)
 	
 	nodeA.otherNode = nodeB
@@ -1439,14 +1443,29 @@ def onHighlightGrab():
 	""" Clamp grabbed member to front glove position and grid z """
 	global grabbedItem
 	global isgrabbing
-	if grabbedItem is not None and isgrabbing is True:		
-		startPos = highlightTool.getRayCaster().getPosition()
+	if grabbedItem is not None and isgrabbing is True:	
+		raycaster = highlightTool.getRayCaster()
+		startPos = raycaster.getPosition()
+#		print startPos
 		dist = mathlite.math.fabs(startPos[2] - GRID_Z)
-		raycaster = highlightTool.getRayCaster().getLineForward()
-		newPos = raycaster.endFromDistance(dist)
+#		print dist
+#		newPoint = raycaster.getLineForward(length=dist).getEnd()
+#		print newPoint
+		newPos = raycaster.getLineForward().endFromDistance(dist)
 		newPos[2] = GRID_Z
 		grabbedItem.setPosition(newPos)
 vizact.ontimer(0,onHighlightGrab)
+
+def onHighlightGrab2():
+	global grabbedItem
+	global isgrabbing
+	pos = []
+	object = viz.MainWindow.pick(info=True,pos=(0.5,0.5))
+	if object.valid:
+		pos = object.point
+	if grabbedItem is not None and isgrabbing is True:	
+		grabbedItem.setPosition(pos)
+#vizact.ontimer(0,onHighlightGrab2)
 
 
 def onRelease(e=None):
@@ -1654,6 +1673,7 @@ def rotateTruss2():
 #		mouseTracker.visible(viz.OFF)
 #		mouseTracker.distance = 0.1
 		line = viz.MainWindow.screenToWorld(viz.Mouse.getPosition())
+		print line.distanceToPoint
 		dist = mathlite.math.fabs(navigator.getPosition()[2]-GRID_Z)
 		pos = line.endFromDistance(dist)
 #		pos[2] = GRID_Z
@@ -1686,8 +1706,45 @@ def rotateTruss2():
 	else:
 		#--Hide rotation GUI
 		rotationCanvas.visible(False)
-vizact.ontimer(0,rotateTruss2)
+#vizact.ontimer(0,rotateTruss2)
 
+def rotateTruss3():
+	global objToRotate
+	global isrotating
+	
+	if objToRotate is not None and isrotating is True:
+		# Clamp glove link z-orientation
+		rotationCanvas.visible(viz.ON)
+		mousePos = viz.mouse.getPosition()
+		rotateValue = mathlite.getNewRange(mousePos[1],0,1,90,-90)
+		print rotateValue
+		#--Rotate based on index
+		if objToRotate.index is 0:
+			rotateValue *= -1
+		else:
+			pass
+		objToRotate.setEuler(0,0,rotateValue)
+		#--Check near 90
+		rot = objToRotate.getEuler()
+		if mathlite.math.fabs(rot[2]+90) <= 5:
+			rot[2] = -90
+		elif mathlite.math.fabs(rot[2]-90) <= 5:
+			rot[2] = 90
+		elif mathlite.math.fabs(rot[2]) <= 5:
+			rot[2] = 0
+		objToRotate.setEuler(rot)
+		
+		updateAngle(objToRotate,rotationSlider,rotationLabel)
+#		slider.set(pos)
+#		rotateTo = mathlite.getNewRange(pos,0,1,90,-90)
+#		objToRotate.setEuler(0,0,int(rotateTo))
+#		rotation = int(objToRotate.getEuler()[2])
+#		string = str(rotation)
+#		rotationLabel.message(string)
+	else:
+		#--Hide rotation GUI
+		rotationCanvas.visible(False)
+vizact.ontimer(0,rotateTruss3)
 def resetSensors():
 	proxyManager.clearSensors()
 	proxyManager.addSensor(pinAnchorSensor)
@@ -1799,10 +1856,10 @@ def cycleOrientation(val):
 	bridge_root.setPosition(pos)
 	
 	# Show feedback
-	runFeedbackTask(str(ORIENTATION.name) + 'View')
+	runFeedbackTask(str(ORIENTATION.name) + ' View')
 	clickSound.play()
-	orientation_text.message(str(ORIENTATION.name) + 'View')
-	orientation_text_shadow.message(str(ORIENTATION.name) + 'View')
+	orientation_text.message(str(ORIENTATION.name) + ' View')
+	orientation_text_shadow.message(str(ORIENTATION.name) + ' View')
 
 
 def cycleMode(mode=Mode.Add):
@@ -2474,6 +2531,8 @@ def MainTask():
 
 	global glove
 	glove = viz.addChild('glove.cfg')
+	glove.disable(viz.INTERSECT_INFO_OBJECT)
+	
 	
 #	viz.MainView.setPosition(START_POS)
 	
