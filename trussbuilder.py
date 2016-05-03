@@ -974,7 +974,6 @@ def createTruss(order=Order(),path=''):
 	truss.quantity = int(order.quantity)
 	truss.orientation = ORIENTATION
 	truss.isNewMember = False
-#	truss.disable(viz.INTERSECT_INFO_OBJECT)
 	
 	truss.setScale([truss.length,truss.diameter*0.001,truss.diameter*0.001])	
 
@@ -985,8 +984,8 @@ def createTruss(order=Order(),path=''):
 	nodeA.parent = truss
 	nodeA.index = 0
 #	nodeA.visible(False)
-#	nodeA.disable(viz.INTERSECT_INFO_OBJECT)
-	viz.grab(truss,nodeA)
+	truss.nodeA = nodeA
+	truss.linkA = viz.grab(truss,nodeA)
 	
 	posB = truss.getPosition()
 	posB[0] += truss.length * 0.5
@@ -995,8 +994,8 @@ def createTruss(order=Order(),path=''):
 	nodeB.parent = truss
 	nodeB.index = 1
 #	nodeB.visible(False)
-#	nodeB.disable(viz.INTERSECT_INFO_OBJECT)
-	viz.grab(truss,nodeB)
+	truss.nodeB = nodeB
+	truss.linkB = viz.grab(truss,nodeB)
 		
 	nodeA.otherNode = nodeB
 	nodeB.otherNode = nodeA
@@ -1033,8 +1032,8 @@ def createTrussNew(order=Order(),path='',loading=False):
 	nodeA.parent = truss
 	nodeA.index = 0
 #	nodeA.visible(False)
-#	nodeA.disable(viz.INTERSECT_INFO_OBJECT)
-	viz.grab(truss,nodeA)
+	truss.nodeA = nodeA
+	truss.linkA = viz.grab(truss,nodeA)
 	
 	posB = truss.getPosition()
 	posB[0] += truss.length * 0.5
@@ -1043,8 +1042,8 @@ def createTrussNew(order=Order(),path='',loading=False):
 	nodeB.parent = truss
 	nodeB.index = 1
 #	nodeB.visible(False)
-#	nodeB.disable(viz.INTERSECT_INFO_OBJECT)
-	viz.grab(truss,nodeB)
+	truss.nodeB = nodeB
+	truss.linkB = viz.grab(truss,nodeB)
 	
 	nodeA.otherNode = nodeB
 	nodeB.otherNode = nodeA
@@ -1278,14 +1277,20 @@ def toggleGrid(value=viz.TOGGLE):
 def toggleMembers(side=True,sideClones=True,top=True,bottom=True):
 		for member in SIDE_MEMBERS:
 			member.visible(side)
+			member.nodeA.visible(side)
+			member.nodeB.visible(side)
 		for member in SIDE_CLONES:
 			member.visible(sideClones)
 			member.nodeA.visible(sideClones)
 			member.nodeB.visible(sideClones)
 		for member in TOP_MEMBERS:
 			member.visible(top)
+			member.nodeA.visible(top)
+			member.nodeB.visible(top)
 		for member in BOT_MEMBERS:
 			member.visible(bottom)
+			member.nodeA.visible(bottom)
+			member.nodeB.visible(bottom)
 
 
 def toggleHighlightables(val=True):
@@ -1714,9 +1719,6 @@ def rotateTruss3():
 	
 	if objToRotate is not None and isrotating is True:
 		# Clamp glove link z-orientation
-		viz.Mouse.setPosition(pos=[0,0.3,0])
-#		print viz.Mouse.getPosition()
-		rotationCanvas.visible(viz.ON)
 		mousePos = viz.mouse.getPosition()
 		rotateValue = mathlite.getNewRange(mousePos[1],0,1,180,-180)
 #		print rotateValue
@@ -1796,19 +1798,19 @@ def cycleOrientation(val):
 		pos[2] = TOP_CACHED_Z
 		
 		for member in SIDE_MEMBERS:
-			member.visible(viz.OFF)
+			member.visible(False)
 			proxyManager.addSensor(member.sensorNodes[0])
 			proxyManager.addSensor(member.sensorNodes[1])
 			member.proxyNodes[0].visible(False)
 			member.proxyNodes[1].visible(False)
 		for member in BOT_MEMBERS:
-			member.visible(viz.OFF)
+			member.visible(False)
 			proxyManager.removeSensor(member.sensorNodes[0])
 			proxyManager.removeSensor(member.sensorNodes[1])
 			member.proxyNodes[0].visible(False)
 			member.proxyNodes[1].visible(False)
 		for member in TOP_MEMBERS:
-			member.visible(viz.ON)	
+			member.visible(True)	
 			proxyManager.addSensor(member.sensorNodes[0])
 			proxyManager.addSensor(member.sensorNodes[1])
 			member.proxyNodes[0].visible(True)
@@ -1821,19 +1823,19 @@ def cycleOrientation(val):
 		pos[2] = BOT_CACHED_Z
 		
 		for member in SIDE_MEMBERS:
-			member.visible(viz.OFF)
+			member.visible(False)
 			proxyManager.addSensor(member.sensorNodes[0])
 			proxyManager.addSensor(member.sensorNodes[1])
 			member.proxyNodes[0].visible(False)
 			member.proxyNodes[1].visible(False)
 		for member in TOP_MEMBERS:
-			member.visible(viz.OFF)
+			member.visible(False)
 			proxyManager.removeSensor(member.sensorNodes[0])
 			proxyManager.removeSensor(member.sensorNodes[1])
 			member.proxyNodes[0].visible(False)
 			member.proxyNodes[1].visible(False)
 		for member in BOT_MEMBERS:
-			member.visible(viz.ON)
+			member.visible(True)
 			proxyManager.addSensor(member.sensorNodes[0])
 			proxyManager.addSensor(member.sensorNodes[1])
 			member.proxyNodes[0].visible(True)
@@ -1846,19 +1848,19 @@ def cycleOrientation(val):
 		pos = BRIDGE_ROOT_POS
 		
 		for member in SIDE_MEMBERS:
-			member.visible(viz.ON)
+			member.visible(True)
 			proxyManager.addSensor(member.sensorNodes[0])
 			proxyManager.addSensor(member.sensorNodes[1])
 			member.proxyNodes[0].visible(True)
 			member.proxyNodes[1].visible(True)
 		for member in TOP_MEMBERS:
-			member.visible(viz.OFF)
+			member.visible(False)
 			proxyManager.removeSensor(member.sensorNodes[0])
 			proxyManager.removeSensor(member.sensorNodes[1])
 			member.proxyNodes[0].visible(False)
 			member.proxyNodes[1].visible(False)
 		for member in BOT_MEMBERS:
-			member.visible(viz.OFF)
+			member.visible(False)
 			proxyManager.removeSensor(member.sensorNodes[0])
 			proxyManager.removeSensor(member.sensorNodes[1])
 			member.proxyNodes[0].visible(False)
@@ -2166,6 +2168,9 @@ def slideRootHat():
 	global BOT_CACHED_Z
 	global bridge_root
 	
+	if MODE is Mode.View or MODE is Mode.Walk:
+		return
+	
 	if ORIENTATION == Orientation.Top or ORIENTATION == Orientation.Bottom:
 		pos = bridge_root.getPosition()
 		if SLIDE_VAL == 0:
@@ -2290,12 +2295,18 @@ def onMouseUp(button):
 		#--Grab onto rotation node
 		elif isrotating is True and objToRotate is not None:
 			rotateLinkA.remove()
+			rotateLinkA = None
 			rotateLinkB.remove()
-			viz.grab(objToRotate.parent,objToRotate)
-			viz.grab(objToRotate.parent,objToRotate.otherNode)
-			link = viz.grab(bridge_root,objToRotate.parent)
+			rotateLinkB = None
+			
+			truss = objToRotate.parent
+			otherNode = objToRotate.otherNode
+			print 'Node', objToRotate, 'Other', otherNode
+			viz.grab(truss,objToRotate)
+			viz.grab(truss,otherNode)
+			link = viz.grab(bridge_root,truss)			
 			GRAB_LINKS.append(link)
-			objToRotate.parent.link = link
+			truss.link = link
 			isgrabbing = False
 			print 'MouseUp: Regrabbing '
 		#--Check if still highlighting before attempting to grab truss
