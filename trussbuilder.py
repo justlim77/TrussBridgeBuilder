@@ -1020,7 +1020,6 @@ def createTrussNew(order=Order(),path='',loading=False):
 	truss.length = float(order.length)
 	truss.quantity = int(order.quantity)
 	truss.orientation = ORIENTATION
-#	truss.disable(viz.INTERSECT_INFO_OBJECT)
 	
 	truss.setScale([truss.length,truss.diameter*0.001,truss.diameter*0.001])	
 	
@@ -1268,10 +1267,10 @@ def toggleGrid(value=viz.TOGGLE):
 	
 	# Show feedback
 	if grid_root.getVisible() is True:
-		runFeedbackTask('Grid On')
+		runFeedbackTask('Grid ON')
 		clickSound.play()
 	else:
-		runFeedbackTask('Grid Off')
+		runFeedbackTask('Grid OFF')
 		hideMenuSound.play()
 
 def toggleMembers(side=True,sideClones=True,top=True,bottom=True):
@@ -1432,7 +1431,7 @@ def onHighlight(e):
 		if hasattr(e.new,'length'):
 			inspectMember(highlightedItem)
 		elif hasattr(e.new,'isNode'):
-			print 'onHighlight: Node parent is',e.new.parent
+#			print 'onHighlight: Node parent is',e.new.parent
 			rotatingItem = e.new
 	else:
 		#--Force clear highlight
@@ -1632,7 +1631,7 @@ def toggleRoad(road):
 			road.visible(True)
 		runFeedbackTask(message)
 	else:
-		runFeedbackTask('No bottom support!')
+		runFeedbackTask('No support for road!')
 		road.visible(False)
 	
 	
@@ -1648,7 +1647,7 @@ def updateQuantity(order,button,orderList,inventory,row):
 def updateAngle(obj,slider,label):
 	if obj != None:
 		rot = obj.getEuler()
-		pos = mathlite.getNewRange(rot[2],90,-90,0,1)
+		pos = mathlite.getNewRange(rot[2],180,-180,0,1)
 		slider.set(pos)
 		string = str(int(rot[2]))
 		label.message(string)
@@ -1713,20 +1712,25 @@ def rotateTruss2():
 		rotationCanvas.visible(False)
 #vizact.ontimer(0,rotateTruss2)
 
+midPoint = 0
+lowerPoint = 0
+upperPoint = 0
 def rotateTruss3():
 	global objToRotate
 	global isrotating
+	global lowerPoint
+	global upperPoint
 	
 	if objToRotate is not None and isrotating is True:
 		# Clamp glove link z-orientation
 		mousePos = viz.mouse.getPosition()
-		rotateValue = mathlite.getNewRange(mousePos[1],0,1,180,-180)
-#		print rotateValue
+#		rotateValue = mathlite.getNewRange(mousePos[1],0,1,180,-180)
+		clampedMouse = viz.clamp(mousePos[1],lowerPoint,upperPoint)
+		rotateValue = mathlite.getNewRange(clampedMouse,lowerPoint,upperPoint,180,-180)
+		print rotateValue
 		#--Rotate based on index
 		if objToRotate.index is 0:
 			rotateValue *= -1
-		else:
-			pass
 		objToRotate.setEuler(0,0,rotateValue)
 		#--Check near 90
 		rot = objToRotate.getEuler()
@@ -2238,6 +2242,9 @@ def onMouseDown(button):
 	global rotateLinkA
 	global rotateLinkB
 	global objToRotate
+	global midPoint
+	global upperPoint
+	global lowerPoint
 	
 	if button == KEYS['interact']:
 #		print 'MouseDown: IsGrabbing is',isgrabbing
@@ -2250,6 +2257,10 @@ def onMouseDown(button):
 		if rotatingItem is not None:
 			#--Show rotation GUI
 			rotationCanvas.visible(True)
+			
+			midPoint = viz.mouse.getPosition()[1]
+			upperPoint += 0.2
+			lowerPoint -= 0.2
 			
 			newParentNode = None
 			#--Break links
@@ -2311,7 +2322,7 @@ def onMouseUp(button):
 			print 'MouseUp: Regrabbing '
 		#--Check if still highlighting before attempting to grab truss
 		elif highlightedItem is None:
-			print 'MouseUp: Highilghted item is none, grabbing set to false'
+			print 'MouseUp: Highlighted item is none, grabbing set to false'
 			isgrabbing = False
 		#--If highlighted truss is still valid, grab highlighted truss member
 		elif isgrabbing is True and highlightedItem is not None and isrotating is False:
@@ -2359,7 +2370,7 @@ def onSlider(obj,pos):
 	global objToRotate
 	if obj == rotationSlider:
 		if objToRotate != None:
-			rotateTo = mathlite.getNewRange(pos,0,1,90,-90)
+			rotateTo = mathlite.getNewRange(pos,0,1,180,-180)
 			highlightedItem.setEuler(0,0,int(rotateTo))
 			rotation = highlightedItem.getEuler()
 			string = str(int(rotation[2]))
