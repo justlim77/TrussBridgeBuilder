@@ -1714,10 +1714,12 @@ def rotateTruss3():
 	
 	if objToRotate is not None and isrotating is True:
 		# Clamp glove link z-orientation
+		viz.Mouse.setPosition(pos=[0,0.3,0])
+#		print viz.Mouse.getPosition()
 		rotationCanvas.visible(viz.ON)
 		mousePos = viz.mouse.getPosition()
-		rotateValue = mathlite.getNewRange(mousePos[1],0,1,90,-90)
-		print rotateValue
+		rotateValue = mathlite.getNewRange(mousePos[1],0,1,180,-180)
+#		print rotateValue
 		#--Rotate based on index
 		if objToRotate.index is 0:
 			rotateValue *= -1
@@ -1745,6 +1747,17 @@ def rotateTruss3():
 		#--Hide rotation GUI
 		rotationCanvas.visible(False)
 vizact.ontimer(0,rotateTruss3)
+
+def flipTruss(truss):
+	rot = truss.getEuler()
+	rotateTo = []
+	if rot[2] == 0:
+		rotateTo = [0,0,90]
+	else:
+		rotateTo = [0,0,0]
+	truss.setEuler(rotateTo)
+	
+	
 def resetSensors():
 	proxyManager.clearSensors()
 	proxyManager.addSensor(pinAnchorSensor)
@@ -2274,8 +2287,20 @@ def onMouseUp(button):
 		if isgrabbing is True and grabbedItem is not None:
 			print 'MouseUp: Releasing',grabbedItem
 			onRelease()
+		#--Grab onto rotation node
+		elif isrotating is True and objToRotate is not None:
+			rotateLinkA.remove()
+			rotateLinkB.remove()
+			viz.grab(objToRotate.parent,objToRotate)
+			viz.grab(objToRotate.parent,objToRotate.otherNode)
+			link = viz.grab(bridge_root,objToRotate.parent)
+			GRAB_LINKS.append(link)
+			objToRotate.parent.link = link
+			isgrabbing = False
+			print 'MouseUp: Regrabbing '
 		#--Check if still highlighting before attempting to grab truss
 		elif highlightedItem is None:
+			print 'MouseUp: Highilghted item is none, grabbing set to false'
 			isgrabbing = False
 		#--If highlighted truss is still valid, grab highlighted truss member
 		elif isgrabbing is True and highlightedItem is not None and isrotating is False:
@@ -2304,34 +2329,19 @@ def onMouseUp(button):
 			SNAP_TO_POS = PRE_SNAP_POS	# Wrong value to snap to
 			grabbedRotation = PRE_SNAP_ROT
 			print 'MouseUp: PRE_SNAP_POS',PRE_SNAP_POS,' | SNAP_TO_POS',SNAP_TO_POS
-		#--Grab onto rotation node
-		elif isrotating is True and objToRotate is not None:
-			rotateLinkA.remove()
-			rotateLinkB.remove()
-			viz.grab(objToRotate.parent,objToRotate)
-			viz.grab(objToRotate.parent,objToRotate.otherNode)
-			link = viz.grab(bridge_root,objToRotate.parent)
-			GRAB_LINKS.append(link)
-			objToRotate.parent.link = link
-			isgrabbing = False
 			
 		#--Release objects
 		objToRotate = None
 		isrotating = False
 
 		print 'MouseUp: IsGrabbing is',isgrabbing,' | GrabbedItem is',grabbedItem
-		
-#	global CACHED_GLOVE_Z
-#	global objToRotate
-#	if button == KEYS['rotate']:
-#		if objToRotate is not None:
-#			objToRotate = None
-#			mouseTracker.visible(viz.ON)
-#			mouseTracker.distance = CACHED_GLOVE_Z
-#		rotationCanvas.visible(False)
 	
 	if button == KEYS['utility']:
-		toggleUtility()
+		#--If mode is Mode.Add, flip truss; else toggle utils
+		if MODE is Mode.Add:
+			flipTruss(grabbedItem)
+		else:
+			toggleUtility()
 
 
 def onSlider(obj,pos):
