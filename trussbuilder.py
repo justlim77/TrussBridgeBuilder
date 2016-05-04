@@ -84,10 +84,10 @@ WARNING_VOLUME = 0.05
 ISMUTED = False
 
 BUILD_ROAM_LIMIT = ([12,-12,-10,10])	# Front,back,left,right limits in meters(m)
-START_POS = ([0,6,-17])					# Set at 5m + avatar height above ground and 17m back fron center
+START_POS = ([0,5,-17])					# Set at 5m + avatar height above ground and 17m back fron center
 BUILD_ROTATION = ([0,0,0])				# Zero-rotation to face dead center
-WALK_POS = ([22,8,-9])
-WALK_ROT = ([-30,0,0])
+WALK_POS = ([21,5.5,-8])
+WALK_ROT = ([-60,0,0])
 VIEW_SPOTS = {
 	 0	: [[35,20,-13],[-60,0,0]]
 	,1	: [[-35,20,-13],[60,0,0]]
@@ -305,21 +305,15 @@ initLighting()
 highlightTool = highlighter.Highlighter()
 proxyManager = initProxy()
 catalogue_root = getCatalogue('data/catalogues/catalogue_CHS.xml')
-environment_root = roots.EnvironmentRoot(visibility=False)
-bridge_root = roots.BridgeRoot(BRIDGE_ROOT_POS,SIDE_VIEW_ROT)
-grid_root = roots.GridRoot(gridColor=GRID_COLOR)
-orientation_text = viz.addText3D('<< View >>',pos=[0,13.5,-5],scale=(2,2,.5),parent=grid_root,align=viz.ALIGN_CENTER)
-orientation_text_shadow = viz.addText3D('<< View >>',parent=orientation_text,align=viz.ALIGN_CENTER)
-orientation_text_shadow.setPosition([0,0,0.2])
-orientation_text_shadow.color(viz.BLACK)
-orientation_text_shadow.alpha(0.75)
-info_text = viz.addText3D('<< Info >>',pos=[0,12,-5],scale=(.5,.5,.5),parent=grid_root,align=viz.ALIGN_CENTER)
-info_text_shadow = viz.addText3D('<< Info >>',parent=info_text,align=viz.ALIGN_CENTER)
-info_text_shadow.setPosition([0,0,0.2])
-info_text_shadow.color(viz.BLACK)
-info_text_shadow.alpha(0.75)
-# Setup audio
+#environment_root = roots.EnvironmentRoot(visibility=False)
+environment_root = roots.EnvironmentRoot()
+bridge_root = roots.Root()
+bridge_root.setPosition(BRIDGE_ROOT_POS)
+bridge_root.setEuler(SIDE_VIEW_ROT)
+grid_root = roots.GridRoot(GRID_COLOR)
 
+
+# Setup audio
 startSound = viz.addAudio('./resources/sounds/return_to_holodeck.wav')
 buttonHighlightSound = viz.addAudio('./resources/sounds/button_highlight.wav')
 clickSound = viz.addAudio('./resources/sounds/click.wav')
@@ -342,8 +336,10 @@ def updateResolution(panel,canvas):
 	canvas.setRenderWorldOverlay([bb.width + 5, bb.height + 5], fov=bb.height * 0.15, distance=3.0)	
 	canvas.setCursorPosition([0.5,0.5])
 
+
 def updateMouseStyle(canvas):
 	canvas.setMouseStyle(viz.CANVAS_MOUSE_BUTTON)
+
 
 # Add environment effects
 env = viz.addEnvironmentMap('resources/textures/sky.jpg')
@@ -352,33 +348,18 @@ env = viz.addEnvironmentMap('resources/textures/sky.jpg')
 #lightEffect = vizfx.addLightingModel(diffuse=vizfx.DIFFUSE_LAMBERT,specular=None)
 #vizfx.getComposer().addEffect(lightEffect)
 
+
 def applyEnvironmentEffect(obj):
 	obj.texture(env)
 	obj.appearance(viz.ENVIRONMENT_MAP)
 #	obj.apply(effect)
 #	obj.apply(lightEffect)	
 
-wave_M = viz.addChild('resources/wave.osgb',cache=viz.CACHE_CLONE,pos=([0,0.75,0]),parent=environment_root)
-wave_M.setAnimationSpeed(0.02)
-wave_B = viz.addChild('resources/wave.osgb',cache=viz.CACHE_CLONE,pos=([0,0.75,-50]),parent=environment_root)
-wave_B.setAnimationSpeed(0.02)
-road_L1 = viz.addChild('resources/road3.osgb',cache=viz.CACHE_CLONE,pos=(-20,5,0),parent=environment_root)
-road_L2 = viz.addChild('resources/road3.osgb',cache=viz.CACHE_CLONE,pos=(-40,5,0),parent=environment_root)
-road_R1 = viz.addChild('resources/road3.osgb',cache=viz.CACHE_CLONE,pos=(20,5,0),parent=environment_root)
-road_R2 = viz.addChild('resources/road3.osgb',cache=viz.CACHE_CLONE,pos=(40,5,0),parent=environment_root)
-road_M = viz.addChild('resources/road3.osgb',cache=viz.CACHE_CLONE,pos=(0,5,0),parent=environment_root)
+
+road_M = viz.addChild('resources/road3.osgb',cache=viz.CACHE_CLONE,pos=(0,5,0),parent=environment_root.getGroup())
 road_M.visible(False)
-#clamp_L = viz.addChild('resources/clamp3.osgb',cache=viz.CACHE_CLONE,pos=(-21,-2.5,0),euler=(-90,0,0),scale=(0.25,0.5,0.5))
-#clamp_L.setParent(environment_root)
-#clamp_R = viz.addChild('resources/clamp3.osgb',cache=viz.CACHE_CLONE,pos=(21,-2.5,0),euler=(90,0,0),scale=(0.25,0.5,0.5))
-#clamp_R.setParent(environment_root)
 applyEnvironmentEffect(road_M)
-applyEnvironmentEffect(road_L1)
-applyEnvironmentEffect(road_L2)
-applyEnvironmentEffect(road_R1)
-applyEnvironmentEffect(road_R2)
-applyEnvironmentEffect(wave_M)
-applyEnvironmentEffect(wave_B)
+
 
 # Bridge pin and roller supports
 pinSupport = viz.addChild('resources/pinSupport.osgb',pos=(-9.5,4,0),scale=[1,1,11])
@@ -1773,6 +1754,7 @@ def resetSensors():
 def cycleOrientation(val):
 	global ORIENTATION
 	global grabbedItem
+	global grid_root
 	
 	if MODE is Mode.View or MODE is Mode.Walk:
 		return
@@ -1819,8 +1801,7 @@ def cycleOrientation(val):
 			proxyManager.addSensor(member.sensorNodes[1])
 			member.proxyNodes[0].visible(True)
 			member.proxyNodes[1].visible(True)			
-		info_text.message(VIEW_MESSAGE)
-		info_text_shadow.message(VIEW_MESSAGE)
+		grid_root.setInfoMessage(VIEW_MESSAGE)
 	elif val == Orientation.Bottom:
 		rot = BOT_VIEW_ROT
 		pos = BOT_VIEW_POS
@@ -1844,9 +1825,7 @@ def cycleOrientation(val):
 			proxyManager.addSensor(member.sensorNodes[1])
 			member.proxyNodes[0].visible(True)
 			member.proxyNodes[1].visible(True)
-			
-		info_text.message(VIEW_MESSAGE)
-		info_text_shadow.message(VIEW_MESSAGE)
+		grid_root.setInfoMessage(VIEW_MESSAGE)
 	else:
 		rot = SIDE_VIEW_ROT
 		pos = BRIDGE_ROOT_POS
@@ -1869,16 +1848,14 @@ def cycleOrientation(val):
 			proxyManager.removeSensor(member.sensorNodes[1])
 			member.proxyNodes[0].visible(False)
 			member.proxyNodes[1].visible(False)
-		info_text.message('')
-		info_text_shadow.message('')
+		grid_root.setInfoMessage(VIEW_MESSAGE)
 	bridge_root.setEuler(rot)
 	bridge_root.setPosition(pos)
 	
 	# Show feedback
 	runFeedbackTask(str(ORIENTATION.name) + ' View')
 	clickSound.play()
-	orientation_text.message(str(ORIENTATION.name) + ' View')
-	orientation_text_shadow.message(str(ORIENTATION.name) + ' View')
+	grid_root.setOrientationMessage(str(ORIENTATION.name) + ' View')
 
 
 def cycleMode(mode=Mode.Add):

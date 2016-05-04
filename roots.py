@@ -2,83 +2,113 @@
 import vizfx
 import vizshape
 
-def GridRoot(gridColor=viz.CYAN):
-	grid_root = viz.addGroup()
-	
-	# Create front grid
-	grid_front = vizshape.addGrid(size=(20,10))
-	grid_front.color(gridColor)
-	grid_front.setPosition(0,5,-5)
-	grid_front.setEuler(0,90,0)
-	grid_front.setParent(grid_root)
+class Root(object):
+	def __init__(self):		
+		self._root = viz.addGroup()
+	def visible(self, state = viz.ON, node='', op=viz.OP_DEFAULT):
+		self._root.visible(state, node, op)
+	def getVisible(self, node='', op=viz.OP_DEFAULT):
+		return self._root.getVisible(node, op)
+	def getGroup(self):
+		return self._root	
+	def setPosition(self, pos):
+		self._root.setPosition(pos)
+	def setEuler(self, rot):
+		self._root.setEuler(rot)
+		
+class GridRoot(Root):
+	def __init__(self,color=viz.CYAN,textColor=viz.WHITE,shadowColor=viz.BLACK):
+		super(self.__class__, self).__init__()
+		
+		# Create front grid
+		self._grid_front = vizshape.addGrid(size=(20,10))
+		self._grid_front.color(color)
+		self._grid_front.setPosition(0,5,-5)
+		self._grid_front.setEuler(0,90,0)
+		self._grid_front.setParent(self._root)
 
-#	grid_front_intersect = vizshape.addPlane(size=(20,10),cullFace=False)
-#	grid_front_intersect.setPosition(grid_front.getPosition())
-#	grid_front_intersect.setEuler(grid_front.getEuler())
-#	grid_front_intersect.setParent(grid_root)
-#	grid_front_intersect.snap = True
+		# Create back grid
+		self._grid_back = vizshape.addGrid(size=(20,10))
+		self._grid_back.color(color)
+		self._grid_back.setPosition(0,5,-5-24)
+		self._grid_back.setEuler(0,90,0)
+		self._grid_back.setParent(self._root)
 
-	# Create back grid
-	grid_back = vizshape.addGrid(size=(20,10))
-	grid_back.color(gridColor)
-	grid_back.setPosition(0,5,-5-24)
-	grid_back.setEuler(0,90,0)
-	grid_back.setParent(grid_root)
-
-	# Create bottom grid
-	grid_bottom = vizshape.addGrid(size=(20,24))
-	grid_bottom.color(gridColor)
-	grid_bottom.setPosition(0,0,-17)
-	grid_bottom.setParent(grid_root)
-	
-	# Create left grid
-	grid_left = vizshape.addGrid(size=(10,24))
-	grid_left.color(gridColor)
-	grid_left.setPosition(-10,5,-17)
-	grid_left.setEuler(0,0,90)
-	grid_left.setParent(grid_root)
-	
-	# Create right grid
-	grid_right = vizshape.addGrid(size=(10,24))
-	grid_right.color(gridColor)
-	grid_right.setPosition(10,5,-17)
-	grid_right.setEuler(0,0,-90)
-	grid_right.setParent(grid_root)
-	
-	# Create floating measurements
-	span_text = viz.addText3D('<< 20 meters >>',pos=[0,11,-5],scale=[1,1,1],parent=grid_root,align=viz.ALIGN_CENTER)
-	span_text_shadow = viz.addText3D('<< 20 meters >>',parent=span_text,align=viz.ALIGN_CENTER)
-	span_text_shadow.setPosition([0,0,0.2])
-	span_text_shadow.color(viz.BLACK)
-	span_text_shadow.alpha(0.75)	
-	
-	height_text = viz.addText3D('<< 10 meters >>',pos=[-11,5,-5],scale=[1,1,1],euler=[0,0,90],parent=grid_root,align=viz.ALIGN_CENTER)
-	height_text_shadow = viz.addText3D('<< 10 meters >>',parent=height_text,align=viz.ALIGN_CENTER)
-	height_text_shadow.setPosition([0,0,0.2])
-	height_text_shadow.color(viz.BLACK)
-	height_text_shadow.alpha(0.75)
-	
-	return grid_root
-	
-	
-def EnvironmentRoot(visibility=True):
-	environment_root = viz.addGroup()
-	day = viz.add('resources/sky_day.osgb', scale=([5,5,5]),parent=environment_root)
-	day.renderToBackground(order=8)
-	environment = viz.add('resources/environment.osgb',parent=environment_root)
-	environment.renderToBackground()
-	try:
-		newWalkway = viz.add('resources/newWalkway.osgb',parent=environment_root)
-	except:
-		viz.logError('**Error: New walkway not found - loading old walkway!')
-		L_offset = 26
-		R_offset = -13
-	#	walkway = viz.addChild('resources/walkwayTest.osgb',parent=environment_root)
-		walkway_L = viz.add('resources/walkway_L.osgb',pos=([-60.72457+L_offset,-1.75,31.85828+3.25]),parent=environment_root)
-		walkway_R = viz.add('resources/walkway_R.osgb',pos=([64.14527+R_offset,-1,0-11]),parent=environment_root)	
-	environment_root.visible(visibility)
-	return environment_root
-	
+		# Create bottom grid
+		self._grid_bottom = vizshape.addGrid(size=(20,24))
+		self._grid_bottom.color(color)
+		self._grid_bottom.setPosition(0,0,-17)
+		self._grid_bottom.setParent(self._root)
+		
+		# Create left grid
+		self._grid_left = vizshape.addGrid(size=(10,24))
+		self._grid_left.color(color)
+		self._grid_left.setPosition(-10,5,-17)
+		self._grid_left.setEuler(0,0,90)
+		self._grid_left.setParent(self._root)
+		
+		# Create right grid
+		self._grid_right = vizshape.addGrid(size=(10,24))
+		self._grid_right.color(color)
+		self._grid_right.setPosition(10,5,-17)
+		self._grid_right.setEuler(0,0,-90)
+		self._grid_right.setParent(self._root)
+		
+		# Create floating measurements
+		self._span_text = viz.addText3D('<< 20 meters >>',pos=[0,11,-5],scale=[1,1,1],parent=self._root,align=viz.ALIGN_CENTER)
+		self._span_text_shadow = viz.addText3D('<< 20 meters >>',parent=self._span_text,align=viz.ALIGN_CENTER)
+		self._span_text_shadow.setPosition([0,0,0.2])
+		self._span_text_shadow.color(shadowColor)
+		self._span_text_shadow.alpha(0.75)	
+		
+		self._height_text = viz.addText3D('<< 10 meters >>',pos=[-11,5,-5],scale=[1,1,1],euler=[0,0,90],parent=self._root,align=viz.ALIGN_CENTER)
+		self._height_text_shadow = viz.addText3D('<< 10 meters >>',parent=self._height_text,align=viz.ALIGN_CENTER)
+		self._height_text_shadow.setPosition([0,0,0.2])
+		self._height_text_shadow.color(shadowColor)
+		self._height_text_shadow.alpha(0.75)	
+		
+		#--Create orientation info text
+		self._orientation_text = viz.addText3D('<< View >>',pos=[0,13.5,-5],scale=(2,2,.5),parent=self._root,align=viz.ALIGN_CENTER)
+		self._orientation_text.color(textColor)
+		self._orientation_text_shadow = viz.addText3D('<< View >>',parent=self._orientation_text,align=viz.ALIGN_CENTER)
+		self._orientation_text_shadow.setPosition([0,0,0.2])
+		self._orientation_text_shadow.color(shadowColor)
+		self._orientation_text_shadow.alpha(0.75)
+		
+		self._info_text = viz.addText3D('<< Info >>',pos=[0,12,-5],scale=(.5,.5,.5),parent=self._root,align=viz.ALIGN_CENTER)
+		self._info_text.color(textColor)
+		self._info_text_shadow = viz.addText3D('<< Info >>',parent=self._info_text,align=viz.ALIGN_CENTER)
+		self._info_text_shadow.setPosition([0,0,0.2])
+		self._info_text_shadow.color(shadowColor)
+		self._info_text_shadow.alpha(0.75)
+		
+	def setOrientationMessage(self, value):
+		self._orientation_text.message(value)
+		self._orientation_text_shadow.message(value)
+		
+	def setInfoMessage(self, value):
+		self._info_text.message(value)
+		self._info_text_shadow.message(value)
+		
+class EnvironmentRoot(Root):
+	def __init__(self):
+		super(self.__class__, self).__init__()
+		
+		self._day = viz.add('resources/sky_day.osgb', scale=([1,1,1]),parent=self._root)
+		self._day.renderToBackground(order=8)
+		self._environment = viz.add('resources/environment.osgb',parent=self._root)
+		self._environment.renderToBackground()
+		self._waveGroup = viz.addGroup(parent=self._root)
+		self._wave_M = viz.addChild('resources/wave.osgb',cache=viz.CACHE_CLONE,pos=([0,2,0]),parent=self._waveGroup)
+		self._wave_B = viz.addChild('resources/wave.osgb',cache=viz.CACHE_CLONE,pos=([0,2,-50]),parent=self._waveGroup)
+		self._newWalkway = viz.add('resources/newWalkway.osgb',parent=self._root)	
+		
+	def getWaveGroup(self):
+		return self._waveGroup
+		
+	def setWaveAnimationSpeed(self, speed, node=''):
+		self._waveGroup.setAnimationSpeed(speed, node)
+		
 	
 def BridgeRoot(pos=([0,0,0]),euler=([0,0,0])):
 	bridge_root = viz.addGroup()
