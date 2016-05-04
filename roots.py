@@ -67,11 +67,15 @@ def EnvironmentRoot(visibility=True):
 	day.renderToBackground(order=8)
 	environment = viz.add('resources/environment.osgb',parent=environment_root)
 	environment.renderToBackground()
-	L_offset = 26
-	R_offset = -13
-#	walkway = viz.addChild('resources/walkwayTest.osgb',parent=environment_root)
-	walkway_L = viz.add('resources/walkway_L.osgb',pos=([-60.72457+L_offset,-1.75,31.85828+3.25]),parent=environment_root)
-	walkway_R = viz.add('resources/walkway_R.osgb',pos=([64.14527+R_offset,-1,0-11]),parent=environment_root)	
+	try:
+		newWalkway = viz.add('resources/newWalkway.osgb',parent=environment_root)
+	except:
+		viz.logError('**Error: New walkway not found - loading old walkway!')
+		L_offset = 26
+		R_offset = -13
+	#	walkway = viz.addChild('resources/walkwayTest.osgb',parent=environment_root)
+		walkway_L = viz.add('resources/walkway_L.osgb',pos=([-60.72457+L_offset,-1.75,31.85828+3.25]),parent=environment_root)
+		walkway_R = viz.add('resources/walkway_R.osgb',pos=([64.14527+R_offset,-1,0-11]),parent=environment_root)	
 	environment_root.visible(visibility)
 	return environment_root
 	
