@@ -3,18 +3,14 @@ import vizfx
 import vizshape
 
 class Root(object):
-	def __init__(self):		
+	def __init__(self, *args):	
 		self._root = viz.addGroup()
 	def visible(self, state = viz.ON, node='', op=viz.OP_DEFAULT):
 		self._root.visible(state, node, op)
 	def getVisible(self, node='', op=viz.OP_DEFAULT):
 		return self._root.getVisible(node, op)
 	def getGroup(self):
-		return self._root	
-	def setPosition(self, pos):
-		self._root.setPosition(pos)
-	def setEuler(self, rot):
-		self._root.setEuler(rot)
+		return self._root
 		
 class GridRoot(Root):
 	def __init__(self,color=viz.CYAN,textColor=viz.WHITE,shadowColor=viz.BLACK):

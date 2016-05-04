@@ -308,8 +308,8 @@ catalogue_root = getCatalogue('data/catalogues/catalogue_CHS.xml')
 #environment_root = roots.EnvironmentRoot(visibility=False)
 environment_root = roots.EnvironmentRoot()
 bridge_root = roots.Root()
-bridge_root.setPosition(BRIDGE_ROOT_POS)
-bridge_root.setEuler(SIDE_VIEW_ROT)
+bridge_root.getGroup().setPosition(BRIDGE_ROOT_POS)
+bridge_root.getGroup().setEuler(SIDE_VIEW_ROT)
 grid_root = roots.GridRoot(GRID_COLOR)
 
 
@@ -383,7 +383,7 @@ viz.grab(rollerSupport,rollerAnchorSphere)
 
 for model in supports:
 #	applyEnvironmentEffect(model)
-	viz.grab(bridge_root,model)
+	viz.grab(bridge_root.getGroup(),model)
 
 # Create canvas for displaying GUI objects
 instructionsPanel = vizinfo.InfoPanel(title=HEADER_TEXT,align=viz.ALIGN_CENTER_BASE,icon=False,key=None)
@@ -1541,7 +1541,7 @@ def onRelease(e=None):
 #		link = viz.grab(bridge_root,members)
 #		GRAB_LINKS.append(link)
 	if grabbedItem is not None:
-		link = viz.grab(bridge_root,grabbedItem)
+		link = viz.grab(bridge_root.getGroup(),grabbedItem)
 		GRAB_LINKS.append(link)
 		grabbedItem.link = link
 	
@@ -1849,8 +1849,8 @@ def cycleOrientation(val):
 			member.proxyNodes[0].visible(False)
 			member.proxyNodes[1].visible(False)
 		grid_root.setInfoMessage(VIEW_MESSAGE)
-	bridge_root.setEuler(rot)
-	bridge_root.setPosition(pos)
+	bridge_root.getGroup().setEuler(rot)
+	bridge_root.getGroup().setPosition(pos)
 	
 	# Show feedback
 	runFeedbackTask(str(ORIENTATION.name) + ' View')
@@ -1929,8 +1929,8 @@ def cycleMode(mode=Mode.Add):
 		toggleGrid(False)
 		toggleEnvironment(True)
 		proxyManager.setDebug(False)
-		bridge_root.setPosition(BRIDGE_ROOT_POS)
-		bridge_root.setEuler(SIDE_VIEW_ROT)
+		bridge_root.getGroup().setPosition(BRIDGE_ROOT_POS)
+		bridge_root.getGroup().setEuler(SIDE_VIEW_ROT)
 		
 		# Show all truss members
 		toggleMembers()
@@ -1953,8 +1953,8 @@ def cycleMode(mode=Mode.Add):
 		toggleGrid(False)
 		proxyManager.setDebug(False)
 		mouseTracker.distance = HAND_DISTANCE
-		bridge_root.setPosition(BRIDGE_ROOT_POS)
-		bridge_root.setEuler(SIDE_VIEW_ROT)
+		bridge_root.getGroup().setPosition(BRIDGE_ROOT_POS)
+		bridge_root.getGroup().setEuler(SIDE_VIEW_ROT)
 		navigator.setPosition(WALK_POS)
 		navigator.setEuler(WALK_ROT)
 		
@@ -2129,7 +2129,7 @@ def slideRoot(val):
 	global bridge_root
 	
 	if ORIENTATION == Orientation.Top or ORIENTATION == Orientation.Bottom:
-		pos = bridge_root.getPosition()
+		pos = bridge_root.getGroup().getPosition()
 		pos[2] += val
 		if ORIENTATION == Orientation.Top:
 			clampedZ = viz.clamp(pos[2],TOP_Z_MIN,SLIDE_MAX)
@@ -2139,7 +2139,7 @@ def slideRoot(val):
 			clampedZ = viz.clamp(pos[2],BOT_Z_MIN,SLIDE_MAX)
 			pos[2] = clampedZ
 			BOT_CACHED_Z = pos[2]
-		bridge_root.setPosition(pos)	
+		bridge_root.getGroup().setPosition(pos)	
 	
 global SLIDE_VAL
 SLIDE_VAL = -1
@@ -2153,7 +2153,7 @@ def slideRootHat():
 		return
 	
 	if ORIENTATION == Orientation.Top or ORIENTATION == Orientation.Bottom:
-		pos = bridge_root.getPosition()
+		pos = bridge_root.getGroup().getPosition()
 		if SLIDE_VAL == 0:
 			pos[2] += SLIDE_INTERVAL
 		elif SLIDE_VAL == 180:
@@ -2167,7 +2167,8 @@ def slideRootHat():
 			clampedZ = viz.clamp(pos[2],BOT_Z_MIN,SLIDE_MAX)
 			pos[2] = clampedZ
 			BOT_CACHED_Z = pos[2]
-		bridge_root.setPosition(pos)
+		bridge_root.getGroup().setPosition(pos)
+		bridge_root.getGroup().setPosition(pos)
 	
 def onHatChange(e):
 	global SLIDE_VAL
@@ -2292,7 +2293,7 @@ def onMouseUp(button):
 			print 'Node', objToRotate, 'Other', otherNode
 			viz.grab(truss,objToRotate)
 			viz.grab(truss,otherNode)
-			link = viz.grab(bridge_root,truss)			
+			link = viz.grab(bridge_root.getGroup(),truss)			
 			GRAB_LINKS.append(link)
 			truss.link = link
 			isgrabbing = False
@@ -2452,7 +2453,7 @@ def LoadData():
 		elif truss.orientation == Orientation.Bottom:
 			BOT_MEMBERS.append(truss)
 		truss.setEuler(truss.order.euler)
-		link = viz.grab(bridge_root,truss)
+		link = viz.grab(bridge_root.getGroup(),truss)
 		truss.link = link
 		GRAB_LINKS.append(link)
 		
