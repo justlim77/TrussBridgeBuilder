@@ -1705,9 +1705,9 @@ def rotateTruss3():
 	if objToRotate is not None and isrotating is True:
 		# Clamp glove link z-orientation
 		mousePos = viz.mouse.getPosition()
-#		rotateValue = mathlite.getNewRange(mousePos[1],0,1,180,-180)
-		clampedMouse = viz.clamp(mousePos[1],lowerPoint,upperPoint)
-		rotateValue = mathlite.getNewRange(clampedMouse,lowerPoint,upperPoint,180,-180)
+		rotateValue = mathlite.getNewRange(mousePos[1],0,1,180,-180)
+#		clampedMouse = viz.clamp(mousePos[1],lowerPoint,upperPoint)
+#		rotateValue = mathlite.getNewRange(clampedMouse,lowerPoint,upperPoint,180,-180)
 		print rotateValue
 		#--Rotate based on index
 		if objToRotate.index is 0:

@@ -227,15 +227,16 @@ class Joystick(Navigator):
 					,'back' 	: 's'
 					,'left' 	: 'a'
 					,'right'	: 'd'
-					,'up'		: 4
-					,'down'		: 2
 					,'camera'	: 'c'
 					,'restart'	: viz.KEY_END
 					,'home'		: viz.KEY_HOME
+					,'utility'	: ' '
 					,'reset'	: 0
-					,'utility'	: 1
-					,'mode'		: 5
+					,'showMenu' : 1
+					,'down'		: 2
 					,'orient'	: 3
+					,'up'		: 4
+					,'mode'		: 5
 					,'builder'	: 6
 					,'walk'		: 7
 					,'angles'	: 8
@@ -244,7 +245,6 @@ class Joystick(Navigator):
 					,'slideFar'	: 0
 					,'slideNear': 180
 					,'env'		: '-'
-					,'showMenu' : ' '
 					,'grid'		: '-'
 					,'snapMenu'	: viz.KEY_CONTROL_L
 					,'interact' : viz.MOUSEBUTTON_LEFT
@@ -254,6 +254,7 @@ class Joystick(Navigator):
 					,'collide'	: 'c'
 					,'stereo' 	: 'm'
 					,'hand'		: 'h'
+					,'capslock'	: viz.KEY_CAPS_LOCK
 		}
 		
 		# Get device from extension if not specified
