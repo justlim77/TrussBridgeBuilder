@@ -315,11 +315,7 @@ class Joystick(Navigator):
 		if self.joy.isButtonDown(self.KEYS['down']):
 			elevation_amount = -self.MOVE_SPEED * elapsed
 		move_amount = self.MOVE_SPEED * elapsed
-#		self.NODE.setPosition([0, 0, y * self.MOVE_SPEED * viz.getFrameElapsed()], viz.REL_LOCAL)
 		self.VIEW.setPosition([x*move_amount,elevation_amount,y*move_amount], viz.REL_LOCAL)
-		turn_amount = self.TURN_SPEED * elapsed
-#		self.VIEW.setEuler([twist*turn_amount,0,0], viz.REL_LOCAL)
-#		self.NODE.setEuler([x * self.TURN_SPEED * , 0, 0], viz.REL_LOCAL)
 
 	def getSensor(self):
 		return self.joy

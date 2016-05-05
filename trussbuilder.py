@@ -285,7 +285,7 @@ def initLighting():
 	for window in viz.getWindowList():
 		window.getView().getHeadLight().disable()
 	# Create directional light
-	sky_light = viz.addDirectionalLight(euler=(-66,37,0),color=[0.8,0.8,0.8])
+	sky_light = viz.addDirectionalLight(euler=(30,45,0),color=[0.8,0.8,0.8])
 #	light1 = vizfx.addDirectionalLight(euler=(40,20,0), color=[0.7,0.7,0.7])
 #	light2 = vizfx.addDirectionalLight(euler=(-65,15,0), color=[0.5,0.25,0.0])
 #	sky_light.color(viz.WHITE)
@@ -305,8 +305,8 @@ initLighting()
 highlightTool = highlighter.Highlighter()
 proxyManager = initProxy()
 catalogue_root = getCatalogue('data/catalogues/catalogue_CHS.xml')
-#environment_root = roots.EnvironmentRoot(visibility=False)
 environment_root = roots.EnvironmentRoot()
+environment_root.visible(False)
 bridge_root = roots.Root()
 bridge_root.getGroup().setPosition(BRIDGE_ROOT_POS)
 bridge_root.getGroup().setEuler(SIDE_VIEW_ROT)
@@ -355,7 +355,7 @@ def applyEnvironmentEffect(obj):
 #	obj.apply(effect)
 #	obj.apply(lightEffect)	
 
-
+#--Create middle road
 road_M = viz.addChild('resources/road3.osgb',cache=viz.CACHE_CLONE,pos=(0,5,0),parent=environment_root.getGroup())
 road_M.visible(False)
 applyEnvironmentEffect(road_M)
@@ -488,11 +488,6 @@ inspectorCanvas = viz.addGUICanvas(align=viz.ALIGN_CENTER)
 inspector = panels.InspectorPanel()
 statPanel = inspector.GetPanel()
 statPanel.setParent(inspectorCanvas)
-## Link inspector canvas with main View
-#inspectorLink = viz.link(viz.MainView, inspectorCanvas)
-##inspectorLink.preMultLinkable(viz.MainView)
-#inspectorLink.preTrans( [-2, -3, 5] )
-#inspectorLink.preEuler( [-45, 0, 0] )
 
 utilityButtons = []
 # Create docked utility panel
@@ -555,10 +550,6 @@ rotationPanel = vizdlg.GridPanel(parent=rotationCanvas,align=viz.ALIGN_CENTER,bo
 rotationSlider = viz.addProgressBar('Angle')
 rotationLabel = viz.addText('0')
 row = rotationPanel.addRow([rotationSlider,rotationLabel])
-# Link rotation canvas with main View
-#rotationLink = viz.link(viz.MainView,rotationCanvas)
-#rotationLink.preEuler( [0,30,0] )
-#rotationLink.preTrans( [0,0.1,1] )
 
 # Add tabbed panels to main menu canvas
 menuCanvas = viz.addGUICanvas(align=viz.ALIGN_CENTER_TOP)
@@ -592,12 +583,10 @@ feedbackCanvas.visible(viz.OFF)
 
 def initCanvas():	
 	# Set canvas resolution to fit bounds of info panel
-#	updateResolution(menuTabPanel,menuCanvas)
 	bb = menuTabPanel.getBoundingBox()
-#	menuCanvas.setRenderWorldOverlay([bb.width + 5, bb.height + 100], fov=bb.height * 0.15, distance=3.0)	
-	menuCanvas.setRenderWorld([bb.width,bb.height+100],[2,viz.AUTO_COMPUTE])
+	menuCanvas.setRenderWorld([bb.width,bb.height+50],[1,viz.AUTO_COMPUTE])
 	menuCanvas.setCursorPosition([0,0])
-	menuCanvas.setPosition(0,2.7,3)
+	menuCanvas.setPosition(0,2.2,1.5)
 	menuCanvas.setMouseStyle(viz.CANVAS_MOUSE_VIRTUAL)
 	
 	updateResolution(dialog,dialogCanvas)
@@ -866,7 +855,7 @@ def createInventory():
 	inventoryGrid.addRow([inventoryTabPanel])
 
 	bb = inventoryGrid.getBoundingBox()
-	inventoryCanvas.setRenderWorld([bb.width,bb.height],[1,viz.AUTO_COMPUTE])
+	inventoryCanvas.setRenderWorld([bb.width*.95,bb.height*.95],[1,viz.AUTO_COMPUTE])
 	inventoryCanvas.setMouseStyle(viz.CANVAS_MOUSE_VIRTUAL)
 createInventory()
 
@@ -943,7 +932,7 @@ def populateInventory():
 	inventoryCanvas.visible(False)
 	
 	bb = inventoryGrid.getBoundingBox()
-	inventoryCanvas.setRenderWorld([bb.width+5,bb.height+5],[1,viz.AUTO_COMPUTE])
+	inventoryCanvas.setRenderWorld([bb.width,bb.height],[1,viz.AUTO_COMPUTE])
 
 
 def createTruss(order=Order(),path=''):
@@ -1619,7 +1608,7 @@ def toggleRoad(road):
 def updateQuantity(order,button,orderList,inventory,row):
 	if order.quantity > 0:
 		order.quantity -= 1
-		button.message('{}m(l] x {}mm(d) x {}mm(th) [{}]'.format(order.diameter, order.thickness, order.length, order.quantity))
+		button.message('{}m(l] x {}mm(d) x {}mm(th) [{}]'.format(order.length, order.diameter, order.thickness, order.quantity))
 	if order.quantity <= 0:
 		inventory.removeRow(row)
 #		orderList.remove(order)
@@ -2559,7 +2548,7 @@ def MainTask():
 #		menuCanvas.visible(viz.OFF)
 #		menuCanvas.setRenderWorldOverlay(RESOLUTION, fov=START_FOV, distance=3.0)
 		bb = menuTabPanel.getBoundingBox()
-		menuCanvas.setRenderWorld([bb.width, bb.height + 100],[2,viz.AUTO_COMPUTE])
+		menuCanvas.setRenderWorld([bb.width * .8, bb.height + 50],[1,viz.AUTO_COMPUTE])
 		menuTabPanel.selectPanel(0)
 		
 		bb = dialog.getBoundingBox()
