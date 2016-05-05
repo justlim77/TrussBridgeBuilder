@@ -1305,7 +1305,7 @@ def toggleMenu(val=viz.TOGGLE):
 		
 	menuCanvas.visible(val)
 	if menuCanvas.getVisible() is True:
-		pos = viz.MainView.getLineForward().endFromDistance(1.5)
+		pos = viz.MainView.getLineForward().endFromDistance(.75)
 		rot = viz.MainView.getLineForward().euler
 		menuCanvas.setPosition(pos)
 		menuCanvas.setEuler(rot)
@@ -2548,7 +2548,7 @@ def MainTask():
 #		menuCanvas.visible(viz.OFF)
 #		menuCanvas.setRenderWorldOverlay(RESOLUTION, fov=START_FOV, distance=3.0)
 		bb = menuTabPanel.getBoundingBox()
-		menuCanvas.setRenderWorld([bb.width * .8, bb.height + 50],[1,viz.AUTO_COMPUTE])
+		menuCanvas.setRenderWorld([bb.width * .8, bb.height + 55],[1,viz.AUTO_COMPUTE])
 		menuTabPanel.selectPanel(0)
 		
 		bb = dialog.getBoundingBox()
