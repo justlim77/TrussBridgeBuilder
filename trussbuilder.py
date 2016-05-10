@@ -1072,6 +1072,64 @@ def createTrussNew(order=Order(),path='',loading=False):
 	
 	return truss
 
+def deleteTruss():
+	global highlightedItem
+	global grabbedItem
+	global isgrabbing
+	
+	PROXY_NODES.remove(grabbedItem.proxyNodes[0])
+	PROXY_NODES.remove(grabbedItem.proxyNodes[1])
+	grabbedItem.proxyNodes[0].remove()
+	grabbedItem.proxyNodes[1].remove()
+	
+	TARGET_NODES.remove(grabbedItem.targetNodes[0])
+	TARGET_NODES.remove(grabbedItem.targetNodes[1])
+	
+	SENSOR_NODES.remove(grabbedItem.sensorNodes[0])
+	SENSOR_NODES.remove(grabbedItem.sensorNodes[1])
+	proxyManager.removeSensor(grabbedItem.sensorNodes[0])
+	proxyManager.removeSensor(grabbedItem.sensorNodes[1])
+	
+	BUILD_MEMBERS.remove(grabbedItem)
+	
+	if grabbedItem.isNewMember == True:
+		proxyManager.removeTarget(grabbedItem.targetNodes[0])
+		proxyManager.removeTarget(grabbedItem.targetNodes[1])
+	else:
+		if grabbedItem.orientation == structures.Orientation.Side:
+			try:
+				grabbedItem.clonedSide.nodeA.remove()
+				grabbedItem.clonedSide.nodeB.remove()
+				SIDE_CLONES.remove(grabbedItem.clonedSide)
+				grabbedItem.clonedSide.remove()
+				grabbedItem.clonedSide = None
+			except:
+				print 'deleteTruss: No cloned side to remove!'
+		
+			SIDE_MEMBERS.remove(grabbedItem)
+		elif grabbedItem.orientation == structures.Orientation.Top:
+			TOP_MEMBERS.remove(grabbedItem)
+		elif grabbedItem.orientation == structures.Orientation.Bottom:
+			BOT_MEMBERS.remove(grabbedItem)
+		
+		try:
+			GRAB_LINKS.remove(grabbedItem.link)
+		except:
+			print 'deleteTruss: No link to remove!'
+	
+	highlightTool.clear()
+	highlightedItem = None
+	grabbedItem.remove()
+	grabbedItem = None
+	isgrabbing = False
+	
+	if MODE != structures.Mode.Edit:
+		cycleMode(structures.Mode.Build)
+		
+	toggleHighlightables()
+	
+	# Play warning sound
+	warningSound.play()
 
 def generateMembers(loading=False):
 	"""Create truss members based on order list"""
@@ -1114,7 +1172,6 @@ def generateMembers(loading=False):
 		TARGET_NODES.append(trussMember.targetNodes[1])
 		SENSOR_NODES.append(trussMember.sensorNodes[0])
 		SENSOR_NODES.append(trussMember.sensorNodes[1])
-		
 		proxyManager.addSensor(trussMember.sensorNodes[0])
 		proxyManager.addSensor(trussMember.sensorNodes[1])
 
@@ -1151,14 +1208,18 @@ def clearMembers():
 			
 	for node in PROXY_NODES:
 		node.remove()
+		node = None
 		del node
 	PROXY_NODES = []
 	for target in TARGET_NODES:
+		target.remove()
 		target = None
 		del target
 	TARGET_NODES = []
 	for sensor in SENSOR_NODES:
 		proxyManager.removeSensor(sensor)
+		sensor.remove()
+		sensor = None
 		del sensor
 	SENSOR_NODES = []
 	
@@ -1257,6 +1318,7 @@ def toggleHighlightables(val=True):
 	highlightTool.clear()
 	highlightables = BUILD_MEMBERS + PROXY_NODES
 	if val is True:
+		highlightTool.setItems([])
 		highlightTool.setItems(highlightables)
 	else:
 		highlightTool.removeItems(highlightables)
@@ -1459,7 +1521,7 @@ def onRelease(e=None):
 			grabbedItem.orientation = ORIENTATION
 			if ORIENTATION == structures.Orientation.Side:		
 				SIDE_MEMBERS.append(grabbedItem)
-				cloneSide(grabbedItem)
+				grabbedItem.clonedTruss = cloneSide(grabbedItem)
 			elif ORIENTATION == structures.Orientation.Top:
 				TOP_MEMBERS.append(grabbedItem)
 			elif ORIENTATION == structures.Orientation.Bottom:
@@ -1513,7 +1575,7 @@ def onRelease(e=None):
 			proxyManager.addSensor(grabbedItem.sensorNodes[0])
 			proxyManager.addSensor(grabbedItem.sensorNodes[1])
 		
-		# Play warning MUTE
+		# Play warning sound
 		warningSound.play()
 			
 	# Re-grab existing Build members
@@ -1768,10 +1830,11 @@ def cycleOrientation(val):
 	clickSound.play()
 	grid_root.setOrientationMessage(str(ORIENTATION.name) + ' View')
 
-
+CACHED_BUILD_MODE = None
 def cycleMode(mode=structures.Mode.Add):
 	global SHOW_HIGHLIGHTER
 	global MODE
+	global CACHED_BUILD_MODE
 	global highlightTool
 	global highlightedItem
 	
@@ -1794,6 +1857,8 @@ def cycleMode(mode=structures.Mode.Add):
 	inventoryCanvas.visible(True)
 	
 	if MODE == structures.Mode.Build:
+		CACHED_BUILD_MODE = MODE
+		
 		inventoryCanvas.setMouseStyle(viz.CANVAS_MOUSE_VIRTUAL)
 
 		#--Hide menu and inspector
@@ -1811,6 +1876,7 @@ def cycleMode(mode=structures.Mode.Add):
 		cycleOrientation(ORIENTATION)
 		
 	elif MODE == structures.Mode.Edit:
+		CACHED_BUILD_MODE = MODE
 		inventoryCanvas.setMouseStyle(viz.CANVAS_MOUSE_VISIBLE)
 		
 		menuCanvas.visible(False)	
@@ -2000,8 +2066,11 @@ def onJoyButton(e):
 		mouseTracker.distance = HAND_DISTANCE
 		clickSound.play()
 	elif e.button == KEYS['builder']:
-		cycleMode(structures.Mode.Edit)
-		mouseTracker.distance = HAND_DISTANCE
+		if MODE == structures.Mode.Build or MODE == structures.Mode.Edit:
+			cycleMode(structures.Mode.View)
+		elif MODE == structures.Mode.View or MODE == structures.Mode.Walk:
+			mouseTracker.distance = HAND_DISTANCE
+			cycleMode(CACHED_BUILD_MODE)
 		clickSound.play()
 	elif e.button == KEYS['viewer']:
 		cycleMode(structures.Mode.View)
@@ -2253,6 +2322,10 @@ def onMouseUp(button):
 			flipTruss(grabbedItem)
 		else:
 			toggleUtility()
+			
+	if button == KEYS['rotate']:
+		if grabbedItem is not None:			
+			deleteTruss()
 
 
 def onSlider(obj,pos):
@@ -2337,7 +2410,7 @@ def LoadData():
 	clearMembers()
 	
 	currentOrientation = ORIENTATION
-	cycleOrientation(Orientation.Side)
+	cycleOrientation(structures.Orientation.Side)
 	currentMode = MODE
 	
 	ORDERS = []
@@ -2347,7 +2420,7 @@ def LoadData():
 			 order = Order(diameter=float(row[0]),thickness=float(row[1]),length=float(row[2]),quantity=int(row[3]))
 			 order.pos = ( [float(row[4]), float(row[5]), float(row[6])] )
 			 order.euler = ( [float(row[7]), float(row[8]), float(row[9])] )
-			 order.orientation = Orientation(int(row[10]))
+			 order.orientation = structures.Orientation(int(row[10]))
 			 ORDERS.append(order)
 	
 	generateMembers(loading=True)
@@ -2356,12 +2429,12 @@ def LoadData():
 		truss.isNewMember = False
 		truss.orientation = truss.order.orientation
 		truss.setPosition(truss.order.pos)
-		if truss.orientation == Orientation.Side:
+		if truss.orientation == structures.Orientation.Side:
 			SIDE_MEMBERS.append(truss)
-			cloneSide(truss)
-		elif truss.orientation == Orientation.Top:
+			truss.clonedSide = cloneSide(truss)
+		elif truss.orientation == structures.Orientation.Top:
 			TOP_MEMBERS.append(truss)
-		elif truss.orientation == Orientation.Bottom:
+		elif truss.orientation == structures.Orientation.Bottom:
 			BOT_MEMBERS.append(truss)
 		truss.setEuler(truss.order.euler)
 		link = viz.grab(bridge_root.getGroup(),truss)
@@ -2454,7 +2527,6 @@ def MainTask():
 	glove = viz.addChild('glove.cfg')
 	glove.disable(viz.INTERSECT_INFO_OBJECT)
 	
-	
 #	viz.MainView.setPosition(START_POS)
 	
 	while True:		
@@ -2505,27 +2577,27 @@ def MainTask():
 		
 		if oculusConnected and joystickConnected:
 			navigator = navigation.Joyculus()
-			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['mode'],cycleMode,vizact.choice([structures.Mode.Edit,structures.Mode.Build]))
+			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['mode'],cycleMode,vizact.choice([structures.Mode.Build,structures.Mode.Edit]))
 			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['orient'],cycleOrientation,vizact.choice([structures.Orientation.Top,structures.Orientation.Bottom,structures.Orientation.Side]))
 			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['angles'],cycleView,vizact.choice([0,1,2]))	
-			vizact.onsensorup ( navigator.getSensor(), navigator.KEYS['road'],toggleRoad,road_M)
+			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['road'],toggleRoad,road_M)
 			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['stereo'],toggleStereo,vizact.choice([False,True]))		
 			viz.callback( navigation.getExtension().HAT_EVENT, onHatChange )
 			vizact.ontimer( 0,slideRootHat )	
 			navigator.setAsMain()
 		elif joystickConnected:
 			navigator = navigation.Joystick()
-			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['mode'],cycleMode,vizact.choice([structures.Mode.Edit,structures.Mode.Build]))
+			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['mode'],cycleMode,vizact.choice([structures.Mode.Build,structures.Mode.Edit]))
 			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['orient'],cycleOrientation,vizact.choice([structures.Orientation.Top,structures.Orientation.Bottom,structures.Orientation.Side]))
 			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['angles'],cycleView,vizact.choice([0,1,2]))			
-			vizact.onsensorup ( navigator.getSensor(), navigator.KEYS['road'],toggleRoad,road_M)			
+			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['road'],toggleRoad,road_M)			
 			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['stereo'],toggleStereo,vizact.choice([False,True]))		
 			viz.callback( navigation.getExtension().HAT_EVENT, onHatChange )
 			vizact.ontimer( 0,slideRootHat )				
 			navigator.setAsMain()
 		elif oculusConnected:
 			navigator = navigation.Oculus()
-			vizact.onkeyup( navigator.KEYS['mode'],cycleMode,vizact.choice([structures.Mode.Edit,structures.Mode.Build]))
+			vizact.onkeyup( navigator.KEYS['mode'],cycleMode,vizact.choice([structures.Mode.Build,structures.Mode.Edit]))
 			vizact.onkeyup( navigator.KEYS['orient'],cycleOrientation,vizact.choice([structures.Orientation.Top,structures.Orientation.Bottom,structures.Orientation.Side]))
 			vizact.onkeyup( navigator.KEYS['stereo'],toggleStereo,vizact.choice([False,True]))
 			vizact.onkeyup( navigator.KEYS['angles'],cycleView,vizact.choice([0,1,2]))
@@ -2534,7 +2606,7 @@ def MainTask():
 			navigator.setAsMain()
 		else:
 			navigator = navigation.KeyboardMouse()
-			vizact.onkeyup( navigator.KEYS['mode'],cycleMode,vizact.choice([structures.Mode.Edit,structures.Mode.Build]))
+			vizact.onkeyup( navigator.KEYS['mode'],cycleMode,vizact.choice([structures.Mode.Build,structures.Mode.Edit]))
 			vizact.onkeyup( navigator.KEYS['orient'],cycleOrientation,vizact.choice([structures.Orientation.Top,structures.Orientation.Bottom,structures.Orientation.Side]))
 			vizact.onkeyup( navigator.KEYS['angles'],cycleView,vizact.choice([0,1,2]) )
 			vizact.onkeyup( navigator.KEYS['stereo'],toggleStereo,vizact.choice([False,True]))
@@ -2558,8 +2630,7 @@ def MainTask():
 		inspectorCanvas.visible(False)
 		
 		vizact.ontimer(0,clampTrackerScroll,mouseTracker,SCROLL_MIN,SCROLL_MAX)
-		vizact.whilemousedown ( navigator.KEYS['rotate'], rotateTruss, objToRotate, rotationSlider, rotationLabel )
-
+		
 		rotationCanvas.setEuler( [0,30,0] )
 		
 		inventoryLink = viz.link(navigator.VIEW,inventoryCanvas)
@@ -2585,6 +2656,7 @@ viz.playSound('./resources/sounds/show_menu.wav',viz.SOUND_PRELOAD)
 viz.playSound('./resources/sounds/hide_menu.wav',viz.SOUND_PRELOAD)
 viz.playSound('./resources/sounds/page_advance.wav',viz.SOUND_PRELOAD)
 viz.playSound('./resources/sounds/out_of_bounds_warning.wav',viz.SOUND_PRELOAD)
+
 
 def getAvatarOrientation(obj):
 	print 'Pos:',obj.getPosition(),'Rot:',obj.getEuler()
