@@ -53,12 +53,12 @@ import vizproximity
 import vizshape
 import viztask
 import csv
-from enum import Enum
 import inventory
 import mathlite
 import navigation
 import panels
 import roots
+import structures
 import sys
 import themes
 import tools
@@ -144,19 +144,8 @@ SLIDE_MAX = 100					# Max z-position of bridge root sliding
 SLIDE_INTERVAL = 0.05			# Interval to slide bridge root in TOP/BOTTOM View
 SUPPORT_ALPHA = 0.25			# Alpha value for bridge red supports	
 
-class Orientation(Enum):
-	Side=1
-	Top=2
-	Bottom=3
-ORIENTATION = Orientation.Side
-
-class Mode(Enum):
-	Build=0
-	Edit=1
-	Add=2
-	View=3
-	Walk=4
-MODE = Mode.View
+ORIENTATION = structures.Orientation.Side
+MODE = structures.Mode.View
 
 PROXY_NODES = []
 TARGET_NODES = []
@@ -244,19 +233,19 @@ def initProxy():
 	
 	# Register callbacks for proximity SENSOR_NODES
 	def enterProximity(e):
+		global SENSOR_NODE
 		global SNAP_TO_POS
 		global VALID_SNAP
-		global SENSOR_NODE
 		SENSOR_NODE = e.sensor.getSource()
 		SNAP_TO_POS = e.sensor.getSource().getPosition()
 		VALID_SNAP = True
 		print 'EnterProximity: SNAP_TO_POS',SNAP_TO_POS
 	
 	def exitProximity(e):
-		global VALID_SNAP
 		global SENSOR_NODE
-		VALID_SNAP = False
+		global VALID_SNAP
 		SENSOR_NODE = None
+		VALID_SNAP = False
 
 	proxyManager.onEnter(None, enterProximity)
 	proxyManager.onExit(None, exitProximity)
@@ -676,7 +665,7 @@ def showdialog(message,func):
 		dialogCanvas.visible(viz.OFF)
 		
 		menuCanvas.setMouseStyle(viz.CANVAS_MOUSE_VIRTUAL)
-		if MODE is Mode.Build:
+		if MODE is structures.Mode.Build:
 			inventoryCanvas.setMouseStyle(viz.CANVAS_MOUSE_VIRTUAL)
 		
 def clearBridge():
@@ -943,6 +932,7 @@ def createTruss(order=Order(),path=''):
 	truss.length = float(order.length)
 	truss.quantity = int(order.quantity)
 	truss.orientation = ORIENTATION
+	truss.level = structures.Level.Horizontal
 	truss.isNewMember = False
 	
 	truss.setScale([truss.length,truss.diameter*0.001,truss.diameter*0.001])	
@@ -990,6 +980,7 @@ def createTrussNew(order=Order(),path='',loading=False):
 	truss.length = float(order.length)
 	truss.quantity = int(order.quantity)
 	truss.orientation = ORIENTATION
+	truss.level = structures.Level.Horizontal
 	
 	truss.setScale([truss.length,truss.diameter*0.001,truss.diameter*0.001])	
 	
@@ -1075,7 +1066,7 @@ def createTrussNew(order=Order(),path='',loading=False):
 		VALID_SNAP = False
 		
 		truss.isNewMember = True		
-		cycleMode(Mode.Add)
+		cycleMode(structures.Mode.Add)
 	else:
 		truss.isNewMember = False
 	
@@ -1318,7 +1309,7 @@ def toggleMenu(val=viz.TOGGLE):
 		showMenuSound.play()
 	else:
 		hideMenuSound.play()
-		if MODE == Mode.Build or MODE is Mode.Edit:
+		if MODE == structures.Mode.Build or MODE is structures.Mode.Edit:
 			cycleMode(MODE)
 
 
@@ -1466,12 +1457,12 @@ def onRelease(e=None):
 		# If new member, group appropriately
 		if grabbedItem.isNewMember == True:
 			grabbedItem.orientation = ORIENTATION
-			if ORIENTATION == Orientation.Side:		
+			if ORIENTATION == structures.Orientation.Side:		
 				SIDE_MEMBERS.append(grabbedItem)
 				cloneSide(grabbedItem)
-			elif ORIENTATION == Orientation.Top:
+			elif ORIENTATION == structures.Orientation.Top:
 				TOP_MEMBERS.append(grabbedItem)
-			elif ORIENTATION == Orientation.Bottom:
+			elif ORIENTATION == structures.Orientation.Bottom:
 				BOT_MEMBERS.append(grabbedItem)
 			grabbedItem.isNewMember = False
 			
@@ -1547,8 +1538,8 @@ def onRelease(e=None):
 	print 'OnRelease: HighlightedItem is',highlightedItem,'GrabbedItem is',grabbedItem,'IsGrabbing is',isgrabbing
 	
 	# Change mode back to Build if not editing
-	if MODE != Mode.Edit:
-		cycleMode(Mode.Build)
+	if MODE != structures.Mode.Edit:
+		cycleMode(structures.Mode.Build)
 	else:
 		toggleHighlightables()
 
@@ -1558,10 +1549,13 @@ def cloneSide(truss):
 	rot = truss.getEuler()
 	scale = truss.getScale()
 	
+	#--Check for truss level
 	pos[2] *= -1
+		
 	clone = truss.clone()
 	clone.setScale(scale)
 	clone.setPosition(pos)
+	clone.setEuler(rot)
 	
 	#--Create spherical connectors
 	posA = truss.proxyNodes[0].getPosition()
@@ -1576,8 +1570,7 @@ def cloneSide(truss):
 	clone.nodeB = nodeB
 	viz.grab(clone,nodeB)
 	
-	#--Adjust orientation of clone
-	clone.setEuler(rot)
+	#--Grab clone with truss
 	viz.grab(truss,clone)
 	
 	#--Add clone to list
@@ -1621,83 +1614,16 @@ def updateAngle(obj,slider,label):
 		slider.set(pos)
 		string = str(int(rot[2]))
 		label.message(string)
-
-
-def rotateTruss(obj,slider,label):	
-	if objToRotate != None:
-		# Clamp glove link z-orientation
-		rotationCanvas.visible(viz.ON)
-		mouseTracker.visible(viz.OFF)
-		mouseTracker.distance = 0.1
-		pos = viz.Mouse.getPosition(viz.WINDOW_NORMALIZED)[0]
-		slider.set(pos)
-		rotateTo = mathlite.getNewRange(pos,0,1,90,-90)
-#		objToRotate.setEuler(0,0,int(rotateTo))
-		rotation = int(objToRotate.getEuler()[2])
-		string = str(rotation)
-		rotationLabel.message(string)
 		
-def rotateTruss2():
+
+def rotateTruss():
 	global objToRotate
 	global isrotating
-	
-	if objToRotate is not None and isrotating is True:
-		# Clamp glove link z-orientation
-		rotationCanvas.visible(viz.ON)
-#		mouseTracker.visible(viz.OFF)
-#		mouseTracker.distance = 0.1
-		line = viz.MainWindow.screenToWorld(viz.Mouse.getPosition())
-		print line.distanceToPoint
-		dist = mathlite.math.fabs(navigator.getPosition()[2]-GRID_Z)
-		pos = line.endFromDistance(dist)
-#		pos[2] = GRID_Z
-		objToRotate.lookAt(pos)
-		rot = objToRotate.getEuler()
-		rot[0] = 0
-		#--Rotate based on index
-		if objToRotate.index is 0:
-			rot[2] = -rot[1]
-		else:
-			rot[2] = rot[1]
-		rot[1] = 0
-		#--Check near 90
-		if mathlite.math.fabs(rot[2]+90) <= 5:
-			rot[2] = -90
-		elif mathlite.math.fabs(rot[2]-90) <= 5:
-			rot[2] = 90
-		elif mathlite.math.fabs(rot[2]) <= 5:
-			rot[2] = 0
-		objToRotate.setEuler(rot)
-		print objToRotate.getEuler()
-		
-		updateAngle(objToRotate,rotationSlider,rotationLabel)
-#		slider.set(pos)
-#		rotateTo = mathlite.getNewRange(pos,0,1,90,-90)
-#		objToRotate.setEuler(0,0,int(rotateTo))
-#		rotation = int(objToRotate.getEuler()[2])
-#		string = str(rotation)
-#		rotationLabel.message(string)
-	else:
-		#--Hide rotation GUI
-		rotationCanvas.visible(False)
-#vizact.ontimer(0,rotateTruss2)
-
-midPoint = 0
-lowerPoint = 0
-upperPoint = 0
-def rotateTruss3():
-	global objToRotate
-	global isrotating
-	global lowerPoint
-	global upperPoint
 	
 	if objToRotate is not None and isrotating is True:
 		# Clamp glove link z-orientation
 		mousePos = viz.mouse.getPosition()
 		rotateValue = mathlite.getNewRange(mousePos[1],0,1,180,-180)
-#		clampedMouse = viz.clamp(mousePos[1],lowerPoint,upperPoint)
-#		rotateValue = mathlite.getNewRange(clampedMouse,lowerPoint,upperPoint,180,-180)
-		print rotateValue
 		#--Rotate based on index
 		if objToRotate.index is 0:
 			rotateValue *= -1
@@ -1713,24 +1639,20 @@ def rotateTruss3():
 		objToRotate.setEuler(rot)
 		
 		updateAngle(objToRotate,rotationSlider,rotationLabel)
-#		slider.set(pos)
-#		rotateTo = mathlite.getNewRange(pos,0,1,90,-90)
-#		objToRotate.setEuler(0,0,int(rotateTo))
-#		rotation = int(objToRotate.getEuler()[2])
-#		string = str(rotation)
-#		rotationLabel.message(string)
 	else:
 		#--Hide rotation GUI
 		rotationCanvas.visible(False)
-vizact.ontimer(0,rotateTruss3)
+vizact.ontimer(0,rotateTruss)
 
 def flipTruss(truss):
 	rot = truss.getEuler()
 	rotateTo = []
 	if rot[2] == 0:
 		rotateTo = [0,0,90]
+		truss.level = structures.Level.Vertical
 	else:
 		rotateTo = [0,0,0]
+		truss.level = structures.Level.Horizontal
 	truss.setEuler(rotateTo)
 	
 	
@@ -1745,7 +1667,7 @@ def cycleOrientation(val):
 	global grabbedItem
 	global grid_root
 	
-	if MODE is Mode.View or MODE is Mode.Walk:
+	if MODE is structures.Mode.View or MODE is structures.Mode.Walk:
 		return
 	
 	if grabbedItem is not None or isrotating is True:
@@ -1767,7 +1689,7 @@ def cycleOrientation(val):
 		model.alpha(SUPPORT_ALPHA)	
 		
 	ORIENTATION = val
-	if val == Orientation.Top:
+	if val == structures.Orientation.Top:
 		rot = TOP_VIEW_ROT
 		pos = TOP_VIEW_POS
 		pos[2] = TOP_CACHED_Z
@@ -1791,7 +1713,7 @@ def cycleOrientation(val):
 			member.proxyNodes[0].visible(True)
 			member.proxyNodes[1].visible(True)			
 		grid_root.setInfoMessage(VIEW_MESSAGE)
-	elif val == Orientation.Bottom:
+	elif val == structures.Orientation.Bottom:
 		rot = BOT_VIEW_ROT
 		pos = BOT_VIEW_POS
 		pos[2] = BOT_CACHED_Z
@@ -1847,7 +1769,7 @@ def cycleOrientation(val):
 	grid_root.setOrientationMessage(str(ORIENTATION.name) + ' View')
 
 
-def cycleMode(mode=Mode.Add):
+def cycleMode(mode=structures.Mode.Add):
 	global SHOW_HIGHLIGHTER
 	global MODE
 	global highlightTool
@@ -1855,9 +1777,9 @@ def cycleMode(mode=Mode.Add):
 	
 	if isrotating: 
 		return
-	if MODE == Mode.Add and grabbedItem is not None:
+	if MODE == structures.Mode.Add and grabbedItem is not None:
 		return
-	if MODE == Mode.Edit and grabbedItem is not None:
+	if MODE == structures.Mode.Edit and grabbedItem is not None:
 		return
 	
 	#--Force clear highlight
@@ -1871,7 +1793,7 @@ def cycleMode(mode=Mode.Add):
 	proxyManager.setDebug(True)
 	inventoryCanvas.visible(True)
 	
-	if MODE == Mode.Build:
+	if MODE == structures.Mode.Build:
 		inventoryCanvas.setMouseStyle(viz.CANVAS_MOUSE_VIRTUAL)
 
 		#--Hide menu and inspector
@@ -1888,7 +1810,7 @@ def cycleMode(mode=Mode.Add):
 		
 		cycleOrientation(ORIENTATION)
 		
-	elif MODE == Mode.Edit:
+	elif MODE == structures.Mode.Edit:
 		inventoryCanvas.setMouseStyle(viz.CANVAS_MOUSE_VISIBLE)
 		
 		menuCanvas.visible(False)	
@@ -1904,7 +1826,7 @@ def cycleMode(mode=Mode.Add):
 		
 		cycleOrientation(ORIENTATION)
 		
-	elif MODE == Mode.Add:
+	elif MODE == structures.Mode.Add:
 		inventoryCanvas.setMouseStyle(viz.CANVAS_MOUSE_VISIBLE)
 		inventoryCanvas.visible(False)
 		
@@ -1913,7 +1835,7 @@ def cycleMode(mode=Mode.Add):
 		# Show highlighter
 		SHOW_HIGHLIGHTER = True
 		
-	elif MODE == Mode.View:
+	elif MODE == structures.Mode.View:
 		inventoryCanvas.visible(viz.OFF)
 		toggleGrid(False)
 		toggleEnvironment(True)
@@ -1936,7 +1858,7 @@ def cycleMode(mode=Mode.Add):
 		for model in supports:
 			model.alpha(0)
 			
-	elif MODE == Mode.Walk:
+	elif MODE == structures.Mode.Walk:
 		inventoryCanvas.visible(viz.OFF)
 		toggleEnvironment(True)
 		toggleGrid(False)
@@ -1968,7 +1890,7 @@ def cycleMode(mode=Mode.Add):
 	
 def cycleView(index):
 	global MODE
-	if MODE is Mode.Build or MODE is Mode.Add or MODE is Mode.Edit:
+	if MODE is structures.Mode.Build or MODE is structures.Mode.Add or MODE is structures.Mode.Edit:
 		runFeedbackTask('Switch to View Mode!')
 		warningSound.play()
 		return
@@ -2022,15 +1944,15 @@ def onKeyUp(key):
 		mouseTracker.distance = HAND_DISTANCE
 		clickSound.play()
 	elif key == KEYS['builder'] or key == KEYS['builder'].upper():
-		cycleMode(Mode.Edit)
+		cycleMode(structures.Mode.Edit)
 		mouseTracker.distance = HAND_DISTANCE
 		clickSound.play()
 	elif key == KEYS['viewer'] or key == KEYS['viewer'].upper():
-		cycleMode(Mode.View)
+		cycleMode(structures.Mode.View)
 		mouseTracker.distance = HAND_DISTANCE
 		clickSound.play()
 	elif key == KEYS['walk'] or key == KEYS['walk'].upper():
-		cycleMode(Mode.Walk)
+		cycleMode(structures.Mode.Walk)
 		clickSound.play()
 	elif key == KEYS['grid'] or key == KEYS['grid'].upper():
 		toggleGrid(viz.TOGGLE)
@@ -2078,15 +2000,15 @@ def onJoyButton(e):
 		mouseTracker.distance = HAND_DISTANCE
 		clickSound.play()
 	elif e.button == KEYS['builder']:
-		cycleMode(Mode.Edit)
+		cycleMode(structures.Mode.Edit)
 		mouseTracker.distance = HAND_DISTANCE
 		clickSound.play()
 	elif e.button == KEYS['viewer']:
-		cycleMode(Mode.View)
+		cycleMode(structures.Mode.View)
 		mouseTracker.distance = HAND_DISTANCE
 		clickSound.play()
 	elif e.button == KEYS['walk']:
-		cycleMode(Mode.Walk)
+		cycleMode(structures.Mode.Walk)
 		clickSound.play()
 	elif e.button == KEYS['grid']:
 		toggleGrid(viz.TOGGLE)
@@ -2117,14 +2039,14 @@ def slideRoot(val):
 	global BOT_CACHED_Z
 	global bridge_root
 	
-	if ORIENTATION == Orientation.Top or ORIENTATION == Orientation.Bottom:
+	if ORIENTATION == structures.Orientation.Top or ORIENTATION == structures.Orientation.Bottom:
 		pos = bridge_root.getGroup().getPosition()
 		pos[2] += val
-		if ORIENTATION == Orientation.Top:
+		if ORIENTATION == structures.Orientation.Top:
 			clampedZ = viz.clamp(pos[2],TOP_Z_MIN,SLIDE_MAX)
 			pos[2] = clampedZ
 			TOP_CACHED_Z = pos[2]
-		elif ORIENTATION == Orientation.Bottom:
+		elif ORIENTATION == structures.Orientation.Bottom:
 			clampedZ = viz.clamp(pos[2],BOT_Z_MIN,SLIDE_MAX)
 			pos[2] = clampedZ
 			BOT_CACHED_Z = pos[2]
@@ -2138,21 +2060,21 @@ def slideRootHat():
 	global BOT_CACHED_Z
 	global bridge_root
 	
-	if MODE is Mode.View or MODE is Mode.Walk:
+	if MODE is structures.Mode.View or MODE is structures.Mode.Walk:
 		return
 	
-	if ORIENTATION == Orientation.Top or ORIENTATION == Orientation.Bottom:
+	if ORIENTATION == structures.Orientation.Top or ORIENTATION == structures.Orientation.Bottom:
 		pos = bridge_root.getGroup().getPosition()
 		if SLIDE_VAL == 0:
 			pos[2] += SLIDE_INTERVAL
 		elif SLIDE_VAL == 180:
 			pos[2] -= SLIDE_INTERVAL
 			
-		if ORIENTATION == Orientation.Top:
+		if ORIENTATION == structures.Orientation.Top:
 			clampedZ = viz.clamp(pos[2],TOP_Z_MIN,SLIDE_MAX)
 			pos[2] = clampedZ
 			TOP_CACHED_Z = pos[2]
-		elif ORIENTATION == Orientation.Bottom:
+		elif ORIENTATION == structures.Orientation.Bottom:
 			clampedZ = viz.clamp(pos[2],BOT_Z_MIN,SLIDE_MAX)
 			pos[2] = clampedZ
 			BOT_CACHED_Z = pos[2]
@@ -2327,7 +2249,7 @@ def onMouseUp(button):
 	
 	if button == KEYS['utility']:
 		#--If mode is Mode.Add, flip truss; else toggle utils
-		if MODE is Mode.Add:
+		if MODE is structures.Mode.Add:
 			flipTruss(grabbedItem)
 		else:
 			toggleUtility()
@@ -2359,11 +2281,11 @@ def onList(e):
 		
 	if e.object == inventoryTabPanel.tabGroup:
 		if e.newSel == 0:
-			ORIENTATION = Orientation.Side
+			ORIENTATION = structures.Orientation.Side
 		if e.newSel == 1:
-			ORIENTATION = Orientation.Top
+			ORIENTATION = structures.Orientation.Top
 		if e.newSel == 2:
-			ORIENTATION = Orientation.Bottom
+			ORIENTATION = structures.Orientation.Bottom
 		
 	clickSound.play()
 	
@@ -2380,7 +2302,7 @@ def SaveData():
 		return
 	
 	currentOrientation = ORIENTATION
-	cycleOrientation(Orientation.Side)
+	cycleOrientation(structures.Orientation.Side)
 	
 	with open(filePath,'wb') as f:
 		writer = csv.writer(f)
@@ -2519,7 +2441,7 @@ def createConfirmButton():
 	doneButton.length(2)
 	vizact.onbuttonup ( doneButton, populateInventory )
 	vizact.onbuttonup ( doneButton, clickSound.play )
-	vizact.onbuttonup ( doneButton, cycleMode, Mode.Build )
+	vizact.onbuttonup ( doneButton, cycleMode, structures.Mode.Build )
 	vizact.onbuttonup ( doneButton, menuCanvas.visible, viz.OFF )
 
 
@@ -2583,8 +2505,8 @@ def MainTask():
 		
 		if oculusConnected and joystickConnected:
 			navigator = navigation.Joyculus()
-			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['mode'],cycleMode,vizact.choice([Mode.Edit,Mode.Build]))
-			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['orient'],cycleOrientation,vizact.choice([Orientation.Top,Orientation.Bottom,Orientation.Side]))
+			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['mode'],cycleMode,vizact.choice([structures.Mode.Edit,structures.Mode.Build]))
+			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['orient'],cycleOrientation,vizact.choice([structures.Orientation.Top,structures.Orientation.Bottom,structures.Orientation.Side]))
 			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['angles'],cycleView,vizact.choice([0,1,2]))	
 			vizact.onsensorup ( navigator.getSensor(), navigator.KEYS['road'],toggleRoad,road_M)
 			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['stereo'],toggleStereo,vizact.choice([False,True]))		
@@ -2593,8 +2515,8 @@ def MainTask():
 			navigator.setAsMain()
 		elif joystickConnected:
 			navigator = navigation.Joystick()
-			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['mode'],cycleMode,vizact.choice([Mode.Edit,Mode.Build]))
-			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['orient'],cycleOrientation,vizact.choice([Orientation.Top,Orientation.Bottom,Orientation.Side]))
+			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['mode'],cycleMode,vizact.choice([structures.Mode.Edit,structures.Mode.Build]))
+			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['orient'],cycleOrientation,vizact.choice([structures.Orientation.Top,structures.Orientation.Bottom,structures.Orientation.Side]))
 			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['angles'],cycleView,vizact.choice([0,1,2]))			
 			vizact.onsensorup ( navigator.getSensor(), navigator.KEYS['road'],toggleRoad,road_M)			
 			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['stereo'],toggleStereo,vizact.choice([False,True]))		
@@ -2603,8 +2525,8 @@ def MainTask():
 			navigator.setAsMain()
 		elif oculusConnected:
 			navigator = navigation.Oculus()
-			vizact.onkeyup( navigator.KEYS['mode'],cycleMode,vizact.choice([Mode.Edit,Mode.Build]))
-			vizact.onkeyup( navigator.KEYS['orient'],cycleOrientation,vizact.choice([Orientation.Top,Orientation.Bottom,Orientation.Side]))
+			vizact.onkeyup( navigator.KEYS['mode'],cycleMode,vizact.choice([structures.Mode.Edit,structures.Mode.Build]))
+			vizact.onkeyup( navigator.KEYS['orient'],cycleOrientation,vizact.choice([structures.Orientation.Top,structures.Orientation.Bottom,structures.Orientation.Side]))
 			vizact.onkeyup( navigator.KEYS['stereo'],toggleStereo,vizact.choice([False,True]))
 			vizact.onkeyup( navigator.KEYS['angles'],cycleView,vizact.choice([0,1,2]))
 			vizact.whilekeydown( navigator.KEYS['slideNear'],slideRoot,-SLIDE_INTERVAL )		
@@ -2612,8 +2534,8 @@ def MainTask():
 			navigator.setAsMain()
 		else:
 			navigator = navigation.KeyboardMouse()
-			vizact.onkeyup( navigator.KEYS['mode'],cycleMode,vizact.choice([Mode.Edit,Mode.Build]))
-			vizact.onkeyup( navigator.KEYS['orient'],cycleOrientation,vizact.choice([Orientation.Top,Orientation.Bottom,Orientation.Side]))
+			vizact.onkeyup( navigator.KEYS['mode'],cycleMode,vizact.choice([structures.Mode.Edit,structures.Mode.Build]))
+			vizact.onkeyup( navigator.KEYS['orient'],cycleOrientation,vizact.choice([structures.Orientation.Top,structures.Orientation.Bottom,structures.Orientation.Side]))
 			vizact.onkeyup( navigator.KEYS['angles'],cycleView,vizact.choice([0,1,2]) )
 			vizact.onkeyup( navigator.KEYS['stereo'],toggleStereo,vizact.choice([False,True]))
 			vizact.whilekeydown( navigator.KEYS['slideNear'],slideRoot,-SLIDE_INTERVAL)		
@@ -2645,7 +2567,7 @@ def MainTask():
 		inventoryLink.postTrans([0,-1,1])
 		inventoryLink.preEuler([0,30,0])		
 
-		cycleMode(Mode.View)		
+		cycleMode(structures.Mode.View)		
 #		cycleMode(Mode.Build)
 
 		#--Show menu
