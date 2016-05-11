@@ -1213,13 +1213,11 @@ def clearMembers():
 		del node
 	PROXY_NODES = []
 	for target in TARGET_NODES:
-		target.remove()
 		target = None
 		del target
 	TARGET_NODES = []
 	for sensor in SENSOR_NODES:
 		proxyManager.removeSensor(sensor)
-		sensor.remove()
 		sensor = None
 		del sensor
 	SENSOR_NODES = []
