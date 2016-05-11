@@ -2,7 +2,7 @@
 [ Objectives ]
 Order truss members required to build a 20m-long bridge across the Singapore River, then proceed to build in VR
 
-[ Controls ]
+[ General ]
 [ JOYBUTTON2 or SPACE BAR ] Toggle Menu
 [ JOYBUTTON11 or ESC KEY ] Close Menu / Quit Application
 
@@ -12,13 +12,14 @@ Order truss members required to build a 20m-long bridge across the Singapore Riv
 [ JOYBUTTON5 | JOYBUTTON3 or Z | X ] Lower/Raise elevation
 [ JOYCURSOR or 1 | 2 ] Slide bridge towards or away from you in Top and Bottom Orientation
 
-[ Build ]
+[ Build | Edit ]
 [ JOYBUTTON6 or SHIFT ] Cycle between Edit and Build Modes
 [ JOYBUTTON4 or TAB ] Cycle between Side, Top, and Bottom Orientations
 [ VIRTUAL MOUSE ] Interact with menu elements
-[ LEFT MOUSE CLICK ] Grab onto truss members in Edit Mode
-[ LEFT MOUSE HOLD ] Click and hold onto spherical ends to rotate truss in Edit Mode
+[ LEFT MOUSE CLICK ] Grab onto truss members in Build Mode | Move truss in Edit Mode
+[ LEFT MOUSE HOLD ] Hold onto white spherical connectors to rotate truss
 [ SCROLL WHEEL ] Extend and retract virtual hand
+[ RIGHT MOUSE CLICK ] Delete grabbed truss member
 """
 INVENTORY_TEXT = """Order truss members from the catalogue & manage your inventory"""
 
@@ -86,7 +87,7 @@ ISMUTED = False
 BUILD_ROAM_LIMIT = ([12,-12,-10,10])	# Front,back,left,right limits in meters(m)
 START_POS = ([0,5,-17])					# Set at 5m + avatar height above ground and 17m back fron center
 BUILD_ROTATION = ([0,0,0])				# Zero-rotation to face dead center
-WALK_POS = ([21,5.5,-8])
+WALK_POS = ([21,5.5,-7])
 WALK_ROT = ([-60,0,0])
 VIEW_SPOTS = {
 	 0	: [[35,20,-13],[-60,0,0]]
@@ -2215,10 +2216,6 @@ def onMouseDown(button):
 		if rotatingItem is not None:
 			#--Show rotation GUI
 			rotationCanvas.visible(True)
-			
-			midPoint = viz.mouse.getPosition()[1]
-			upperPoint += 0.2
-			lowerPoint -= 0.2
 			
 			newParentNode = None
 			#--Break links
