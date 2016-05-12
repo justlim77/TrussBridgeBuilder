@@ -213,9 +213,9 @@ def initScene(res=RESOLUTION,quality=4,fov=FOV,stencil=8,stereoMode=viz.STEREO_H
 	viz.window.setName( 'Virtual Truss Bridge Builder & Visualizer' ) 
 	viz.window.setBorder( viz.BORDER_FIXED )
 	viz.clearcolor(clearColor)
-	viz.go(stereoMode | fullscreen)
 	darkTheme = themes.getDarkTheme()
 	viz.setTheme(darkTheme)	
+	viz.go(stereoMode | fullscreen)
 	
 	
 # Disable mouse navigation and hide the mouse cursor
@@ -1331,13 +1331,16 @@ def toggleUtility(val=viz.TOGGLE):
 		menuCanvas.visible(False)
 		
 	utilityCanvas.visible(val)
+	glove.visible(False)
+
 	if utilityCanvas.getVisible() is True:
-		glove.visible(False)
 		inventoryCanvas.setMouseStyle(viz.CANVAS_MOUSE_VISIBLE)
 		showMenuSound.play()
 	else:
-		glove.visible(True)
-		updateMouseStyle(inventoryCanvas)
+		if MODE == structures.Mode.Build:
+			inventoryCanvas.setMouseStyle(viz.CANVAS_MOUSE_VIRTUAL)
+		elif MODE == structures.Mode.Edit:
+			glove.visible(True)
 		hideMenuSound.play()
 
 
@@ -1705,16 +1708,17 @@ def rotateTruss():
 		rotationCanvas.visible(False)
 vizact.ontimer(0,rotateTruss)
 
-def flipTruss(truss):
-	rot = truss.getEuler()
-	rotateTo = []
-	if rot[2] == 0:
-		rotateTo = [0,0,90]
-		truss.level = structures.Level.Vertical
-	else:
-		rotateTo = [0,0,0]
-		truss.level = structures.Level.Horizontal
-	truss.setEuler(rotateTo)
+global isSpinning
+isSpinning = False
+def spinTruss(truss):
+	global isSpinning
+	if not isSpinning:
+		isSpinning = True
+		rot = truss.getEuler()
+		z = rot[2] + 45
+		spin = vizact.spinTo(euler=[0,0,z],time=0.1,interpolate=vizact.easeInOutCubic)
+		truss.addAction(spin)
+		isSpinning = False
 	
 	
 def resetSensors():
@@ -1843,6 +1847,8 @@ def cycleMode(mode=structures.Mode.Add):
 		return
 	if MODE == structures.Mode.Edit and grabbedItem is not None:
 		return
+	
+	toggleUtility(False)
 	
 	#--Force clear highlight
 	highlightTool.clear()
@@ -2313,10 +2319,10 @@ def onMouseUp(button):
 	
 	if button == KEYS['utility']:
 		#--If mode is Mode.Add, flip truss; else toggle utils
-		if MODE is structures.Mode.Add:
-			flipTruss(grabbedItem)
-		else:
+		if grabbedItem is None:
 			toggleUtility()
+		elif MODE is structures.Mode.Add or MODE is structures.Mode.Edit:
+			spinTruss(grabbedItem)
 			
 	if button == KEYS['rotate']:
 		if grabbedItem is not None:			
