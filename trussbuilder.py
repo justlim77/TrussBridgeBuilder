@@ -297,6 +297,7 @@ proxyManager = initProxy()
 catalogue_root = getCatalogue('data/catalogues/catalogue_CHS.xml')
 environment_root = roots.EnvironmentRoot()
 environment_root.visible(False)
+environment_root.setWaveAnimationSpeed(0.01);
 bridge_root = roots.Root()
 bridge_root.getGroup().setPosition(BRIDGE_ROOT_POS)
 bridge_root.getGroup().setEuler(SIDE_VIEW_ROT)
