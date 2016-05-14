@@ -98,6 +98,14 @@ class EnvironmentRoot(Root):
 		self._wave_M = viz.addChild('resources/wave.osgb',cache=viz.CACHE_CLONE,pos=([0,2,0]),parent=self._waveGroup)
 		self._wave_B = viz.addChild('resources/wave.osgb',cache=viz.CACHE_CLONE,pos=([0,2,-50]),parent=self._waveGroup)
 		self._newWalkway = viz.add('resources/newWalkway.osgb',parent=self._root)	
+		#Add a texture and set it to repeat mode.
+#		grass = viz.addTexture('images/tile_grass.jpg', wrap=viz.REPEAT)
+#
+#		#Add the terrain using the infinte terrain plug-in.
+#		self._terrain = viz.add('InfiniteTerrain.dlc',1,'456',7,6,15000,0.0005)
+#
+#		#Texture the terrain.
+#		self._terrain.texture(grass)
 		
 	def getWaveGroup(self):
 		return self._waveGroup
