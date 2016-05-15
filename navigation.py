@@ -57,6 +57,8 @@ class Navigator(object):
 		self.ORIGIN_ROT = [0,0,0]
 		self.EYE_HEIGHT = 1.8
 		self.FOV = 100
+		self.CAN_ELEVATE = True
+		self.CAN_STRAFE = True
 		
 		self.NODE = viz.addGroup()
 		self.VIEW = viz.MainView
@@ -114,6 +116,10 @@ class Navigator(object):
 	
 	def setTurnSpeed(self,speed):
 		self.TURN_SPEED = speed
+	
+	def setNavAbility(self,strafe=True,elevate=True):
+		self.CAN_STRAFE = strafe
+		self.CAN_ELEVATE = elevate
 		
 	def setOrigin(self,pos,euler):
 		self.ORIGIN_POS = pos
@@ -165,17 +171,17 @@ class KeyboardMouse(Navigator):
 		yaw,pitch,roll = self.VIEW.getEuler()
 		m = viz.Matrix.euler(yaw,0,0)
 		dm = viz.getFrameElapsed() * self.MOVE_SPEED
-		if viz.key.isDown(self.KEYS['forward']):
+		if viz.key.isDown(self.KEYS['forward']) and self.CAN_STRAFE:
 			m.preTrans([0,0,dm])
-		if viz.key.isDown(self.KEYS['back']):
+		if viz.key.isDown(self.KEYS['back']) and self.CAN_STRAFE:
 			m.preTrans([0,0,-dm])
-		if viz.key.isDown(self.KEYS['left']):
+		if viz.key.isDown(self.KEYS['left']) and self.CAN_STRAFE:
 			m.preTrans([-dm,0,0])
-		if viz.key.isDown(self.KEYS['right']):
+		if viz.key.isDown(self.KEYS['right']) and self.CAN_STRAFE:
 			m.preTrans([dm,0,0])
-		if viz.key.isDown(self.KEYS['up']):
+		if viz.key.isDown(self.KEYS['up']) and self.CAN_ELEVATE:
 			m.preTrans([0,dm,0])
-		if viz.key.isDown(self.KEYS['down']):
+		if viz.key.isDown(self.KEYS['down']) and self.CAN_ELEVATE:
 			m.preTrans([0,-dm,0])
 		self.VIEW.setPosition(m.getPosition(), viz.REL_PARENT)
 #		viz.logNotice('Node position:', self.getPosition())
@@ -310,11 +316,13 @@ class Joystick(Navigator):
 		x,y,z = self.joy.getPosition()
 		twist = self.joy.getTwist()
 		elevation_amount = 0
-		if self.joy.isButtonDown(self.KEYS['up']):
+		if self.joy.isButtonDown(self.KEYS['up'])  and self.CAN_ELEVATE:
 			elevation_amount = self.MOVE_SPEED * elapsed
-		if self.joy.isButtonDown(self.KEYS['down']):
+		if self.joy.isButtonDown(self.KEYS['down']) and self.CAN_ELEVATE:
 			elevation_amount = -self.MOVE_SPEED * elapsed
-		move_amount = self.MOVE_SPEED * elapsed
+		move_amount = 0
+		if self.CAN_STRAFE:
+			self.MOVE_SPEED * elapsed
 		self.VIEW.setPosition([x*move_amount,elevation_amount,y*move_amount], viz.REL_LOCAL)
 
 	def getSensor(self):
@@ -417,17 +425,17 @@ class Oculus(Navigator):
 		yaw,pitch,roll = self.VIEW_LINK.getEuler()
 		m = viz.Matrix.euler(yaw,0,0)
 		dm = viz.getFrameElapsed() * self.MOVE_SPEED
-		if viz.key.isDown(self.KEYS['forward']):
+		if viz.key.isDown(self.KEYS['forward']) and self.CAN_STRAFE:
 			m.preTrans([0,0,dm])
-		if viz.key.isDown(self.KEYS['back']):
+		if viz.key.isDown(self.KEYS['back']) and self.CAN_STRAFE:
 			m.preTrans([0,0,-dm])
-		if viz.key.isDown(self.KEYS['left']):
+		if viz.key.isDown(self.KEYS['left']) and self.CAN_STRAFE:
 			m.preTrans([-dm * self.STRAFE_SPEED,0,0])
-		if viz.key.isDown(self.KEYS['right']):
+		if viz.key.isDown(self.KEYS['right']) and self.CAN_STRAFE:
 			m.preTrans([dm * self.STRAFE_SPEED,0,0])
-		if viz.key.isDown(self.KEYS['up']):
+		if viz.key.isDown(self.KEYS['up']) and self.CAN_ELEVATE:
 			m.preTrans([0,dm,0])
-		if viz.key.isDown(self.KEYS['down']):
+		if viz.key.isDown(self.KEYS['down']) and self.CAN_ELEVATE:
 			m.preTrans([0,-dm,0])
 		self.NODE.setPosition(m.getPosition(), viz.REL_PARENT)
 
@@ -567,11 +575,13 @@ class Joyculus(Navigator):
 		x,y,z = self.joy.getPosition()
 		twist = self.joy.getTwist()
 		elevation_amount = 0
-		if self.joy.isButtonDown(self.KEYS['up']):
+		if self.joy.isButtonDown(self.KEYS['up']) and self.CAN_ELEVATE:
 			elevation_amount = self.MOVE_SPEED * elapsed
-		if self.joy.isButtonDown(self.KEYS['down']):
+		if self.joy.isButtonDown(self.KEYS['down']) and self.CAN_ELEVATE:
 			elevation_amount = -self.MOVE_SPEED * elapsed
-		move_amount = self.MOVE_SPEED * elapsed
+		move_amount = 0
+		if self.CAN_STRAFE:
+			move_amount = self.MOVE_SPEED * elapsed
 #		self.NODE.setPosition([0, 0, y * self.MOVE_SPEED * viz.getFrameElapsed()], viz.REL_LOCAL)
 		self.NODE.setPosition([x*move_amount,elevation_amount,y*move_amount], viz.REL_LOCAL)
 		turn_amount = self.TURN_SPEED * elapsed

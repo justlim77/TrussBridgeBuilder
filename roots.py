@@ -78,13 +78,31 @@ class GridRoot(Root):
 		self._info_text_shadow.color(shadowColor)
 		self._info_text_shadow.alpha(0.75)
 		
-	def setOrientationMessage(self, value):
-		self._orientation_text.message(value)
-		self._orientation_text_shadow.message(value)
+	def setOrientationMessage(self, message):
+		self._orientation_text.message(message)
+		self._orientation_text_shadow.message(message)
 		
-	def setInfoMessage(self, value):
-		self._info_text.message(value)
-		self._info_text_shadow.message(value)
+	def setInfoMessage(self, message):
+		self._info_text.message(message)
+		self._info_text_shadow.message(message)
+
+class InfoRoot(Root):
+	def __init__(self,textColor=viz.WHITE,shadowColor=viz.BLACK):
+		super(self.__class__, self).__init__()
+		
+		#--Create info text
+		self._info_text = viz.addText3D('Info',pos=[0,15,-5],scale=(1,1,1),parent=self._root,align=viz.ALIGN_CENTER)
+		self._info_text.color(textColor)
+		self._info_text_shadow = viz.addText3D('Info',parent=self._info_text,align=viz.ALIGN_CENTER)
+		self._info_text_shadow.setPosition([0,0,0.2])
+		self._info_text_shadow.color(shadowColor)
+		self._info_text_shadow.alpha(0.75)
+			
+	def showInfoMessage(self, message='',val=True):
+		self._info_text.message(message)
+		self._info_text_shadow.message(message)
+		self._info_text.visible(val)
+		self._info_text_shadow.visible(val)
 		
 class EnvironmentRoot(Root):
 	def __init__(self):

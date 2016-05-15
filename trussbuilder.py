@@ -1,29 +1,36 @@
 ﻿"""
-[ Objectives ]
-Order truss members required to build a 20m-long bridge across the Singapore River, then proceed to build in VR
+[ Objective ]			Order truss members required to build a 20m bridge across the Singapore River
+
+[ Controls ]
 
 [ General ]
-[ JOYBUTTON2 or SPACE BAR ] Toggle Menu
-[ JOYBUTTON11 or ESC KEY ] Close Menu / Quit Application
+[ JOYBUTTON2 ]			Toggle Main Menu
+[ MIDDLE MOUSE CLICK ]	Toggle Utility Menu
+[ JOYCURSOR LEFT/RIGHT]	Cycle between menu tabs
+[ ESC KEY ]		     	Close Menu / Quit Application
 
 [ Movement ]
-[ VR HEADSET or MOUSE ] Look around
-[ JOYSTICK or WASD ] Navigate
-[ JOYBUTTON5 | JOYBUTTON3 or Z | X ] Lower/Raise elevation
-[ JOYCURSOR or 1 | 2 ] Slide bridge towards or away from you in Top and Bottom Orientation
+[ VR HEADSET ]			Look around
+[ JOYSTICK ]        	Navigate
+[ JOYBUTTON 5/3 ]		Lower/Raise elevation
 
 [ Build | Edit ]
-[ JOYBUTTON6 or SHIFT ] Cycle between Edit and Build Modes
-[ JOYBUTTON4 or TAB ] Cycle between Side, Top, and Bottom Orientations
-[ VIRTUAL MOUSE ] Interact with menu elements
-[ LEFT MOUSE CLICK ] Grab onto truss members in Build Mode | Move truss in Edit Mode
-[ LEFT MOUSE HOLD ] Hold onto white spherical connectors to rotate truss
-[ SCROLL WHEEL ] Extend and retract virtual hand
-[ RIGHT MOUSE CLICK ] Delete grabbed truss member
+[ JOYBUTTON6 ]			Cycle between Edit and Build Modes
+[ JOYBUTTON4 ]			Cycle between Side, Top, and Bottom Orientations
+[ JOYCURSOR UP/DOWN]	Slide bridge away or towards in Top or Bottom Orientation
+[ VIRTUAL MOUSE ]		Interact with menu elements
+[ LEFT MOUSE CLICK ]	Create new truss in Build Mode | Grab and move truss in Edit Mode
+[ LEFT MOUSE HOLD ]		Hold onto white spherical connectors to rotate truss
+[ MIDDLE MOUSE CLICK ]	Rotate grabbed truss member in 45 degree intervals
+[ RIGHT MOUSE CLICK ]	Delete grabbed truss member
+[ SCROLL WHEEL ]		Extend and retract virtual hand
 """
 INVENTORY_TEXT = """Order truss members from the catalogue & manage your inventory"""
 
 FEEDBACK_MESSAGE = """<FEEDBACK>"""
+
+INITIAL_MESSAGE = """[ To begin building, switch to Build Mode ]
+[ JOYBUTTON6 ]"""
 
 VIEW_MESSAGE = """[ JOYHATDOWN | JOYHATUP ] Slide bridge towards or away"""
 
@@ -101,6 +108,9 @@ INSPECTOR_POS_OFFSET = ( [0,0,2] )
 INSPECTOR_ROT_OFFSET = ( [] )
 HEADER_TEXT = 'Truss Bridge Builder & Visualizer'
 INVENTORY_MESSAGE = 'Order truss members from the catalogue and manage'
+DESIGNERS_TEXT = '   Dave\n   Tracy'
+PROGRAMMERS_TEXT = '   Justin'
+ARTISTS_TEXT = '   Rakesh\n   Jason\n   Anas'
 
 LEN_MIN = 0.1				# Min length allowed for truss
 LEN_MAX = 20.0				# Max length allowed for truss
@@ -302,7 +312,7 @@ bridge_root = roots.Root()
 bridge_root.getGroup().setPosition(BRIDGE_ROOT_POS)
 bridge_root.getGroup().setEuler(SIDE_VIEW_ROT)
 grid_root = roots.GridRoot(GRID_COLOR)
-
+info_root = roots.InfoRoot()
 
 # Setup audio
 startSound = viz.addAudio('./resources/sounds/return_to_holodeck.wav')
@@ -460,19 +470,29 @@ inventoryPanel.addItem(bottomRow)
 # TAB 3: Options panel
 optionPanel = vizinfo.InfoPanel(title=HEADER_TEXT,text='Options',align=viz.ALIGN_CENTER_TOP,icon=False,key=None)
 optionPanel.getTitleBar().fontSize(36)
-optionPanel.addSection('File')
-saveHeader = optionPanel.addItem(viz.addText('Append ".csv" when saving'))
+optionPanel.addSection('    [ File ]')
+saveHeader = optionPanel.addItem(viz.addText('    [ Append ".csv" when saving ]'))
 saveButton = optionPanel.addItem(viz.addButtonLabel('Save Bridge'))
 saveButton.length(2)
 loadButton = optionPanel.addItem(viz.addButtonLabel('Load Bridge'))
 loadButton.length(2)
-optionPanel.addSection('Application')
+optionPanel.addSection('    [ Application ]')
 soundButton = optionPanel.addItem(viz.addButtonLabel('Toggle Audio'))
 soundButton.length(2)
 resetButton = optionPanel.addItem(viz.addButtonLabel('Clear Bridge'))
 resetButton.length(2)
 quitButton = optionPanel.addItem(viz.addButtonLabel('Quit Application'))
 quitButton.length(2)
+
+# TAB 4: Credits panel
+creditsPanel = vizinfo.InfoPanel(title=HEADER_TEXT,text='Credits',align=viz.ALIGN_CENTER_TOP,icon=False,key=None)
+creditsPanel.getTitleBar().fontSize(36)
+creditsPanel.addSection('    [ Design ]')
+creditsPanel.addItem(viz.addText(DESIGNERS_TEXT))
+creditsPanel.addSection('    [ Programming ]')
+creditsPanel.addItem(viz.addText(PROGRAMMERS_TEXT))
+creditsPanel.addSection('    [ Art ]')
+creditsPanel.addItem(viz.addText(ARTISTS_TEXT))
 
 # Create inspector panel
 inspectorCanvas = viz.addGUICanvas(align=viz.ALIGN_CENTER)
@@ -535,23 +555,26 @@ utilityLink = viz.link(viz.MainView,utilityCanvas)
 utilityLink.preTrans( [0, 0, 1.5] )
 
 
-# Rotation Panel
+# Rotation Canvas/Panel
 rotationCanvas = viz.addGUICanvas(align=viz.ALIGN_CENTER)
 rotationPanel = vizdlg.GridPanel(parent=rotationCanvas,align=viz.ALIGN_CENTER,border=False)
 rotationSlider = viz.addProgressBar('Angle')
 rotationLabel = viz.addText('0')
 row = rotationPanel.addRow([rotationSlider,rotationLabel])
 
-# Add tabbed panels to main menu canvas
+# Menu Canvas
 menuCanvas = viz.addGUICanvas(align=viz.ALIGN_CENTER_TOP)
-menuTabPanel = vizdlg.TabPanel(align=viz.ALIGN_CENTER_TOP,parent=menuCanvas)
-menuTabPanel.addPanel('Instructions',instructionsPanel)
 controlsQuad = viz.addTexQuad(size=[512,512],parent=menuCanvas)
 controlsPic = viz.addTexture('resources/gui/joystick_mapping_truss.jpg',parent=controlsQuad)
 controlsQuad.texture(controlsPic)
+
+# Add tabbed panels to main menu canvas
+menuTabPanel = vizdlg.TabPanel(align=viz.ALIGN_CENTER_TOP,parent=menuCanvas)
+menuTabPanel.addPanel('Instructions',instructionsPanel)
 menuTabPanel.addPanel('Controls',controlsQuad)
 menuTabPanel.addPanel('Inventory',inventoryPanel)
 menuTabPanel.addPanel('Options',optionPanel)
+menuTabPanel.addPanel('Credits',creditsPanel)
 
 # Add dialog canvas
 dialogCanvas = viz.addGUICanvas(align=viz.ALIGN_CENTER)
@@ -577,7 +600,7 @@ def initCanvas():
 	bb = menuTabPanel.getBoundingBox()
 	menuCanvas.setRenderWorld([bb.width,bb.height+50],[1,viz.AUTO_COMPUTE])
 	menuCanvas.setCursorPosition([0,0])
-	menuCanvas.setPosition(0,2.2,1.5)
+	menuCanvas.setPosition(0,2.275,1.5)
 	menuCanvas.setMouseStyle(viz.CANVAS_MOUSE_VIRTUAL)
 	
 	updateResolution(dialog,dialogCanvas)
@@ -1870,7 +1893,9 @@ def cycleMode(mode=structures.Mode.Add):
 		#--Hide menu and inspector
 		menuCanvas.visible(False)
 		inspectorCanvas.visible(False)
-		
+		if info_root.getVisible() is True:
+			info_root.visible(False)
+			
 		# Clear highlighter
 		SHOW_HIGHLIGHTER = False
 		highlightedItem = None
@@ -1887,7 +1912,9 @@ def cycleMode(mode=structures.Mode.Add):
 		
 		menuCanvas.visible(False)	
 		glove.visible(True)
-		
+		if info_root.getVisible() is True:
+			info_root.visible(False)
+			
 		# Clear highlighter
 		highlightTool.clear()
 		highlightTool.removeItems(BUILD_MEMBERS)
@@ -2637,12 +2664,15 @@ def MainTask():
 		
 		inventoryLink = viz.link(navigator.VIEW,inventoryCanvas)
 #		inventoryLink.setMask(viz.LINK_POS)
-		inventoryLink.postTrans([0,-1,1])
+		inventoryLink.postTrans([0,-1,.5])
 		inventoryLink.preEuler([0,30,0])		
 
 		cycleMode(structures.Mode.View)		
 #		cycleMode(Mode.Build)
 
+		#--Show initial info message
+		info_root.showInfoMessage(INITIAL_MESSAGE)
+		
 		#--Show menu
 		toggleMenu(True)
 		
