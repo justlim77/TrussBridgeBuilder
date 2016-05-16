@@ -502,49 +502,40 @@ inspector = panels.InspectorPanel()
 statPanel = inspector.GetPanel()
 statPanel.setParent(inspectorCanvas)
 
-utilityButtons = []
 # Create docked utility panel
 utilityCanvas = viz.addGUICanvas(align=viz.ALIGN_CENTER)
 points = mathlite.getPointsInCircum(30,8)
 # Menu button
 menuButton = viz.addButton(parent=utilityCanvas)
 menuButton.texture(viz.addTexture('resources/GUI/menu-128.png'))
-#menuButton.setPosition(0,0)
 menuButton.setScale(BUTTON_SCALE,BUTTON_SCALE)
 # Reset View button
 homeButton = viz.addButton(parent=utilityCanvas)
 homeButton.texture(viz.addTexture('resources/gui/reset-128.png'))
-#homeButton.setPosition(0,0)
 homeButton.setScale(BUTTON_SCALE,BUTTON_SCALE)
 # Build mode button
 buildModeButton = viz.addButton(parent=utilityCanvas)
 buildModeButton.texture(viz.addTexture('resources/gui/wrench-128.png'))
-#buildModeButton.setPosition(0,0)
 buildModeButton.setScale(BUTTON_SCALE,BUTTON_SCALE)
 # Viewer mode button
 viewerModeButton = viz.addButton(parent=utilityCanvas)
 viewerModeButton.texture(viz.addTexture('resources/gui/viewer-128.png'))
-#viewerModeButton.setPosition(0,0)
 viewerModeButton.setScale(BUTTON_SCALE,BUTTON_SCALE)
 # Walk mode button
 walkModeButton = viz.addButton(parent=utilityCanvas)
 walkModeButton.texture(viz.addTexture('resources/gui/walking-128.png'))
-#walkModeButton.setPosition(0,0)
 walkModeButton.setScale(BUTTON_SCALE,BUTTON_SCALE)
 # Toggle environment button
 toggleEnvButton = viz.addButton(parent=utilityCanvas)
 toggleEnvButton.texture(viz.addTexture('resources/gui/environment-128.png'))
-#toggleEnvButton.setPosition(0,0)
 toggleEnvButton.setScale(BUTTON_SCALE,BUTTON_SCALE)
 # Toggle grid button
 toggleGridButton = viz.addButton(parent=utilityCanvas)
 toggleGridButton.texture(viz.addTexture('resources/gui/grid-64.png'))
-#toggleGridButton.setPosition(0,0)
 toggleGridButton.setScale(BUTTON_SCALE,BUTTON_SCALE)
 # Reset orientation button
 resetOriButton = viz.addButton(parent=utilityCanvas)
 resetOriButton.texture(viz.addTexture('resources/gui/compass-128.png'))
-#resetOriButton.setPosition(0,0)
 resetOriButton.setScale(BUTTON_SCALE,BUTTON_SCALE)
 
 utilityButtons = ( [menuButton,homeButton,buildModeButton,viewerModeButton,walkModeButton,toggleEnvButton,toggleGridButton,resetOriButton] )
@@ -554,7 +545,7 @@ for i, button in enumerate(utilityButtons):
 # Link utility canvas with main View
 utilityLink = viz.link(viz.MainView,utilityCanvas)
 #utilityLink.postMultLinkable(viz.MainView)
-utilityLink.preTrans( [0, 0, 1.5] )
+utilityLink.preTrans( [0, 0, 3] )
 
 
 # Rotation Canvas/Panel
@@ -1360,6 +1351,117 @@ def toggleHighlightables(val=True):
 		highlightTool.removeItems(highlightables)
 		highlightTool.setItems([])
 
+def getOrientationHighlightables():
+	highlightTool.clear()
+	highlightables = []
+	
+	if ORIENTATION is structures.Orientation.Top:	
+		for member in SIDE_CLONES:
+			member.visible(True)
+			member.nodeA.visible(True)
+			member.nodeB.visible(True)
+			member.alpha(INACTIVE_ALPHA)
+			member.nodeA.alpha(INACTIVE_ALPHA)
+			member.nodeB.alpha(INACTIVE_ALPHA)
+		for member in SIDE_MEMBERS:
+			member.visible(True)
+			proxyManager.addSensor(member.sensorNodes[0])
+			proxyManager.addSensor(member.sensorNodes[1])
+			member.proxyNodes[0].visible(True)
+			member.proxyNodes[1].visible(True)
+			member.alpha(INACTIVE_ALPHA)
+			member.proxyNodes[0].alpha(INACTIVE_ALPHA)
+			member.proxyNodes[1].alpha(INACTIVE_ALPHA)			
+		for member in BOT_MEMBERS:
+			member.visible(False)
+			proxyManager.removeSensor(member.sensorNodes[0])
+			proxyManager.removeSensor(member.sensorNodes[1])
+			member.proxyNodes[0].visible(False)
+			member.proxyNodes[1].visible(False)
+		for member in TOP_MEMBERS:
+			member.visible(True)	
+			proxyManager.addSensor(member.sensorNodes[0])
+			proxyManager.addSensor(member.sensorNodes[1])
+			member.proxyNodes[0].visible(True)
+			member.proxyNodes[1].visible(True)
+			member.alpha(1)
+			member.proxyNodes[0].alpha(1)
+			member.proxyNodes[1].alpha(1)			
+			#--Add to highlight
+			highlightables.append(member)
+			highlightables.append(member.proxyNodes[0])
+			highlightables.append(member.proxyNodes[1])
+	elif ORIENTATION is structures.Orientation.Bottom:
+		for member in SIDE_CLONES:
+			member.visible(True)
+			member.nodeA.visible(True)
+			member.nodeB.visible(True)
+			member.alpha(INACTIVE_ALPHA)
+			member.nodeA.alpha(INACTIVE_ALPHA)
+			member.nodeB.alpha(INACTIVE_ALPHA)		
+		for member in SIDE_MEMBERS:
+			member.visible(True)
+			proxyManager.addSensor(member.sensorNodes[0])
+			proxyManager.addSensor(member.sensorNodes[1])
+			member.proxyNodes[0].visible(True)
+			member.proxyNodes[1].visible(True)
+			#--Lower opacity of guide truss members
+			member.alpha(INACTIVE_ALPHA)
+			member.proxyNodes[0].alpha(INACTIVE_ALPHA)
+			member.proxyNodes[1].alpha(INACTIVE_ALPHA)				
+		for member in TOP_MEMBERS:
+			member.visible(False)
+			proxyManager.removeSensor(member.sensorNodes[0])
+			proxyManager.removeSensor(member.sensorNodes[1])
+			member.proxyNodes[0].visible(False)
+			member.proxyNodes[1].visible(False)
+		for member in BOT_MEMBERS:
+			member.visible(True)
+			proxyManager.addSensor(member.sensorNodes[0])
+			proxyManager.addSensor(member.sensorNodes[1])
+			member.proxyNodes[0].visible(True)
+			member.proxyNodes[1].visible(True)	
+			member.alpha(1)
+			member.proxyNodes[0].alpha(1)
+			member.proxyNodes[1].alpha(1)			
+			#--Add to highlight
+			highlightables.append(member)
+			highlightables.append(member.proxyNodes[0])
+			highlightables.append(member.proxyNodes[1])
+	elif ORIENTATION is structures.Orientation.Side:			
+		for member in SIDE_CLONES:
+			member.visible(False)
+			member.nodeA.visible(False)
+			member.nodeB.visible(False)			
+		for member in SIDE_MEMBERS:
+			member.visible(True)
+			proxyManager.addSensor(member.sensorNodes[0])
+			proxyManager.addSensor(member.sensorNodes[1])
+			member.proxyNodes[0].visible(True)
+			member.proxyNodes[1].visible(True)	
+			#--Set opacity of side truss to 1
+			member.alpha(1)
+			member.proxyNodes[0].alpha(1)
+			member.proxyNodes[1].alpha(1)				
+			#--Add to highlight
+			highlightables.append(member)
+			highlightables.append(member.proxyNodes[0])
+			highlightables.append(member.proxyNodes[1])			
+		for member in TOP_MEMBERS:
+			member.visible(False)
+			proxyManager.removeSensor(member.sensorNodes[0])
+			proxyManager.removeSensor(member.sensorNodes[1])
+			member.proxyNodes[0].visible(False)
+			member.proxyNodes[1].visible(False)
+		for member in BOT_MEMBERS:
+			member.visible(False)
+			proxyManager.removeSensor(member.sensorNodes[0])
+			proxyManager.removeSensor(member.sensorNodes[1])
+			member.proxyNodes[0].visible(False)
+			member.proxyNodes[1].visible(False)
+	return highlightables
+	
+
 def toggleUtility(val=viz.TOGGLE):
 	if isgrabbing or isrotating:
 		return
@@ -1642,7 +1744,7 @@ def onRelease(e=None):
 	if MODE != structures.Mode.Edit:
 		cycleMode(structures.Mode.Build)
 	else:
-		toggleHighlightables()
+		highlightTool.setItems(getOrientationHighlightables())
 
 
 def cloneSide(truss):
@@ -2744,8 +2846,7 @@ def MainTask():
 		rotationCanvas.setEuler( [0,30,0] )
 		
 		inventoryLink = viz.link(navigator.VIEW,inventoryCanvas)
-#		inventoryLink.setMask(viz.LINK_POS)
-		inventoryLink.postTrans([0,-.75,.5])
+		inventoryLink.postTrans([0,-0.5,0.5])
 		inventoryLink.preEuler([0,30,0])		
 
 		global CACHED_MODE
