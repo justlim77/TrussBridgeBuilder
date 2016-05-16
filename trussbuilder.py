@@ -1,29 +1,29 @@
 ﻿"""
-[ Objective ]------------------Order truss members required to build a 20m bridge across the Singapore River
+[ Objective ]----------------------------Order truss members required to build a 20m bridge across the Singapore River
 
 [ Controls ]
 
 [ General ]
-[ JOYBUTTON2 ]--------------------Toggle Main Menu
-[ MIDDLE MOUSE CLICK ]--------Toggle Utility Menu
-[ JOYCURSOR LEFT/RIGHT ]---Cycle between menu tabs
-[ ESC KEY ]--------------------------Close Menu / Quit Application
+[ JOYBUTTON2 ]---------------------Toggle Main Menu
+[ MIDDLE MOUSE CLICK ]---------Toggle Utility Menu
+[ JOYCURSOR LEFT/RIGHT ]-----Cycle between menu tabs
+[ ESC KEY ]----------------------------Close Menu / Quit Application
 
 [ Movement ]
-[ VR HEADSET ]-----------Look around
-[ JOYSTICK ]-------------Navigate
-[ JOYBUTTON 5/3 ]--------Lower/Raise elevation
+[ VR HEADSET ]----------------------Look around
+[ JOYSTICK ]--------------------------Navigate
+[ JOYBUTTON 5/3 ]-----------------Lower/Raise elevation
 
 [ Build | Edit ]
-[ JOYBUTTON6 ]			Cycle between Edit and Build Modes
-[ JOYBUTTON4 ]			Cycle between Side, Top, and Bottom Orientations
-[ JOYCURSOR UP/DOWN]	Slide bridge away or towards in Top or Bottom Orientation
-[ VIRTUAL MOUSE ]		Interact with menu elements
-[ LEFT MOUSE CLICK ]	Create new truss in Build Mode | Grab and move truss in Edit Mode
-[ LEFT MOUSE HOLD ]		Hold onto white spherical connectors to rotate truss
-[ MIDDLE MOUSE CLICK ]	Rotate grabbed truss member in 45 degree intervals
-[ RIGHT MOUSE CLICK ]	Delete grabbed truss member
-[ SCROLL WHEEL ]		Extend and retract virtual hand
+[ JOYBUTTON6 ]---------------------Cycle between Edit and Build Modes
+[ JOYBUTTON4 ]---------------------Cycle between Side, Top, and Bottom Orientations
+[ JOYCURSOR UP/DOWN]---------Slide bridge away or towards in Top or Bottom Orientation
+[ VIRTUAL MOUSE ]-----------------Interact with menu elements
+[ LEFT MOUSE CLICK ]--------------Create new truss in Build Mode | Grab and move truss in Edit Mode
+[ LEFT MOUSE HOLD ]--------------Hold onto white spherical connectors to rotate truss
+[ MIDDLE MOUSE CLICK ]----------Rotate grabbed truss member in 45 degree intervals
+[ RIGHT MOUSE CLICK ]------------Delete grabbed truss member
+[ SCROLL WHEEL ]-------------------Extend and retract virtual hand
 """
 INVENTORY_TEXT = """Order truss members from the catalogue & manage your inventory"""
 
@@ -33,6 +33,8 @@ INITIAL_MESSAGE = """[ To begin building, switch to Build Mode ]
 [ JOYBUTTON6 ]"""
 
 VIEW_MESSAGE = """[ JOYHATDOWN | JOYHATUP ] Slide bridge towards or away"""
+SIDE_VIEW_MESSAGE = """[  JOYBUTTON4  ] Cycle between side, top, and bottom""" 
+MODE_MESSAGE = """<MODE>"""
 
 LOAD_MESSAGE = """Any unsaved progress will be lost! 
 Are you sure you want to proceed?
@@ -97,9 +99,10 @@ BUILD_ROTATION = ([0,0,0])				# Zero-rotation to face dead center
 WALK_POS = ([21,5.5,-7])
 WALK_ROT = ([-60,0,0])
 VIEW_SPOTS = {
-	 0	: [[35,20,-13],[-60,0,0]]
-	,1	: [[-35,20,-13],[60,0,0]]
-	,2	: [[0,20,19],[180,0,0]]
+	 0	: [[-15,12,-13],[50,0,0]]
+	,1	: [[15,12,-13],[-40,0,0]]
+	,2	: [[-12,10,6],[130,0,0]]
+	,3	: [[0,11,14],[180,0,0]]
 }
 
 MENU_RES = ([1000,750])
@@ -154,7 +157,7 @@ BOT_Z_MIN = -5					# Minimum z-position of Bottom Bridge Root
 SLIDE_MAX = 100					# Max z-position of bridge root sliding
 SLIDE_INTERVAL = 0.05			# Interval to slide bridge root in TOP/BOTTOM View
 SUPPORT_ALPHA = 0.25			# Alpha value for bridge red supports	
-
+INACTIVE_ALPHA = 0.25			# Alpha value for inactive truss members
 ORIENTATION = structures.Orientation.Side
 MODE = structures.Mode.View
 
@@ -173,6 +176,8 @@ SCROLL_MIN = 0.2
 SCROLL_MAX = 20
 
 CACHED_GLOVE_Z = 0
+
+OPTIONS_BUTTON_LENGTH = 1.75
 
 DEBUG_PROXIMITY = True
 DEBUG_CAMBOUNDS = False
@@ -285,7 +290,7 @@ def initLighting():
 	for window in viz.getWindowList():
 		window.getView().getHeadLight().disable()
 	# Create directional light
-	sky_light = viz.addDirectionalLight(euler=(30,45,0),color=[0.8,0.8,0.8])
+	sky_light = viz.addDirectionalLight(euler=(0,45,0),color=[0.8,0.8,0.8])
 #	light1 = vizfx.addDirectionalLight(euler=(40,20,0), color=[0.7,0.7,0.7])
 #	light2 = vizfx.addDirectionalLight(euler=(-65,15,0), color=[0.5,0.25,0.0])
 #	sky_light.color(viz.WHITE)
@@ -352,12 +357,10 @@ env = viz.addEnvironmentMap('resources/textures/sky.jpg')
 
 def applyEnvironmentEffect(obj):
 	obj.texture(env)
-	obj.appearance(viz.ENVIRONMENT_MAP)
-#	obj.apply(effect)
-#	obj.apply(lightEffect)	
+	obj.appearance(viz.ENVIRONMENT_MAP)	
 
 #--Create middle road
-road_M = viz.addChild('resources/road3.osgb',cache=viz.CACHE_CLONE,pos=(0,5,0),parent=environment_root.getGroup())
+road_M = viz.addChild('resources/road.osgb',cache=viz.CACHE_CLONE,pos=(0,5,0),parent=environment_root.getGroup())
 road_M.visible(False)
 applyEnvironmentEffect(road_M)
 
@@ -383,7 +386,6 @@ proxyManager.addSensor(rollerAnchorSensor)
 viz.grab(rollerSupport,rollerAnchorSphere)
 
 for model in supports:
-#	applyEnvironmentEffect(model)
 	viz.grab(bridge_root.getGroup(),model)
 
 # Create canvas for displaying GUI objects
@@ -423,9 +425,9 @@ for thickness in catalogue_root[diameterDropList.getSelection()]:
 thicknessDropList.addItems(thicknesses)
 thicknessDropList.select(2)
 thickness = orderPanel.addLabelItem('Thickness (mm)', thicknessDropList)
-# Initilize lengthTextbox with default value of 1m
+# Initilize lengthTextbox with default value of 5m
 lengthTextbox = viz.addTextbox()
-lengthTextbox.message('1')
+lengthTextbox.message('5')
 length = orderPanel.addLabelItem('Length (m)', lengthTextbox)
 # Initialize quantitySlider with default value of 1
 quantitySlider = viz.addProgressBar('1')
@@ -472,17 +474,17 @@ optionPanel = vizinfo.InfoPanel(title=HEADER_TEXT,text='Options',align=viz.ALIGN
 optionPanel.getTitleBar().fontSize(36)
 optionPanel.addSection('    [ File ]')
 saveHeader = optionPanel.addItem(viz.addText('    [ Append ".csv" when saving ]'))
-saveButton = optionPanel.addItem(viz.addButtonLabel('Save Bridge'))
-saveButton.length(2)
-loadButton = optionPanel.addItem(viz.addButtonLabel('Load Bridge'))
-loadButton.length(2)
+saveButton = optionPanel.addItem(viz.addButtonLabel('Save Bridge'),align=viz.ALIGN_CENTER)
+saveButton.length(OPTIONS_BUTTON_LENGTH)
+loadButton = optionPanel.addItem(viz.addButtonLabel('Load Bridge'),align=viz.ALIGN_CENTER)
+loadButton.length(OPTIONS_BUTTON_LENGTH)
 optionPanel.addSection('    [ Application ]')
-soundButton = optionPanel.addItem(viz.addButtonLabel('Toggle Audio'))
-soundButton.length(2)
-resetButton = optionPanel.addItem(viz.addButtonLabel('Clear Bridge'))
-resetButton.length(2)
-quitButton = optionPanel.addItem(viz.addButtonLabel('Quit Application'))
-quitButton.length(2)
+soundButton = optionPanel.addItem(viz.addButtonLabel('Toggle Audio'),align=viz.ALIGN_CENTER)
+soundButton.length(OPTIONS_BUTTON_LENGTH)
+resetButton = optionPanel.addItem(viz.addButtonLabel('Clear Bridge'),align=viz.ALIGN_CENTER)
+resetButton.length(OPTIONS_BUTTON_LENGTH)
+quitButton = optionPanel.addItem(viz.addButtonLabel('Quit Application'),align=viz.ALIGN_CENTER)
+quitButton.length(OPTIONS_BUTTON_LENGTH)
 
 # TAB 4: Credits panel
 creditsPanel = vizinfo.InfoPanel(title=HEADER_TEXT,text='Credits',align=viz.ALIGN_CENTER_TOP,icon=False,key=None)
@@ -612,8 +614,6 @@ def initCanvas():
 	
 #	inspectorCanvas.setRenderWorldOverlay(RESOLUTION,fov=90.0,distance=3.0)
 	inspectorCanvas.setRenderWorld(RESOLUTION,[10,viz.AUTO_COMPUTE])
-#	inspectorCanvas.setPosition(0,0,2)
-#	inspectorCanvas.setEuler(0,0,0)
 	
 	utilityCanvas.setRenderWorld(UTILITY_CANVAS_RES,[1,viz.AUTO_COMPUTE])
 	utilityCanvas.setPosition(0,0,0)
@@ -640,7 +640,6 @@ def inspectMember(obj):
 								str(int(obj.getEuler()[2])) + ' deg')
 		inspectorCanvas.visible(True)
 	else:
-#		inspector.SetMessage(None)
 		inspectorCanvas.visible(False)
 
 def showFeedback():
@@ -996,6 +995,8 @@ def createTruss(order=Order(),path=''):
 	sensorB =  vizproximity.addBoundingSphereSensor(truss.proxyNodes[1])
 	truss.sensorNodes = [sensorA,sensorB]
 	
+	applyEnvironmentEffect(truss)	
+	
 	return truss
 
 
@@ -1094,6 +1095,11 @@ def createTrussNew(order=Order(),path='',loading=False):
 		
 		truss.isNewMember = True		
 		cycleMode(structures.Mode.Add)
+		
+		#--Set alpha to 1
+		truss.alpha(1)
+		truss.proxyNodes[0].alpha(1)
+		truss.proxyNodes[1].alpha(1)
 	else:
 		truss.isNewMember = False
 	
@@ -1203,7 +1209,6 @@ def generateMembers(loading=False):
 		proxyManager.addSensor(trussMember.sensorNodes[1])
 
 		BUILD_MEMBERS.append(trussMember)
-		applyEnvironmentEffect(trussMember)
 
 	# Clear ORDERS
 	ORDERS = []
@@ -1231,6 +1236,7 @@ def clearMembers():
 	except:
 		print 'clearMembers: Failed to remove highlightable items'
 	
+	highlightTool.setItems([])
 	proxyManager.clearTargets()
 			
 	for node in PROXY_NODES:
@@ -1337,6 +1343,11 @@ def toggleMembers(side=True,sideClones=True,top=True,bottom=True):
 			member.visible(bottom)
 			member.nodeA.visible(bottom)
 			member.nodeB.visible(bottom)
+		#--Turn all alpha values to 1 for full visibility
+		for members in BUILD_MEMBERS:
+			members.alpha(1)
+		for nodes in PROXY_NODES:
+			nodes.alpha(1)
 
 
 def toggleHighlightables(val=True):
@@ -1758,6 +1769,9 @@ def cycleOrientation(val):
 	global grabbedItem
 	global grid_root
 	
+	#--Force clear highlight
+	highlightTool.clear()
+
 	if MODE is structures.Mode.View or MODE is structures.Mode.Walk:
 		return
 	
@@ -1768,14 +1782,9 @@ def cycleOrientation(val):
 	rot = []
 
 	resetSensors()
+	highlightables = []	#--Define highlightables
+	highlightTool.setItems([])
 	
-	#--Force clear highlight
-	highlightTool.clear()
-	
-	for member in SIDE_CLONES:
-		member.visible(False)
-		member.nodeA.visible(False)
-		member.nodeB.visible(False)
 	for model in supports:
 		model.alpha(SUPPORT_ALPHA)	
 		
@@ -1785,12 +1794,22 @@ def cycleOrientation(val):
 		pos = TOP_VIEW_POS
 		pos[2] = TOP_CACHED_Z
 		
+		for member in SIDE_CLONES:
+			member.visible(True)
+			member.nodeA.visible(True)
+			member.nodeB.visible(True)
+			member.alpha(INACTIVE_ALPHA)
+			member.nodeA.alpha(INACTIVE_ALPHA)
+			member.nodeB.alpha(INACTIVE_ALPHA)
 		for member in SIDE_MEMBERS:
-			member.visible(False)
+			member.visible(True)
 			proxyManager.addSensor(member.sensorNodes[0])
 			proxyManager.addSensor(member.sensorNodes[1])
-			member.proxyNodes[0].visible(False)
-			member.proxyNodes[1].visible(False)
+			member.proxyNodes[0].visible(True)
+			member.proxyNodes[1].visible(True)
+			member.alpha(INACTIVE_ALPHA)
+			member.proxyNodes[0].alpha(INACTIVE_ALPHA)
+			member.proxyNodes[1].alpha(INACTIVE_ALPHA)			
 		for member in BOT_MEMBERS:
 			member.visible(False)
 			proxyManager.removeSensor(member.sensorNodes[0])
@@ -1802,19 +1821,37 @@ def cycleOrientation(val):
 			proxyManager.addSensor(member.sensorNodes[0])
 			proxyManager.addSensor(member.sensorNodes[1])
 			member.proxyNodes[0].visible(True)
-			member.proxyNodes[1].visible(True)			
+			member.proxyNodes[1].visible(True)
+			member.alpha(1)
+			member.proxyNodes[0].alpha(1)
+			member.proxyNodes[1].alpha(1)			
+			#--Add to highlight
+			highlightables.append(member)
+			highlightables.append(member.proxyNodes[0])
+			highlightables.append(member.proxyNodes[1])
 		grid_root.setInfoMessage(VIEW_MESSAGE)
 	elif val == structures.Orientation.Bottom:
 		rot = BOT_VIEW_ROT
 		pos = BOT_VIEW_POS
 		pos[2] = BOT_CACHED_Z
 		
+		for member in SIDE_CLONES:
+			member.visible(True)
+			member.nodeA.visible(True)
+			member.nodeB.visible(True)
+			member.alpha(INACTIVE_ALPHA)
+			member.nodeA.alpha(INACTIVE_ALPHA)
+			member.nodeB.alpha(INACTIVE_ALPHA)		
 		for member in SIDE_MEMBERS:
-			member.visible(False)
+			member.visible(True)
 			proxyManager.addSensor(member.sensorNodes[0])
 			proxyManager.addSensor(member.sensorNodes[1])
-			member.proxyNodes[0].visible(False)
-			member.proxyNodes[1].visible(False)
+			member.proxyNodes[0].visible(True)
+			member.proxyNodes[1].visible(True)
+			#--Lower opacity of guide truss members
+			member.alpha(INACTIVE_ALPHA)
+			member.proxyNodes[0].alpha(INACTIVE_ALPHA)
+			member.proxyNodes[1].alpha(INACTIVE_ALPHA)				
 		for member in TOP_MEMBERS:
 			member.visible(False)
 			proxyManager.removeSensor(member.sensorNodes[0])
@@ -1826,18 +1863,37 @@ def cycleOrientation(val):
 			proxyManager.addSensor(member.sensorNodes[0])
 			proxyManager.addSensor(member.sensorNodes[1])
 			member.proxyNodes[0].visible(True)
-			member.proxyNodes[1].visible(True)
+			member.proxyNodes[1].visible(True)	
+			member.alpha(1)
+			member.proxyNodes[0].alpha(1)
+			member.proxyNodes[1].alpha(1)			
+			#--Add to highlight
+			highlightables.append(member)
+			highlightables.append(member.proxyNodes[0])
+			highlightables.append(member.proxyNodes[1])
 		grid_root.setInfoMessage(VIEW_MESSAGE)
 	else:
 		rot = SIDE_VIEW_ROT
 		pos = BRIDGE_ROOT_POS
 		
+		for member in SIDE_CLONES:
+			member.visible(False)
+			member.nodeA.visible(False)
+			member.nodeB.visible(False)			
 		for member in SIDE_MEMBERS:
 			member.visible(True)
 			proxyManager.addSensor(member.sensorNodes[0])
 			proxyManager.addSensor(member.sensorNodes[1])
 			member.proxyNodes[0].visible(True)
-			member.proxyNodes[1].visible(True)
+			member.proxyNodes[1].visible(True)	
+			#--Set opacity of side truss to 1
+			member.alpha(1)
+			member.proxyNodes[0].alpha(1)
+			member.proxyNodes[1].alpha(1)				
+			#--Add to highlight
+			highlightables.append(member)
+			highlightables.append(member.proxyNodes[0])
+			highlightables.append(member.proxyNodes[1])			
 		for member in TOP_MEMBERS:
 			member.visible(False)
 			proxyManager.removeSensor(member.sensorNodes[0])
@@ -1850,9 +1906,14 @@ def cycleOrientation(val):
 			proxyManager.removeSensor(member.sensorNodes[1])
 			member.proxyNodes[0].visible(False)
 			member.proxyNodes[1].visible(False)
-		grid_root.setInfoMessage(VIEW_MESSAGE)
+		grid_root.setInfoMessage(SIDE_VIEW_MESSAGE)
+	
+	#--Set new position and rotation
 	bridge_root.getGroup().setEuler(rot)
 	bridge_root.getGroup().setPosition(pos)
+	
+	#--Set new highlights
+	highlightTool.setItems(highlightables)
 	
 	# Show feedback
 	runFeedbackTask(str(ORIENTATION.name) + ' View')
@@ -1869,6 +1930,9 @@ def cycleMode(mode=structures.Mode.Add):
 	global highlightTool
 	global highlightedItem
 	
+	#--Force clear highlight
+	highlightTool.clear()
+	
 	if isrotating: 
 		return
 	if MODE == structures.Mode.Add and grabbedItem is not None:
@@ -1877,9 +1941,6 @@ def cycleMode(mode=structures.Mode.Add):
 		return
 	
 	toggleUtility(False)
-	
-	#--Force clear highlight
-	highlightTool.clear()
 	
 	MODE = mode
 	
@@ -2051,7 +2112,7 @@ def onKeyUp(key):
 		runFeedbackTask('View reset!')
 		viewChangeSound.play()
 	elif key == ',':
-		print navigator.getPosition()
+		getAvatarOrientation(navigator)
 	elif key == KEYS['env'] or key == KEYS['env'].upper():
 		toggleEnvironment()	
 	elif key == KEYS['reset'] or key == KEYS['reset'].upper():
@@ -2107,8 +2168,8 @@ def onJoyButton(e):
 			toggleUtility(False)
 		elif menuCanvas.getVisible() is True:
 			toggleMenu(False)
-		else:
-			quitGame()
+#		else:
+#			quitGame()
 	elif e.button == ',':
 		print navigator.getPosition()
 	elif e.button == KEYS['env']:
@@ -2628,7 +2689,7 @@ def MainTask():
 			navigator = navigation.Joyculus()
 			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['mode'],cycleMode,vizact.choice([structures.Mode.Build,structures.Mode.Edit]))
 			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['orient'],cycleOrientation,vizact.choice([structures.Orientation.Top,structures.Orientation.Bottom,structures.Orientation.Side]))
-			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['angles'],cycleView,vizact.choice([0,1,2]))	
+			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['angles'],cycleView,vizact.choice([0,1,2,3]))	
 			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['road'],toggleRoad,road_M)
 			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['stereo'],toggleStereo,vizact.choice([False,True]))		
 			viz.callback( navigation.getExtension().HAT_EVENT, onHatChange )
@@ -2638,7 +2699,7 @@ def MainTask():
 			navigator = navigation.Joystick()
 			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['mode'],cycleMode,vizact.choice([structures.Mode.Build,structures.Mode.Edit]))
 			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['orient'],cycleOrientation,vizact.choice([structures.Orientation.Top,structures.Orientation.Bottom,structures.Orientation.Side]))
-			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['angles'],cycleView,vizact.choice([0,1,2]))			
+			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['angles'],cycleView,vizact.choice([0,1,2,3]))			
 			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['road'],toggleRoad,road_M)			
 			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['stereo'],toggleStereo,vizact.choice([False,True]))		
 			viz.callback( navigation.getExtension().HAT_EVENT, onHatChange )
@@ -2649,7 +2710,7 @@ def MainTask():
 			vizact.onkeyup( navigator.KEYS['mode'],cycleMode,vizact.choice([structures.Mode.Build,structures.Mode.Edit]))
 			vizact.onkeyup( navigator.KEYS['orient'],cycleOrientation,vizact.choice([structures.Orientation.Top,structures.Orientation.Bottom,structures.Orientation.Side]))
 			vizact.onkeyup( navigator.KEYS['stereo'],toggleStereo,vizact.choice([False,True]))
-			vizact.onkeyup( navigator.KEYS['angles'],cycleView,vizact.choice([0,1,2]))
+			vizact.onkeyup( navigator.KEYS['angles'],cycleView,vizact.choice([0,1,2,3]))
 			vizact.whilekeydown( navigator.KEYS['slideNear'],slideRoot,-SLIDE_INTERVAL )		
 			vizact.whilekeydown( navigator.KEYS['slideFar'],slideRoot,SLIDE_INTERVAL )	
 			navigator.setAsMain()
@@ -2657,7 +2718,7 @@ def MainTask():
 			navigator = navigation.KeyboardMouse()
 			vizact.onkeyup( navigator.KEYS['mode'],cycleMode,vizact.choice([structures.Mode.Build,structures.Mode.Edit]))
 			vizact.onkeyup( navigator.KEYS['orient'],cycleOrientation,vizact.choice([structures.Orientation.Top,structures.Orientation.Bottom,structures.Orientation.Side]))
-			vizact.onkeyup( navigator.KEYS['angles'],cycleView,vizact.choice([0,1,2]) )
+			vizact.onkeyup( navigator.KEYS['angles'],cycleView,vizact.choice([0,1,2,3]) )
 			vizact.onkeyup( navigator.KEYS['stereo'],toggleStereo,vizact.choice([False,True]))
 			vizact.whilekeydown( navigator.KEYS['slideNear'],slideRoot,-SLIDE_INTERVAL)		
 			vizact.whilekeydown( navigator.KEYS['slideFar'],slideRoot,SLIDE_INTERVAL)
@@ -2684,13 +2745,12 @@ def MainTask():
 		
 		inventoryLink = viz.link(navigator.VIEW,inventoryCanvas)
 #		inventoryLink.setMask(viz.LINK_POS)
-		inventoryLink.postTrans([0,-1,.5])
+		inventoryLink.postTrans([0,-.75,.5])
 		inventoryLink.preEuler([0,30,0])		
 
 		global CACHED_MODE
 		CACHED_MODE = structures.Mode.View
-		cycleMode(structures.Mode.View)		
-#		cycleMode(Mode.Build)
+		cycleMode(CACHED_MODE)		
 
 		#--Show initial info message
 		info_root.showInfoMessage(INITIAL_MESSAGE)
