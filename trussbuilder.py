@@ -1,18 +1,18 @@
 ﻿"""
-[ Objective ]			Order truss members required to build a 20m bridge across the Singapore River
+[ Objective ]------------------Order truss members required to build a 20m bridge across the Singapore River
 
 [ Controls ]
 
 [ General ]
-[ JOYBUTTON2 ]			Toggle Main Menu
-[ MIDDLE MOUSE CLICK ]	Toggle Utility Menu
-[ JOYCURSOR LEFT/RIGHT]	Cycle between menu tabs
-[ ESC KEY ]		     	Close Menu / Quit Application
+[ JOYBUTTON2 ]--------------------Toggle Main Menu
+[ MIDDLE MOUSE CLICK ]--------Toggle Utility Menu
+[ JOYCURSOR LEFT/RIGHT ]---Cycle between menu tabs
+[ ESC KEY ]--------------------------Close Menu / Quit Application
 
 [ Movement ]
-[ VR HEADSET ]			Look around
-[ JOYSTICK ]        	Navigate
-[ JOYBUTTON 5/3 ]		Lower/Raise elevation
+[ VR HEADSET ]-----------Look around
+[ JOYSTICK ]-------------Navigate
+[ JOYBUTTON 5/3 ]--------Lower/Raise elevation
 
 [ Build | Edit ]
 [ JOYBUTTON6 ]			Cycle between Edit and Build Modes
@@ -106,7 +106,7 @@ MENU_RES = ([1000,750])
 MENU_POS = ([0,18,-8])
 INSPECTOR_POS_OFFSET = ( [0,0,2] )
 INSPECTOR_ROT_OFFSET = ( [] )
-HEADER_TEXT = 'Truss Bridge Builder & Visualizer'
+HEADER_TEXT = 'Truss Bridge Builder & Visualiser'
 INVENTORY_MESSAGE = 'Order truss members from the catalogue and manage'
 DESIGNERS_TEXT = '   Dave\n   Tracy'
 PROGRAMMERS_TEXT = '   Justin'
@@ -220,7 +220,7 @@ def initScene(res=RESOLUTION,quality=4,fov=FOV,stencil=8,stereoMode=viz.STEREO_H
 	viz.setOption('viz.dwm_composition',viz.OFF)
 	viz.setOption('viz.model.optimize', 1)
 	viz.setOption('viz.publish.allow_capture_video', 1)	# Allow capturing videos in published EXE 
-	viz.window.setName( 'Virtual Truss Bridge Builder & Visualizer' ) 
+	viz.window.setName( 'Virtual Truss Bridge Builder & Visualiser' ) 
 	viz.window.setBorder( viz.BORDER_FIXED )
 	viz.clearcolor(clearColor)
 	darkTheme = themes.getDarkTheme()
@@ -669,6 +669,8 @@ def showdialog(message,func):
 	menuCanvas.setMouseStyle(viz.CANVAS_MOUSE_VISIBLE)
 	inventoryCanvas.setMouseStyle(viz.CANVAS_MOUSE_VISIBLE)
 	
+	global dialog
+	dialog.remove()
 	# Re-adjust resolution	
 	dialog = vizdlg.MessageDialog(message=message, title='Warning', accept='Yes (Enter)', cancel='No (Esc)',parent=dialogCanvas)
 	dialog.setScreenAlignment(viz.ALIGN_CENTER)
@@ -1857,10 +1859,12 @@ def cycleOrientation(val):
 	clickSound.play()
 	grid_root.setOrientationMessage(str(ORIENTATION.name) + ' View')
 
-CACHED_BUILD_MODE = None
+CACHED_MODE = None
+CACHED_BUILD_MODE = structures.Mode.Build
 def cycleMode(mode=structures.Mode.Add):
 	global SHOW_HIGHLIGHTER
 	global MODE
+	global CACHED_MODE
 	global CACHED_BUILD_MODE
 	global highlightTool
 	global highlightedItem
@@ -1904,6 +1908,13 @@ def cycleMode(mode=structures.Mode.Add):
 		highlightTool.removeItems(PROXY_NODES)
 		highlightTool.setItems([])
 		
+		#--If cached mode is View or Walk, reset to build position
+		if CACHED_MODE is structures.Mode.View or CACHED_MODE is structures.Mode.Walk:
+			navigator.setPosition(START_POS)
+			navigator.setEuler([0,0,0])
+		
+		navigator.setNavAbility()
+		
 		cycleOrientation(ORIENTATION)
 		
 	elif MODE == structures.Mode.Edit:
@@ -1923,6 +1934,13 @@ def cycleMode(mode=structures.Mode.Add):
 		highlightTool.setItems(highlightables)
 		SHOW_HIGHLIGHTER = True
 		
+		#--If cached mode is View or Walk, reset to build position
+		if CACHED_MODE is structures.Mode.View or CACHED_MODE is structures.Mode.Walk:
+			navigator.setPosition(START_POS)
+			navigator.setEuler([0,0,0])		
+		
+		navigator.setNavAbility()
+		
 		cycleOrientation(ORIENTATION)
 		
 	elif MODE == structures.Mode.Add:
@@ -1941,6 +1959,7 @@ def cycleMode(mode=structures.Mode.Add):
 		proxyManager.setDebug(False)
 		bridge_root.getGroup().setPosition(BRIDGE_ROOT_POS)
 		bridge_root.getGroup().setEuler(SIDE_VIEW_ROT)
+		navigator.setNavAbility()
 		
 		# Show all truss members
 		toggleMembers()
@@ -1967,6 +1986,7 @@ def cycleMode(mode=structures.Mode.Add):
 		bridge_root.getGroup().setEuler(SIDE_VIEW_ROT)
 		navigator.setPosition(WALK_POS)
 		navigator.setEuler(WALK_ROT)
+		navigator.setNavAbility(elevate=False)
 		
 		# Show all truss members
 		toggleMembers()
@@ -1982,6 +2002,9 @@ def cycleMode(mode=structures.Mode.Add):
 		# Hide supports
 		for model in supports:
 			model.alpha(0)
+	
+	#--Store new mode in cache
+	CACHED_MODE = MODE
 	
 	# UI/Sound feedback
 	runFeedbackTask(str(MODE.name) + ' Mode')
@@ -2004,6 +2027,7 @@ def cycleView(index):
 		
 	navigator.setPosition(targetPos)
 	navigator.setEuler(targetRot)
+	navigator.setNavAbility(False,False)
 	
 	# Feedback
 	runFeedbackTask('View ' + str(index))
@@ -2027,7 +2051,6 @@ def onKeyUp(key):
 		runFeedbackTask('View reset!')
 		viewChangeSound.play()
 	elif key == ',':
-#		print viz.MainView.getPosition()
 		print navigator.getPosition()
 	elif key == KEYS['env'] or key == KEYS['env'].upper():
 		toggleEnvironment()	
@@ -2233,9 +2256,6 @@ def onMouseDown(button):
 	global rotateLinkA
 	global rotateLinkB
 	global objToRotate
-	global midPoint
-	global upperPoint
-	global lowerPoint
 	
 	if button == KEYS['interact']:
 #		print 'MouseDown: IsGrabbing is',isgrabbing
@@ -2399,11 +2419,11 @@ def SaveData():
 	# Play MUTE
 	clickSound.play()
 	
-	filePath = vizinput.fileSave(file='bridge01.csv',filter=[('CSV Files','*.csv')],directory='/data/saves')		
+	filePath = vizinput.fileSave(file='bridge01.csv',filter=[('CSV Files','*.csv')],directory='./data/saves')		
 	if filePath == '':
 		return
 	
-	currentOrientation = ORIENTATION
+	cachedOrientation = ORIENTATION
 	cycleOrientation(structures.Orientation.Side)
 	
 	with open(filePath,'wb') as f:
@@ -2414,7 +2434,7 @@ def SaveData():
 							str(truss.getEuler()[0]),str(truss.getEuler()[1]),str(truss.getEuler()[2]),
 							int(truss.orientation.value)])
 	
-	cycleOrientation(currentOrientation)
+	cycleOrientation(cachedOrientation)
 	
 	# Save successful feedback
 	runFeedbackTask('Save success!')
@@ -2438,9 +2458,9 @@ def LoadData():
 
 	clearMembers()
 	
-	currentOrientation = ORIENTATION
+	cachedOrientation = ORIENTATION
 	cycleOrientation(structures.Orientation.Side)
-	currentMode = MODE
+	cachedMode = MODE
 	
 	ORDERS = []
 	with open(filePath,'rb') as f:
@@ -2470,8 +2490,8 @@ def LoadData():
 		truss.link = link
 		GRAB_LINKS.append(link)
 		
-	cycleOrientation(currentOrientation)
-	cycleMode(currentMode)
+	cycleOrientation(cachedOrientation)
+	cycleMode(cachedMode)
 	
 	# Show load feedback
 	runFeedbackTask('Load success!')
@@ -2667,6 +2687,8 @@ def MainTask():
 		inventoryLink.postTrans([0,-1,.5])
 		inventoryLink.preEuler([0,30,0])		
 
+		global CACHED_MODE
+		CACHED_MODE = structures.Mode.View
 		cycleMode(structures.Mode.View)		
 #		cycleMode(Mode.Build)
 
