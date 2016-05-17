@@ -363,14 +363,14 @@ def applyEnvironmentEffect(obj):
 	obj.appearance(viz.ENVIRONMENT_MAP)	
 
 #--Create middle road
-road = viz.addChild('resources/road_final.osgb',cache=viz.CACHE_CLONE,pos=(0,5.38086,0),parent=environment_root.getGroup())
+road = viz.addChild('resources/road.osgb',cache=viz.CACHE_CLONE,pos=(0,5.38086,0),parent=environment_root.getGroup())
 road.visible(False)
 #applyEnvironmentEffect(road)
 
 
 # Bridge pin and roller supports
-pinSupport = viz.addChild('resources/pinSupport.osgb',pos=(-9.5,4,0),scale=[1,1,11])
-rollerSupport = viz.addChild('resources/rollerSupport.osgb',pos=(9.5,4,0),scale=[1,1,11])
+pinSupport = viz.addChild('resources/support_pin.osgb',pos=(-9.5,4,0),scale=[1,1,11])
+rollerSupport = viz.addChild('resources/support_roller.osgb',pos=(9.5,4,0),scale=[1,1,11])
 supports = [pinSupport,rollerSupport]
 
 #Setup anchor points for truss members
