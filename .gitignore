@@ -25,8 +25,7 @@ $RECYCLE.BIN/
 # =========================
 # Vizard Project Folders
 # =========================
-[Rr]esources/walkway_final.osgb
-[Rr]esources/walkway_prefinal.osgb
+/[Rr]esources
 
 # =========================
 # Operating System Files
