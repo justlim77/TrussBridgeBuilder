@@ -557,8 +557,8 @@ row = rotationPanel.addRow([rotationSlider,rotationLabel])
 
 # Menu Canvas
 menuCanvas = viz.addGUICanvas(align=viz.ALIGN_CENTER_TOP)
-controlsQuad = viz.addTexQuad(size=[512,512],parent=menuCanvas)
-controlsPic = viz.addTexture('resources/gui/joystick_mapping_truss.jpg',parent=controlsQuad)
+controlsQuad = viz.addTexQuad(size=[1024,512],parent=menuCanvas)
+controlsPic = viz.addTexture('resources/gui/merged_mapping_truss.png',parent=controlsQuad)
 controlsQuad.texture(controlsPic)
 
 # Add tabbed panels to main menu canvas
@@ -1326,6 +1326,9 @@ def toggleMembers(side=True,sideClones=True,top=True,bottom=True):
 			member.visible(sideClones)
 			member.nodeA.visible(sideClones)
 			member.nodeB.visible(sideClones)
+			member.alpha(1)
+			member.nodeA.alpha(1)
+			member.nodeB.alpha(1)			
 		for member in TOP_MEMBERS:
 			member.visible(top)
 			member.nodeA.visible(top)
@@ -1760,6 +1763,8 @@ def cloneSide(truss):
 	clone.setPosition(pos)
 	clone.setEuler(rot)
 	
+	truss.clonedSide = clone
+	
 	#--Create spherical connectors
 	posA = truss.proxyNodes[0].getPosition()
 	posA[2] = pos[2]
@@ -1791,9 +1796,10 @@ def toggleRoad(road):
 	if len(BOT_MEMBERS) is not 0:
 		message = ''
 		if road_M.getVisible() is True:
-			message = 'Road exists'
+			message = 'Road removed'
+			road.visible(False)
 		else:
-			message = 'Added road!'
+			message = 'Road added'
 			road.visible(True)
 		runFeedbackTask(message)
 	else:

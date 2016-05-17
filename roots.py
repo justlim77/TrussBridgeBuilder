@@ -50,30 +50,39 @@ class GridRoot(Root):
 		self._grid_right.setEuler(0,0,-90)
 		self._grid_right.setParent(self._root)
 		
+#		# Floating controls
+#		self._controlsQuad = viz.addTexQuad(size=[20,20])
+#		controlsPic = viz.addTexture('resources/gui/merged_mapping_truss.png',parent=self._controlsQuad)
+#		self._controlsQuad.texture(controlsPic)		
+#		self._grid_bottom.setPosition(0,0.1,-30)
+#		self._controlsQuad.setEuler(0,90,0)
+#		self._controlsQuad.setParent(self._root)
+##		self._controlsQuad.disable(viz.LIGHTING)
+		
 		# Create floating measurements
-		self._span_text = viz.addText3D('<< 20 meters >>',pos=[0,11,-5],scale=[1,1,1],parent=self._root,align=viz.ALIGN_CENTER)
-		self._span_text_shadow = viz.addText3D('<< 20 meters >>',parent=self._span_text,align=viz.ALIGN_CENTER)
+		self._span_text = viz.addText3D('< 20 meters >',pos=[0,11,-5],scale=[1,1,1],parent=self._root,align=viz.ALIGN_CENTER)
+		self._span_text_shadow = viz.addText3D('< 20 meters >',parent=self._span_text,align=viz.ALIGN_CENTER)
 		self._span_text_shadow.setPosition([0,0,0.2])
 		self._span_text_shadow.color(shadowColor)
 		self._span_text_shadow.alpha(0.75)	
 		
-		self._height_text = viz.addText3D('<< 10 meters >>',pos=[-11,5,-5],scale=[1,1,1],euler=[0,0,90],parent=self._root,align=viz.ALIGN_CENTER)
-		self._height_text_shadow = viz.addText3D('<< 10 meters >>',parent=self._height_text,align=viz.ALIGN_CENTER)
+		self._height_text = viz.addText3D('< 10 meters >',pos=[-11,5,-5],scale=[1,1,1],euler=[0,0,90],parent=self._root,align=viz.ALIGN_CENTER)
+		self._height_text_shadow = viz.addText3D('< 10 meters >',parent=self._height_text,align=viz.ALIGN_CENTER)
 		self._height_text_shadow.setPosition([0,0,0.2])
 		self._height_text_shadow.color(shadowColor)
 		self._height_text_shadow.alpha(0.75)	
 		
 		#--Create orientation info text
-		self._orientation_text = viz.addText3D('<< View >>',pos=[0,13.5,-5],scale=(2,2,.5),parent=self._root,align=viz.ALIGN_CENTER)
+		self._orientation_text = viz.addText3D('< View >',pos=[0,13.5,-5],scale=(2,2,.5),parent=self._root,align=viz.ALIGN_CENTER)
 		self._orientation_text.color(textColor)
-		self._orientation_text_shadow = viz.addText3D('<< View >>',parent=self._orientation_text,align=viz.ALIGN_CENTER)
+		self._orientation_text_shadow = viz.addText3D('< View >',parent=self._orientation_text,align=viz.ALIGN_CENTER)
 		self._orientation_text_shadow.setPosition([0,0,0.2])
 		self._orientation_text_shadow.color(shadowColor)
 		self._orientation_text_shadow.alpha(0.75)
 		
-		self._info_text = viz.addText3D('<< Info >>',pos=[0,12,-5],scale=(.5,.5,.5),parent=self._root,align=viz.ALIGN_CENTER)
+		self._info_text = viz.addText3D('< Info >',pos=[0,12,-5],scale=(.5,.5,.5),parent=self._root,align=viz.ALIGN_CENTER)
 		self._info_text.color(textColor)
-		self._info_text_shadow = viz.addText3D('<< Info >>',parent=self._info_text,align=viz.ALIGN_CENTER)
+		self._info_text_shadow = viz.addText3D('< Info >',parent=self._info_text,align=viz.ALIGN_CENTER)
 		self._info_text_shadow.setPosition([0,0,0.2])
 		self._info_text_shadow.color(shadowColor)
 		self._info_text_shadow.alpha(0.75)
