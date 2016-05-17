@@ -32,8 +32,10 @@ FEEDBACK_MESSAGE = """<FEEDBACK>"""
 INITIAL_MESSAGE = """[ To begin building, switch to Build Mode ]
 [ JOYBUTTON6 ]"""
 
-VIEW_MESSAGE = """[ JOYHATDOWN | JOYHATUP ] Slide bridge towards or away"""
-SIDE_VIEW_MESSAGE = """[  JOYBUTTON4  ] Cycle between side, top, and bottom""" 
+VIEW_MESSAGE = """[  JOYBUTTON2  ] Toggle Main Menu
+[ JOYHATDOWN | JOYHATUP ] Slide bridge towards or away"""
+SIDE_VIEW_MESSAGE = """[  JOYBUTTON2  ] Toggle Main Menu
+[  JOYBUTTON4  ] Cycle between side, top, and bottom""" 
 MODE_MESSAGE = """<MODE>"""
 
 LOAD_MESSAGE = """Any unsaved progress will be lost! 
@@ -290,7 +292,8 @@ def initLighting():
 	for window in viz.getWindowList():
 		window.getView().getHeadLight().disable()
 	# Create directional light
-	sky_light = viz.addDirectionalLight(euler=(0,45,0),color=[0.8,0.8,0.8])
+	sky_light = viz.addDirectionalLight(euler=(30,45,0),color=[0.8,0.8,0.8])
+	sky_light2 = viz.addDirectionalLight(euler=(-30,45,0),color=[0.8,0.8,0.8])	
 #	light1 = vizfx.addDirectionalLight(euler=(40,20,0), color=[0.7,0.7,0.7])
 #	light2 = vizfx.addDirectionalLight(euler=(-65,15,0), color=[0.5,0.25,0.0])
 #	sky_light.color(viz.WHITE)
@@ -360,9 +363,9 @@ def applyEnvironmentEffect(obj):
 	obj.appearance(viz.ENVIRONMENT_MAP)	
 
 #--Create middle road
-road_M = viz.addChild('resources/road.osgb',cache=viz.CACHE_CLONE,pos=(0,5,0),parent=environment_root.getGroup())
-road_M.visible(False)
-applyEnvironmentEffect(road_M)
+road = viz.addChild('resources/road_final.osgb',cache=viz.CACHE_CLONE,pos=(0,5.38086,0),parent=environment_root.getGroup())
+road.visible(False)
+#applyEnvironmentEffect(road)
 
 
 # Bridge pin and roller supports
@@ -621,7 +624,8 @@ def initCanvas():
 	rotationCanvas.visible(False)
 initCanvas()
 
-menuTabPanel.selectPanel(2)
+#--Start at inventory tab
+#menuTabPanel.selectPanel(2)
 
 def inspectMember(obj):
 	if obj is not None:			
@@ -1275,6 +1279,9 @@ def clearMembers():
 		link = None
 	GRAB_LINKS = []
 	
+	#--Clear road
+	toggleRoad(road)
+	
 	# Show feedback
 	runFeedbackTask('Bridge cleared!')
 	hideMenuSound.play()
@@ -1795,7 +1802,7 @@ def cloneSide(truss):
 def toggleRoad(road):
 	if len(BOT_MEMBERS) is not 0:
 		message = ''
-		if road_M.getVisible() is True:
+		if road.getVisible() is True:
 			message = 'Road removed'
 			road.visible(False)
 		else:
@@ -2250,7 +2257,7 @@ def onKeyUp(key):
 	elif key == KEYS['showMenu']:
 		toggleMenu()
 	elif key == KEYS['road']:
-		toggleRoad(road_M)
+		toggleRoad(road)
 		clickSound.play()
 	elif key == KEYS['angles']:
 		pass
@@ -2798,7 +2805,7 @@ def MainTask():
 			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['mode'],cycleMode,vizact.choice([structures.Mode.Build,structures.Mode.Edit]))
 			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['orient'],cycleOrientation,vizact.choice([structures.Orientation.Top,structures.Orientation.Bottom,structures.Orientation.Side]))
 			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['angles'],cycleView,vizact.choice([0,1,2,3]))	
-			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['road'],toggleRoad,road_M)
+			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['road'],toggleRoad,road)
 			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['stereo'],toggleStereo,vizact.choice([False,True]))		
 			viz.callback( navigation.getExtension().HAT_EVENT, onHatChange )
 			vizact.ontimer( 0,slideRootHat )	
@@ -2808,7 +2815,7 @@ def MainTask():
 			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['mode'],cycleMode,vizact.choice([structures.Mode.Build,structures.Mode.Edit]))
 			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['orient'],cycleOrientation,vizact.choice([structures.Orientation.Top,structures.Orientation.Bottom,structures.Orientation.Side]))
 			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['angles'],cycleView,vizact.choice([0,1,2,3]))			
-			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['road'],toggleRoad,road_M)			
+			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['road'],toggleRoad,road)			
 			vizact.onsensorup( navigator.getSensor(), navigator.KEYS['stereo'],toggleStereo,vizact.choice([False,True]))		
 			viz.callback( navigation.getExtension().HAT_EVENT, onHatChange )
 			vizact.ontimer( 0,slideRootHat )				

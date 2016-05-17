@@ -73,14 +73,14 @@ class GridRoot(Root):
 		self._height_text_shadow.alpha(0.75)	
 		
 		#--Create orientation info text
-		self._orientation_text = viz.addText3D('< View >',pos=[0,13.5,-5],scale=(2,2,.5),parent=self._root,align=viz.ALIGN_CENTER)
+		self._orientation_text = viz.addText3D('< View >',pos=[0,14,-5],scale=(2,2,.5),parent=self._root,align=viz.ALIGN_CENTER)
 		self._orientation_text.color(textColor)
 		self._orientation_text_shadow = viz.addText3D('< View >',parent=self._orientation_text,align=viz.ALIGN_CENTER)
 		self._orientation_text_shadow.setPosition([0,0,0.2])
 		self._orientation_text_shadow.color(shadowColor)
 		self._orientation_text_shadow.alpha(0.75)
 		
-		self._info_text = viz.addText3D('< Info >',pos=[0,12,-5],scale=(.5,.5,.5),parent=self._root,align=viz.ALIGN_CENTER)
+		self._info_text = viz.addText3D('< Info >',pos=[0,12.25,-5],scale=(.5,.5,.5),parent=self._root,align=viz.ALIGN_CENTER)
 		self._info_text.color(textColor)
 		self._info_text_shadow = viz.addText3D('< Info >',parent=self._info_text,align=viz.ALIGN_CENTER)
 		self._info_text_shadow.setPosition([0,0,0.2])
@@ -122,9 +122,9 @@ class EnvironmentRoot(Root):
 		self._environment = viz.add('resources/environment.osgb',parent=self._root)
 		self._environment.renderToBackground()
 		self._waveGroup = viz.addGroup(parent=self._root)
-		self._wave_M = viz.addChild('resources/wave.osgb',cache=viz.CACHE_CLONE,pos=([0,2,0]),parent=self._waveGroup)
-		self._wave_B = viz.addChild('resources/wave.osgb',cache=viz.CACHE_CLONE,pos=([0,2,-50]),parent=self._waveGroup)
-		self._newWalkway = viz.addChild('resources/newWalkway.osgb',parent=self._root)	
+		self._wave_M = viz.addChild('resources/wave.osgb',cache=viz.CACHE_CLONE,pos=([0,1.5,0]),parent=self._waveGroup)
+		self._wave_B = viz.addChild('resources/wave.osgb',cache=viz.CACHE_CLONE,pos=([0,1.5,-50]),parent=self._waveGroup)
+		self._newWalkway = viz.addChild('resources/walkway_final.osgb',parent=self._root)	
 		
 	def getWaveGroup(self):
 		return self._waveGroup
