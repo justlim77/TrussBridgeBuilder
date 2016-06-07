@@ -1,4 +1,13 @@
-﻿from enum import Enum
+﻿from datetime import datetime
+from pyInstall import installIfNeeded
+
+def log(message):
+    print(datetime.now().strftime("%a %b %d %H:%M:%S") + " - " + str(message))
+
+# Enum34 is actually named enum on pip.
+installIfNeeded("Enum", "enum34", log = log)
+
+from enum import Enum
 
 class Orientation(Enum):
 	Side=1

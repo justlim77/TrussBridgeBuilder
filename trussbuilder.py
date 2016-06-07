@@ -363,9 +363,10 @@ def applyEnvironmentEffect(obj):
 	obj.appearance(viz.ENVIRONMENT_MAP)	
 
 #--Create middle road
-road = viz.addChild('resources/road.osgb',cache=viz.CACHE_CLONE,pos=(0,5.38086,0),parent=environment_root.getGroup())
+road = viz.addChild('resources/road.osgb',pos=(0,5.38086,0),parent=environment_root.getGroup())
 road.visible(False)
 #applyEnvironmentEffect(road)
+
 
 
 # Bridge pin and roller supports

@@ -168,7 +168,7 @@ if __name__ == '__main__':
 	ORIGIN = [0,5,-17]
 	
 	gridRoot = GridRoot()
-	viz.MainView.setPosition(ORIGIN)
+	viz.MainView.setPosition(ORIGIN)	
 	
 #	bridgeRoot = BridgeRoot()
 #	environment_root = EnvironmentRoot()
