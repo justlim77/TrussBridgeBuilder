@@ -223,6 +223,7 @@ KEYS = { 'forward'	: 'w'
 
 # Initialize scene
 def initScene(res=RESOLUTION,quality=4,fov=FOV,stencil=8,stereoMode=viz.STEREO_HORZ,fullscreen=viz.FULLSCREEN,clearColor=viz.BLACK):
+	viz.setOption('viz.splashscreen', './resources/splash/splash.jpg')
 	viz.window.setSize(res)
 	viz.setMultiSample(quality)
 	viz.fov(fov)
@@ -481,7 +482,7 @@ inventoryPanel.addItem(bottomRow)
 optionPanel = vizinfo.InfoPanel(title=HEADER_TEXT,text='Options',align=viz.ALIGN_CENTER_TOP,icon=False,key=None)
 optionPanel.getTitleBar().fontSize(36)
 optionPanel.addSection('    [ File ]')
-saveHeader = optionPanel.addItem(viz.addText('    [ Append ".csv" when saving ]'))
+#saveHeader = optionPanel.addItem(viz.addText('    [ Append ".csv" when saving ]'))
 saveButton = optionPanel.addItem(viz.addButtonLabel('Save Bridge'),align=viz.ALIGN_CENTER)
 saveButton.length(OPTIONS_BUTTON_LENGTH)
 loadButton = optionPanel.addItem(viz.addButtonLabel('Load Bridge'),align=viz.ALIGN_CENTER)
@@ -515,7 +516,7 @@ utilityCanvas = viz.addGUICanvas(align=viz.ALIGN_CENTER)
 points = mathlite.getPointsInCircum(30,8)
 # Menu button
 menuButton = viz.addButton(parent=utilityCanvas)
-menuButton.texture(viz.addTexture('resources/GUI/menu-128.png'))
+menuButton.texture(viz.addTexture('resources/gui/menu-128.png'))
 menuButton.setScale(BUTTON_SCALE,BUTTON_SCALE)
 # Reset View button
 homeButton = viz.addButton(parent=utilityCanvas)
@@ -2296,6 +2297,9 @@ def onJoyButton(e):
 		toggleEnvironment()	
 	elif e.button == KEYS['reset']:
 		navigator.reset()
+		if MODE == structures.Mode.Walk:
+			cycleMode(structures.Mode.View)
+		navigator.setNavAbility()
 		mouseTracker.distance = HAND_DISTANCE
 		runFeedbackTask('View reset!')
 		viewChangeSound.play()
@@ -2600,9 +2604,12 @@ def SaveData():
 	# Play MUTE
 	clickSound.play()
 	
-	filePath = vizinput.fileSave(file='bridge01.csv',filter=[('CSV Files','*.csv')],directory='./data/saves')		
+	filePath = vizinput.fileSave(file='Bridge',filter=[('CSV Files','*.csv')],directory='./data/saves')		
 	if filePath == '':
 		return
+		
+	if not '.csv' in filePath:
+		filePath += '.csv'
 	
 	cachedOrientation = ORIENTATION
 	cycleOrientation(structures.Orientation.Side)
@@ -2874,14 +2881,15 @@ def MainTask():
 		#--Show initial info message
 		info_root.showInfoMessage(INITIAL_MESSAGE)
 		
-		#--Show menu
-		toggleMenu(True)
 		
 		#--Button callbacks
 		vizact.onbuttonup ( saveButton, SaveData )
 		vizact.onbuttonup ( loadButton, loadBridge )
 		vizact.onbuttonup ( resetButton, clearBridge )
 		vizact.onbuttonup ( resetButton, clickSound.play )
+		
+		#--Show menu
+#		toggleMenu(True)
 		
 		INITIALIZED = True
 viztask.schedule( MainTask() )
