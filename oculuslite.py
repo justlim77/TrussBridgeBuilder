@@ -92,3 +92,4 @@ class Oculus(object):
 		self.navigationNode.setEuler(euler)		
 	def reset(self):
 		self.hmd.getSensor().reset()
+		
