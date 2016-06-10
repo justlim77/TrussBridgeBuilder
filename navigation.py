@@ -8,7 +8,8 @@ import sys
 import viz
 import vizact
 import vizconfig
-import oculus_08 as oculus
+#import oculus_08 as oculus
+import oculus
 import mathlite
 
 # Navigator Base Class

@@ -25,6 +25,10 @@
 [ RIGHT MOUSE CLICK ]------------Delete grabbed truss member
 [ SCROLL WHEEL ]-------------------Extend and retract virtual hand
 """
+
+#--UTF-8 Encoding
+# -*- coding: utf-8 -*-
+
 INVENTORY_TEXT = """Order truss members from the catalogue & manage your inventory"""
 
 FEEDBACK_MESSAGE = """<FEEDBACK>"""
@@ -85,7 +89,7 @@ FOV = 35
 START_FOV = 100
 STENCIL = 8
 STEREOMODE = viz.STEREO_HORZ
-FULLSCREEN = 0
+FULLSCREEN = viz.FULLSCREEN
 CLEAR_COLOR = viz.GRAY
 GRID_COLOR = viz.BLACK
 BUTTON_SCALE = 0.5
@@ -232,7 +236,7 @@ def initScene(res=RESOLUTION,quality=4,fov=FOV,stencil=8,stereoMode=viz.STEREO_H
 	viz.clearcolor(clearColor)
 	darkTheme = themes.getDarkTheme()
 	viz.setTheme(darkTheme)	
-	viz.go(stereoMode | fullscreen)
+	viz.go(fullscreen)
 	
 	
 # Disable mouse navigation and hide the mouse cursor
@@ -292,14 +296,15 @@ def initLighting():
 	for window in viz.getWindowList():
 		window.getView().getHeadLight().disable()
 	# Create directional light
-	sky_light = viz.addDirectionalLight(euler=(30,45,0),color=[0.8,0.8,0.8])
-	sky_light2 = viz.addDirectionalLight(euler=(-30,45,0),color=[0.8,0.8,0.8])	
+	sky_light = vizfx.addDirectionalLight(euler=(30,45,0),color=[0.8,0.8,0.8])
+#	sky_light2 = vizfx.addDirectionalLight(euler=(-30,45,0),color=[0.8,0.8,0.8])	
 #	light1 = vizfx.addDirectionalLight(euler=(40,20,0), color=[0.7,0.7,0.7])
 #	light2 = vizfx.addDirectionalLight(euler=(-65,15,0), color=[0.5,0.25,0.0])
 #	sky_light.color(viz.WHITE)
 	# Adjust ambient color
 #	viz.setOption('viz.lightModel.ambient',[0]*3)
-	sky_light.ambient([0.8]*3)
+#	sky_light.ambient([0.8]*3)
+#	sky_light2.ambient([0.8]*3)
 #	vizfx.setAmbientColor([0.3,0.3,0.4])
 
 def getCatalogue(path):
@@ -307,7 +312,7 @@ def getCatalogue(path):
 	return ET.parse(str(path)).getroot()
 
 # Initialize
-initScene(RESOLUTION,MULTISAMPLING,FOV,STENCIL,viz.PROMPT,FULLSCREEN,(0.1, 0.1, 0.1, 1.0))
+initScene(RESOLUTION,MULTISAMPLING,FOV,STENCIL,STEREOMODE,FULLSCREEN,(0.1, 0.1, 0.1, 1.0))
 initMouse()
 initLighting()
 highlightTool = highlighter.Highlighter()
@@ -363,10 +368,9 @@ def applyEnvironmentEffect(obj):
 	obj.appearance(viz.ENVIRONMENT_MAP)	
 
 #--Create middle road
-road = viz.addChild('resources/road.osgb',pos=(0,5.38086,0),parent=environment_root.getGroup())
+road = vizfx.addChild('resources/road.osgb',pos=(0,5.25,0),parent=environment_root.getGroup())
 road.visible(False)
 #applyEnvironmentEffect(road)
-
 
 
 # Bridge pin and roller supports
@@ -633,7 +637,7 @@ def inspectMember(obj):
 		inspector.SetMessage(str(obj.length) + 'm x ' +
 								str(obj.diameter) + 'mm x ' +
 								str(obj.thickness) + 'mm x at ' +
-								str(int(obj.getEuler()[2])) + ' deg')
+								str(int(obj.getEuler()[2])) + '°')
 		inspectorCanvas.visible(True)
 	else:
 		inspectorCanvas.visible(False)
@@ -1818,7 +1822,7 @@ def toggleRoad(road):
 def updateQuantity(order,button,orderList,inventory,row):
 	if order.quantity > 0:
 		order.quantity -= 1
-		button.message('{}m(l] x {}mm(d) x {}mm(th) [{}]'.format(order.length, order.diameter, order.thickness, order.quantity))
+		button.message('{}m(l) x {}mm(d) x {}mm(th) [{}]'.format(order.length, order.diameter, order.thickness, order.quantity))
 	if order.quantity <= 0:
 		inventory.removeRow(row)
 #		orderList.remove(order)
@@ -1829,7 +1833,7 @@ def updateAngle(obj,slider,label):
 		rot = obj.getEuler()
 		pos = mathlite.getNewRange(rot[2],180,-180,0,1)
 		slider.set(pos)
-		string = str(int(rot[2]))
+		string = str(int(rot[2])) + '°'
 		label.message(string)
 		
 
@@ -2035,7 +2039,7 @@ def cycleOrientation(val):
 	runFeedbackTask(str(ORIENTATION.name) + ' View')
 	clickSound.play()
 	grid_root.setOrientationMessage(str(ORIENTATION.name) + ' View')
-
+	
 CACHED_MODE = None
 CACHED_BUILD_MODE = structures.Mode.Build
 def cycleMode(mode=structures.Mode.Add):
@@ -2686,8 +2690,8 @@ vizact.onbuttonup ( orderBottomButton, addOrder, ORDERS_BOT_GRID, ORDERS_BOT, OR
 vizact.onbuttonup ( orderBottomButton, clickSound.play )
 vizact.onbuttonup ( doneButton, populateInventory )
 vizact.onbuttonup ( doneButton, clickSound.play )
-vizact.onbuttonup ( resetButton, clearBridge )
-vizact.onbuttonup ( resetButton, clickSound.play )
+#vizact.onbuttonup ( resetButton, clearBridge )
+#vizact.onbuttonup ( resetButton, clickSound.play )
 vizact.onbuttonup ( quitButton, quitGame )
 vizact.onbuttonup ( quitButton, clickSound.play )
 vizact.onbuttonup ( menuButton, onKeyUp, KEYS['showMenu'], )
@@ -2698,8 +2702,8 @@ vizact.onbuttonup ( walkModeButton, onKeyUp, KEYS['walk'] )
 vizact.onbuttonup ( resetOriButton, onKeyUp, KEYS['reset'] )
 vizact.onbuttonup ( toggleEnvButton, onKeyUp, KEYS['env'] )
 vizact.onbuttonup ( toggleGridButton, onKeyUp, KEYS['grid'] )
-vizact.onbuttonup ( saveButton, SaveData )
-vizact.onbuttonup ( loadButton, loadBridge )
+#vizact.onbuttonup ( saveButton, SaveData )	#--Moved to after initialize
+#vizact.onbuttonup ( loadButton, loadBridge )
 vizact.onbuttonup ( soundButton, toggleAudio )
 
 FLASH_TIME = 3.0			# Time to flash screen
@@ -2860,7 +2864,7 @@ def MainTask():
 		rotationCanvas.setEuler( [0,30,0] )
 		
 		inventoryLink = viz.link(navigator.VIEW,inventoryCanvas)
-		inventoryLink.postTrans([0,-0.5,0.5])
+		inventoryLink.postTrans([0,-0.5,0.75])
 		inventoryLink.preEuler([0,30,0])		
 
 		global CACHED_MODE
@@ -2872,6 +2876,12 @@ def MainTask():
 		
 		#--Show menu
 		toggleMenu(True)
+		
+		#--Button callbacks
+		vizact.onbuttonup ( saveButton, SaveData )
+		vizact.onbuttonup ( loadButton, loadBridge )
+		vizact.onbuttonup ( resetButton, clearBridge )
+		vizact.onbuttonup ( resetButton, clickSound.play )
 		
 		INITIALIZED = True
 viztask.schedule( MainTask() )

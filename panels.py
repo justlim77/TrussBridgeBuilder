@@ -30,7 +30,7 @@ class InspectorPanel(vizinfo.InfoPanel):
 #		self.statsPanel.addItem(self.rotation_stat)
 		
 		self.statsPanel = vizdlg.Panel(align=viz.ALIGN_CENTER_TOP,border=False)
-		self.statsMsg = self.statsPanel.addItem(viz.addText('Highlight truss member to inspect'))
+		self.statsMsg = self.statsPanel.addItem(viz.addText('Highlight member to inspect element'))
 	def GetPanel(self):
 		return self.statsPanel
 	def DiameterStat(self):
@@ -39,4 +39,4 @@ class InspectorPanel(vizinfo.InfoPanel):
 		if message != None:
 			self.statsMsg.message(message)
 		else:
-			self.statsMsg.message('Highlight truss member to inspect')
+			self.statsMsg.message('Highlight member to inspect element')
