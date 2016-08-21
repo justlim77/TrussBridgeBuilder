@@ -8,9 +8,13 @@ import sys
 import viz
 import vizact
 import vizconfig
+import viztask
+import vizinfo
+import vizfx
 #import oculus_08 as oculus
 import oculus
 import mathlite
+import cursor
 
 # Navigator Base Class
 class Navigator(object):
@@ -194,7 +198,7 @@ class KeyboardMouse(Navigator):
 	def setAsMain(self):
 		viz.logStatus("""Setting KeyboardMouse as main""")
 		
-		self.VIEW_LINK.preTrans([0,-self.EYE_HEIGHT,0])
+#		self.VIEW_LINK.preTrans([0,-self.EYE_HEIGHT,0])
 		
 		viz.mouse.setOverride(viz.ON) 
 		viz.fov(self.FOV)
@@ -292,11 +296,11 @@ class Joystick(Navigator):
 		self.MOVE_SPEED = val
 	
 	def getPosition(self):
-		return self.VIEW_LINK.getPosition()
+		return self.VIEW.getPosition()
 		
 	def setPosition(self,position):
 #		self.navigationNode.setPosition(position, viz.REL_PARENT)
-		self.VIEW_LINK.setPosition(position)
+		self.VIEW.setPosition(position)
 
 	def getEuler(self):
 		return self.VIEW.getEuler()
@@ -632,22 +636,116 @@ def getNavigator():
 	nav.setAsMain()
 	return nav
 
+def SetWorld():
+	canvas.setRenderWorld([800,600],[3,viz.AUTO_COMPUTE])
+	canvas.setPosition([0,2,3])
+	canvas.setMouseStyle(viz.CANVAS_MOUSE_VISIBLE)
+
+	viz.mouse.setVisible(False)
+	viz.mouse.setTrap(True)
+
+def updateHighlightTool(highlighter):
+	highlighter.highlight()
+
+def IntersectHighlighter(highlighter):
+	line = highlighter.getLineForward(viz.ABS_GLOBAL, length=100.0)
+	return viz.intersect(line.begin, line.end)
+	
+def HighlightTask(highlighter, canvas):
+	last_highlight = ''
+	try:
+		while True:
+			info = IntersectHighlighter(highlighter)
+#			print info.intersectPoint
+			intersect_pos = info.intersectPoint
+			print intersect_pos
+			bb = canvas.getBoundingBox()
+			pos = [0,0]
+#			print(bb.width, bb.height)
+			canvas_pos = canvas.getPosition()
+			x = mathlite.getNewRange(intersect_pos[0], canvas_pos[0]-bb.width*0.5, canvas_pos[0] + bb.width*0.5, 0, 1) 
+			y = mathlite.getNewRange(intersect_pos[1], canvas_pos[1]-bb.height*0.5, canvas_pos[1] +bb.height*0.5, 0, 1)
+#			cursor.setLength(intersect_pos[2])
+#			cursor.setPos(canvas)
+			canvas.setCursorPosition([x,y])
+			print canvas.getCursorPosition()
+			node_name = info.name
+			
+			if last_highlight != node_name:
+#				print(node_name)
+				pass
+			
+			yield None
+	finally:
+		pass
+
+intersect_pos = [0,0,0]
+
+def ClickTask(highlighter, canvas):
+	while True:
+		yield viztask.waitKeyDown(' ')
+		
+		highlightTask = viztask.schedule(HighlightTask(highlighter, canvas))
+		
+		yield viztask.waitKeyUp(' ')
+		
+		highlightTask.remove()
+		
+		info = IntersectHighlighter(highlighter)
+		print(info.name)
+		
 if __name__ == '__main__':		
 	# Run scene
 	viz.setMultiSample(8)
 	viz.setOption('viz.dwm_composition',viz.OFF)
 	viz.go()
 	
+	nav = None
 	nav = getNavigator()
- 
-	nav.setPosition([0,0,0])
+	if nav is not None:
+		nav.setPosition([0,0,0])
+		
 	def printPos():
 		print nav.getPosition()
-	vizact.onkeyup(' ',printPos)
+#	vizact.onkeyup(' ',printPos)
 	
 #	viz.mouse(viz.OFF)
 #	viz.mouse.setVisible(False)
 	viz.mouse.setTrap()
 
 	# Add environment
-	viz.addChild('maze.osgb')
+	maze = vizfx.addChild('maze.osgb')
+	maze.hint(viz.OPTIMIZE_INTERSECT_HINT)
+	maze.disable(viz.SHADOW_CASTING)
+	
+	#Create skylight
+	viz.MainView.getHeadLight().disable()
+	sky_light = viz.addDirectionalLight(euler=(0,90,0), color=viz.WHITE)
+	sky_light.setShadowMode(viz.SHADOW_DEPTH_MAP)
+	
+	# Create canvas for displaying GUI objects
+	canvas = viz.addGUICanvas(pos=[0, 3.0, 3.0])
+	canvas.alignment(viz.ALIGN_CENTER)
+	instructions ="""Use the trigger to select
+	and jump to painting."""
+	panel = vizinfo.InfoPanel(instructions, title='Vizard SteamVR Demo', key=None, icon=False, align=viz.ALIGN_CENTER, parent=canvas)
+	SetWorld()
+	bb = panel.getBoundingBox()
+	canvas.setRenderWorld([bb.width, bb.height],[1,viz.AUTO_COMPUTE])	
+
+	print(canvas.getNodeNames())
+	
+	import tools
+	from tools import highlighter
+	highlighter = highlighter.Highlighter()
+	highlighter.highlight()
+	
+	viz.link(nav.VIEW_LINK, highlighter)
+	
+	highlighter.setUpdateFunction(updateHighlightTool)
+	
+	viztask.schedule(ClickTask(highlighter, canvas))
+	
+	
+	
+	
