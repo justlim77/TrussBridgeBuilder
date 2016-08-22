@@ -646,6 +646,20 @@ def SetWorld():
 
 def updateHighlightTool(highlighter):
 	highlighter.highlight()
+#	print highlighter.getLineForward().getEnd()
+#	highlighter.
+#	print highlighter.getRayCaster().getColor()
+
+def pick(l, index):
+    """
+    :param l: list of integers
+    :type l: list
+    :param index: index at which to pick an integer from *l*
+    :type index: int
+    :returns: integer at *index* in *l*
+    :rtype: int
+    """
+    return l[index]
 
 def IntersectHighlighter(highlighter):
 	line = highlighter.getLineForward(viz.ABS_GLOBAL, length=100.0)
@@ -658,17 +672,23 @@ def HighlightTask(highlighter, canvas):
 			info = IntersectHighlighter(highlighter)
 #			print info.intersectPoint
 			intersect_pos = info.intersectPoint
-			print intersect_pos
+			if info.name != 'gui_group':
+				canvas.setMouseStyle(viz.CANVAS_MOUSE_BUTTON | viz.CANVAS_MOUSE_MOVE)
+			else:
+				canvas.setMouseStyle(viz.CANVAS_MOUSE_VISIBLE)
+#			highlighter.
+#			print intersect_pos
 			bb = canvas.getBoundingBox()
 			pos = [0,0]
 #			print(bb.width, bb.height)
 			canvas_pos = canvas.getPosition()
+#			highlighter.getLineForward().setEnd(intersect_pos[2])
 			x = mathlite.getNewRange(intersect_pos[0], canvas_pos[0]-bb.width*0.5, canvas_pos[0] + bb.width*0.5, 0, 1) 
 			y = mathlite.getNewRange(intersect_pos[1], canvas_pos[1]-bb.height*0.5, canvas_pos[1] +bb.height*0.5, 0, 1)
 #			cursor.setLength(intersect_pos[2])
 #			cursor.setPos(canvas)
 			canvas.setCursorPosition([x,y])
-			print canvas.getCursorPosition()
+#			print canvas.getCursorPosition()
 			node_name = info.name
 			
 			if last_highlight != node_name:
@@ -678,21 +698,42 @@ def HighlightTask(highlighter, canvas):
 			yield None
 	finally:
 		pass
-
+		
+def CanvasButtonTask(canvas):
+	while True:
+		yield viztask.waitKeyDown(' ')
+		canvas.sendMouseButtonEvent(viz.MOUSEBUTTON_LEFT, viz.DOWN)
+		print 'mouse down'
+		yield viztask.waitKeyUp(' ')
+		canvas.sendMouseButtonEvent(viz.MOUSEBUTTON_LEFT, viz.UP)
+		print 'mouse up'
+	
 intersect_pos = [0,0,0]
 
 def ClickTask(highlighter, canvas):
 	while True:
-		yield viztask.waitKeyDown(' ')
-		
+#		yield viztask.waitKeyDown(' ')
 		highlightTask = viztask.schedule(HighlightTask(highlighter, canvas))
 		
-		yield viztask.waitKeyUp(' ')
-		
+#		yield viztask.waitKeyUp(' ')
+
+		yield None
 		highlightTask.remove()
 		
 		info = IntersectHighlighter(highlighter)
-		print(info.name)
+		
+#		print(info.name)
+		
+def OnMouseUp(button):
+	if(button == viz.MOUSEBUTTON_LEFT):
+		print 'mouse left up'
+		
+def OnMouseDown(button):
+	if(button == viz.MOUSEBUTTON_LEFT):
+		print 'mouse left down'
+
+def OnButtonClicked():
+	print 'clicked'
 		
 if __name__ == '__main__':		
 	# Run scene
@@ -726,26 +767,41 @@ if __name__ == '__main__':
 	# Create canvas for displaying GUI objects
 	canvas = viz.addGUICanvas(pos=[0, 3.0, 3.0])
 	canvas.alignment(viz.ALIGN_CENTER)
+	canvasButtonTask = viztask.schedule(CanvasButtonTask(canvas))
 	instructions ="""Use the trigger to select
 	and jump to painting."""
 	panel = vizinfo.InfoPanel(instructions, title='Vizard SteamVR Demo', key=None, icon=False, align=viz.ALIGN_CENTER, parent=canvas)
+	click_button = viz.addButton(parent=canvas)
 	SetWorld()
 	bb = panel.getBoundingBox()
 	canvas.setRenderWorld([bb.width, bb.height],[1,viz.AUTO_COMPUTE])	
-
 	print(canvas.getNodeNames())
 	
+	import vizshape
 	import tools
 	from tools import highlighter
+	from tools import ray_caster
+	ray = ray_caster.Simple3DRay(0.0025)
+	ray.setColor(viz.CYAN)
+	rayCaster = ray_caster.RayCaster()
+	rayCaster.setIntersectAll(False)
+	rayCaster.setStartingOffset([0,0,0])
+	rayCaster.setRay(ray)
 	highlighter = highlighter.Highlighter()
-	highlighter.highlight()
-	
+	highlighter.setRayCaster(rayCaster)
+
 	viz.link(nav.VIEW_LINK, highlighter)
 	
 	highlighter.setUpdateFunction(updateHighlightTool)
 	
 	viztask.schedule(ClickTask(highlighter, canvas))
 	
+	print pick([0, 1], 0)
 	
+	viz.callback(viz.MOUSEUP_EVENT, OnMouseUp)
+	viz.callback(viz.MOUSEDOWN_EVENT, OnMouseDown)
+	
+	import vizact
+	vizact.onbuttonup(click_button, OnButtonClicked)
 	
 	
