@@ -124,7 +124,7 @@ class EnvironmentRoot(Root):
 		self._waveGroup = viz.addGroup(parent=self._root)
 #		self._wave_M = viz.addChild('resources/wave.osgb',cache=viz.CACHE_CLONE,pos=([0,1.5,0]),parent=self._waveGroup)
 #		self._wave_B = viz.addChild('resources/wave.osgb',cache=viz.CACHE_CLONE,pos=([0,1.5,-50]),parent=self._waveGroup)
-		self._newWalkway = vizfx.addChild('resources/walkway_test.osgb',pos=[0,0.25,0], parent=self._root)	
+		self._newWalkway = vizfx.addChild('resources/walkway.osgb',pos=[0,0.25,0], parent=self._root)	
 		
 	def getWaveGroup(self):
 		return self._waveGroup
